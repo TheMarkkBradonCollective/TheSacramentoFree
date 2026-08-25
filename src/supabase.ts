@@ -835,15 +835,41 @@ export async function upsertSupabaseProfile(
 
     if (scope === 'preferences') {
       const prefsPayload = buildUserPrefsPayload(profileForSave);
+      const wantsGoGetPrefs =
+        prefsPayload.goGetEnabled === true ||
+        prefsPayload.pickupAvailability != null ||
+        prefsPayload.goGetRingDurationSeconds !== 140 ||
+        prefsPayload.goGetRingPattern !== 'ring';
 
-      let { error } = await supabase.from('users').update(prefsPayload).eq('uid', profileForSave.uid);
+      let { data, error } = await supabase
+        .from('users')
+        .update(prefsPayload)
+        .eq('uid', profileForSave.uid)
+        .select(
+          'uid, goGetEnabled, pickupAvailability, goGetRingDurationSeconds, goGetRingPattern, navigationSettings, appPreferences, staffInteractionMode',
+        )
+        .maybeSingle();
 
       const migrationHint = prefsColumnMigrationHint(error, prefsPayload, profileForSave);
       if (migrationHint) {
         return { ok: false, errorMessage: migrationHint };
       }
 
-      if (error && /goGetEnabled|staffInteractionMode|pickupAvailability|goGetRing|navigationSettings|appPreferences|schema cache|PGRST204/i.test(`${error.code || ''} ${error.message || ''}`)) {
+      if (
+        error &&
+        /goGetEnabled|staffInteractionMode|pickupAvailability|goGetRing|navigationSettings|appPreferences|schema cache|PGRST204/i.test(
+          `${error.code || ''} ${error.message || ''}`,
+        )
+      ) {
+        if (wantsGoGetPrefs || prefsPayload.navigationSettings != null || prefsPayload.appPreferences != null) {
+          return {
+            ok: false,
+            errorMessage:
+              prefsColumnMigrationHint(error, prefsPayload, profileForSave) ??
+              'Account settings could not be saved. Re-run complete-schema.sql in the Supabase SQL editor, then try again.',
+          };
+        }
+
         const {
           goGetEnabled: _goGet,
           staffInteractionMode: _mode,
@@ -854,12 +880,38 @@ export async function upsertSupabaseProfile(
           appPreferences: _prefs,
           ...legacyPrefs
         } = prefsPayload;
-        ({ error } = await supabase.from('users').update(legacyPrefs).eq('uid', profileForSave.uid));
+        ({ data, error } = await supabase
+          .from('users')
+          .update(legacyPrefs)
+          .eq('uid', profileForSave.uid)
+          .select('uid')
+          .maybeSingle());
       }
 
       if (error) {
         handleSupabaseError(error, 'users');
         return { ok: false, errorMessage: error.message };
+      }
+
+      if (!data) {
+        return {
+          ok: false,
+          errorMessage: 'Could not save account settings. Sign out and sign back in, then try again.',
+        };
+      }
+
+      if (wantsGoGetPrefs) {
+        const saved = normalizeUserProfileRow(data as Record<string, unknown>);
+        if (!saved) {
+          return { ok: false, errorMessage: 'Could not verify Go Get settings were saved.' };
+        }
+        if (saved.goGetEnabled !== (prefsPayload.goGetEnabled === true)) {
+          return {
+            ok: false,
+            errorMessage:
+              'Go Get settings did not stick on the server. Re-run complete-schema.sql in Supabase, then try again.',
+          };
+        }
       }
 
       setSupabaseConfigurationState(true);

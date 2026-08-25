@@ -1,5 +1,4 @@
 import type { AppPreferences, UserProfile } from '../types';
-import { writeStoredGoGetPrefs, profileToStoredGoGetPrefs } from './goGetPrefs';
 import { writeStoredNavPrefs, profileToStoredNavPrefs } from './navPrefs';
 import { writeStoredAppPrefs, profileToStoredAppPrefs, persistUserAppPreferencesCached, mergeStoredAppPreferencesIntoProfile } from './appPrefsCache';
 import { writeChatCategoryFilter, writeChatStatusFilter } from './chatInboxFilters';
@@ -32,7 +31,8 @@ function isTheme(value: unknown): value is Theme {
 export function applyUserPreferencesToDevice(profile: UserProfile): void {
   const reconciled = reconcileProfileWithStoredPreferences(profile);
   writeStoredNavPrefs(profileToStoredNavPrefs(reconciled));
-  writeStoredGoGetPrefs(profileToStoredGoGetPrefs(reconciled));
+  // Go Get prefs are written only by persistUserGoGetSettings — do not let heartbeats
+  // overwrite a neighbor's explicit opt-in before the users row catches up.
   writeStoredAppPrefs(profileToStoredAppPrefs(reconciled));
   if (isStaffRole(reconciled.role)) {
     writeStaffInteractionModePref(
