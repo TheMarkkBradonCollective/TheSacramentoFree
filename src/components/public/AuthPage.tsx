@@ -32,7 +32,7 @@ export default function AuthPage({
 }: AuthPageProps) {
   const { navigate } = usePublicRoute();
   const { enabled: newspaper } = useNewspaperSkin();
-  const brandName = newspaper ? NEWSPAPER.name : SITE.name;
+  const brandName = NEWSPAPER.name;
   const [authMode, setAuthMode] = useState<AuthMode>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -145,9 +145,7 @@ export default function AuthPage({
         {!newspaper ? (
           <div className="relative z-10 flex items-center gap-3">
             <BrandLogo imgClassName="h-24 w-auto max-w-[220px] object-contain" showTitle={false} />
-            <span className="font-display font-bold text-lg text-white">
-              Sacramento <span className="text-white/80">Buy Nothing</span>
-            </span>
+            <span className="font-display font-bold text-lg text-white">{brandName}</span>
           </div>
         ) : (
           <div className="relative z-10">

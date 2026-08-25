@@ -4,17 +4,8 @@ import { useNewspaperSkin } from './NewspaperSkinContext';
 
 export function useBrand() {
   const { enabled: newspaper } = useNewspaperSkin();
-  if (!newspaper) {
-    return {
-      newspaper: false,
-      name: SITE.name,
-      shortName: SITE.shortName,
-      tagline: SITE.tagline,
-      copy: (text: string) => text,
-    };
-  }
   return {
-    newspaper: true,
+    newspaper,
     name: NEWSPAPER.name,
     shortName: NEWSPAPER.title,
     tagline: NEWSPAPER.tagline,

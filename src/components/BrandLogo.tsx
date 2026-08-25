@@ -102,8 +102,8 @@ export default function BrandLogo({
 }: BrandLogoProps) {
   const [failed, setFailed] = useState(false);
   const { enabled: newspaper } = useNewspaperSkin();
-  const title = newspaper ? `${NEWSPAPER.the} ${NEWSPAPER.title}` : SITE.name;
-  const tagline = subtitle ?? (newspaper ? NEWSPAPER.tagline : SITE.tagline);
+  const title = `${NEWSPAPER.the} ${NEWSPAPER.title}`;
+  const tagline = subtitle ?? NEWSPAPER.tagline;
 
   if (newspaper) {
     return (
@@ -135,7 +135,7 @@ export default function BrandLogo({
     <div className={className}>
       <img
         src={APP_LOGO_SRC}
-        alt="Sacramento Buy Nothing"
+        alt={NEWSPAPER.name}
         className={imgClassName}
         onError={() => setFailed(true)}
       />
