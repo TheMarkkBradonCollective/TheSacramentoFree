@@ -1,4 +1,5 @@
-import { isNativeApp, APP_ORIGIN } from './apkDownload';
+import { APP_ORIGIN } from './apkDownload';
+import { isNativeApp } from './nativePlatform';
 import {
   PLAY_STORE_ASSETS_BASE_PATH,
   PLAY_STORE_FEATURE_GRAPHIC,
