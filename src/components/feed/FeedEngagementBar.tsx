@@ -109,12 +109,6 @@ export default function FeedEngagementBar({
           })}
         </div>
       </div>
-
-      {isOwn && (
-        <p className="text-[11px] text-muted">
-          Vote and reaction counts are from neighbors — you can&apos;t vote on your own post.
-        </p>
-      )}
     </div>
   );
 }
