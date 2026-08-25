@@ -117,6 +117,12 @@ export default function ListingEngagement({
           <ChevronDown className="w-4 h-4" />
           {downvotes}
         </button>
+        {variant === 'card' && comments.length > 0 && (
+          <span className="ml-auto text-xs text-muted flex items-center gap-1">
+            <MessageSquare className="w-3.5 h-3.5" />
+            {comments.length}
+          </span>
+        )}
         {variant === 'detail' && (
           <span className="ml-auto text-xs text-muted flex items-center gap-1">
             <MessageSquare className="w-3.5 h-3.5" />

@@ -54,6 +54,7 @@ import { NEWSPAPER } from './preview/newspaperBrand';
 import { isNewspaperSkinActive } from './preview/NewspaperSkinContext';
 import GoGetRingCoordinator from './components/goget/GoGetRingCoordinator';
 import GoGetTripCoordinator from './components/goget/GoGetTripCoordinator';
+import FeedLiveProvider from './contexts/FeedLiveProvider';
 import FullScreenPanel from './components/FullScreenPanel';
 import GoFundMeSupport from './components/GoFundMeSupport';
 import PrivacyPolicyContent from './components/PrivacyPolicyContent';
@@ -2294,6 +2295,7 @@ export default function App() {
               onDeepLink={handlePushDeepLink}
               onOpenAwards={handleOpenAwards}
             >
+            <FeedLiveProvider userProfile={userProfile} blockedUserIds={blockedUserIds}>
             <GoGetRingCoordinator userProfile={userProfile} />
             <GoGetTripCoordinator
               userProfile={userProfile}
@@ -2829,6 +2831,7 @@ export default function App() {
                 />
               )}
             </PresenceProvider>
+            </FeedLiveProvider>
             </NotificationsHubProvider>
           )}
         </>

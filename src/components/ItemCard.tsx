@@ -1,4 +1,4 @@
-import { Bookmark, Calendar, Eye, LifeBuoy, MapPin, MessageSquare, Navigation, Pencil, Tag } from 'lucide-react';
+import { Bookmark, Calendar, ChevronDown, ChevronUp, Eye, LifeBuoy, MapPin, MessageSquare, Navigation, Pencil, Tag } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { ItemComment, ItemPost, UserProfile } from '../types';
 import { stripListingMetadata, parseTradeSeeking } from '../lib/itemLocation';
@@ -242,6 +242,9 @@ export default function ItemCard({
   );
 
   if (layout === 'grid') {
+    const netScore = voteState.upvotes - voteState.downvotes;
+    const hasEngagement = voteState.upvotes > 0 || voteState.downvotes > 0 || comments.length > 0;
+
     return (
       <article
         id={`item_card_${item.id}`}
@@ -290,6 +293,22 @@ export default function ItemCard({
               <span className="absolute bottom-1.5 left-1.5 inline-flex items-center gap-0.5 rounded-full bg-black/75 px-1.5 py-0.5 text-[10px] font-bold text-white">
                 <Navigation className="w-3 h-3 shrink-0" aria-hidden />
                 {formatRouteDistance(distanceMeters)}
+              </span>
+            )}
+            {hasEngagement && (
+              <span className="absolute bottom-1.5 right-1.5 inline-flex items-center gap-1 rounded-full bg-black/75 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                {(voteState.upvotes > 0 || voteState.downvotes > 0) && (
+                  <span className="inline-flex items-center gap-0.5">
+                    <ChevronUp className="w-3 h-3" aria-hidden />
+                    {netScore > 0 ? `+${netScore}` : netScore}
+                  </span>
+                )}
+                {comments.length > 0 && (
+                  <span className="inline-flex items-center gap-0.5">
+                    <MessageSquare className="w-3 h-3" aria-hidden />
+                    {comments.length}
+                  </span>
+                )}
               </span>
             )}
           </div>

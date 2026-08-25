@@ -9,7 +9,8 @@ import { useConfirm } from '../contexts/ConfirmContext';
 import { confirmDeleteFeedPost } from '../lib/destructiveConfirm';
 import { isPlayStoreDemo, PLAY_STORE_DEMO_FEED_POSTS } from '../preview/playStoreDemo';
 
-export function useFeedPosts(userProfile: UserProfile | null) {
+export function useFeedPosts(userProfile: UserProfile | null, options?: { enabled?: boolean }) {
+  const enabled = options?.enabled !== false && !!userProfile;
   const [posts, setPosts] = useState<FeedPost[]>(() => (isPlayStoreDemo() ? PLAY_STORE_DEMO_FEED_POSTS : []));
   const [loading, setLoading] = useState(() => !isPlayStoreDemo());
   const [creating, setCreating] = useState(false);
@@ -17,6 +18,7 @@ export function useFeedPosts(userProfile: UserProfile | null) {
   const isStaff = userProfile ? isStaffRole(userProfile.role) : false;
 
   const reload = useCallback(async () => {
+    if (!enabled) return;
     if (isPlayStoreDemo()) {
       setPosts(PLAY_STORE_DEMO_FEED_POSTS);
       setLoading(false);
@@ -25,21 +27,45 @@ export function useFeedPosts(userProfile: UserProfile | null) {
     const data = await getFeedPosts(80);
     setPosts(data);
     setLoading(false);
-  }, []);
+  }, [enabled]);
 
   useEffect(() => {
+    if (!enabled) {
+      setPosts([]);
+      setLoading(false);
+      return;
+    }
     void reload();
-  }, [reload]);
+  }, [reload, enabled]);
 
   useEffect(() => {
-    if (isPlayStoreDemo()) return;
+    if (!enabled || isPlayStoreDemo()) return;
     return subscribePostgresChanges<FeedPost>(
       { channelName: 'live-feed-posts', table: 'feed_posts', event: '*' },
-      () => {
-        void reload();
+      (payload) => {
+        const row = (payload.new || payload.old) as FeedPost | null;
+        if (!row?.id) return;
+
+        if (payload.eventType === 'INSERT') {
+          const inserted = payload.new as FeedPost;
+          setPosts((prev) => [inserted, ...prev.filter((post) => post.id !== inserted.id)]);
+          setLoading(false);
+          return;
+        }
+
+        if (payload.eventType === 'UPDATE') {
+          const updated = payload.new as FeedPost;
+          setPosts((prev) => prev.map((post) => (post.id === updated.id ? { ...post, ...updated } : post)));
+          return;
+        }
+
+        if (payload.eventType === 'DELETE') {
+          const deleted = payload.old as FeedPost;
+          setPosts((prev) => prev.filter((post) => post.id !== deleted.id));
+        }
       },
     );
-  }, [reload]);
+  }, [enabled]);
 
   useEffect(() => {
     const onDeleted = (event: Event) => {
@@ -80,7 +106,7 @@ export function useFeedPosts(userProfile: UserProfile | null) {
 
   const publishPost = useCallback(
     async (input: { text: string; imageFiles: File[] }) => {
-      if (!userProfile) return false;
+      if (!enabled || !userProfile) return false;
       setCreating(true);
       const result = await createFeedPost(userProfile, input);
       setCreating(false);
@@ -91,12 +117,12 @@ export function useFeedPosts(userProfile: UserProfile | null) {
       setPosts((prev) => [result.post!, ...prev.filter((p) => p.id !== result.post!.id)]);
       return true;
     },
-    [userProfile, alert],
+    [userProfile, alert, enabled],
   );
 
   const publishPoll = useCallback(
     async (input: { text: string; options: string[] }) => {
-      if (!userProfile) return false;
+      if (!enabled || !userProfile) return false;
       setCreating(true);
       const result = await createFeedPollPost(userProfile, input);
       setCreating(false);
@@ -107,12 +133,12 @@ export function useFeedPosts(userProfile: UserProfile | null) {
       setPosts((prev) => [result.post!, ...prev.filter((p) => p.id !== result.post!.id)]);
       return true;
     },
-    [userProfile, alert],
+    [userProfile, alert, enabled],
   );
 
   const removePost = useCallback(
     async (post: FeedPost) => {
-      if (!userProfile) return false;
+      if (!enabled || !userProfile) return false;
       const ok = await confirmDeleteFeedPost(confirm, isStaff && post.userId !== userProfile.uid);
       if (!ok) return false;
       const result = await deleteFeedPost(post.id, userProfile.uid, isStaff);
@@ -124,7 +150,7 @@ export function useFeedPosts(userProfile: UserProfile | null) {
       notifyFeedPostDeleted(post.id);
       return true;
     },
-    [userProfile, isStaff, confirm, alert],
+    [userProfile, isStaff, confirm, alert, enabled],
   );
 
   return { posts, loading, creating, publishPost, publishPoll, removePost, reload };

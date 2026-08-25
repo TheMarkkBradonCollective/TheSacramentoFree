@@ -7,7 +7,7 @@ import {
   getSupabaseEventRsvps,
   setSupabaseEventRsvp,
 } from '../supabase';
-import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
+import { subscribePostgresChanges } from '../lib/supabaseRealtime';
 import { commentPostedAsNeighbor } from '../lib/staffInteractionMode';
 import { resolveProfileIdentity } from '../lib/profilePersistence';
 import { countPastRsvps, effectivePastRsvp } from '../lib/eventRsvp';
@@ -148,65 +148,72 @@ export function useEventsEngagement(
     eventIdSetRef.current = new Set(eventIds);
   }, [eventIds.join('|')]);
 
-  const reloadEngagementForEvents = useCallback(
-    debounceRealtime(async (ids: string[]) => {
-      if (!uid || ids.length === 0) return;
-      const tracked = ids.filter((id) => eventIdSetRef.current.has(id));
-      if (tracked.length === 0) return;
-
-      const [rsvps, comments] = await Promise.all([
-        getSupabaseEventRsvps(tracked),
-        getSupabaseEventComments(tracked),
-      ]);
-
-      setEventRsvps((prev) => {
-        const next = { ...prev };
-        for (const eventId of tracked) {
-          const rsvpsForEvent = rsvps.filter((r) => r.eventId === eventId);
-          next[eventId] = buildRsvpState(rsvpsForEvent, uid);
-        }
-        return next;
-      });
-
-      setEventComments((prev) => {
-        const next = { ...prev };
-        for (const eventId of tracked) {
-          next[eventId] = comments.filter((c) => c.eventId === eventId);
-        }
-        return next;
-      });
-    }, 150),
-    [uid],
-  );
-
   useEffect(() => {
     if (isPlayStoreDemo() || !uid || eventIds.length === 0) return;
 
+    const patchRsvps = (payload: { eventType: string; new: EventRsvp | null; old: EventRsvp | null }) => {
+      const row = (payload.new || payload.old) as EventRsvp | null;
+      if (!row?.eventId || !eventIdSetRef.current.has(row.eventId)) return;
+      if (row.userId === uid && payload.eventType !== 'DELETE') return;
+
+      setEventRsvps((prev) => {
+        const current = prev[row.eventId] ?? EMPTY_RSVP_STATE;
+        let next = { ...current };
+
+        if (payload.old) {
+          next = adjustRsvpCounts(next, payload.old.rsvpStatus as EventRsvpStatus, null);
+        }
+        if (payload.eventType !== 'DELETE' && payload.new) {
+          next = adjustRsvpCounts(next, null, payload.new.rsvpStatus as EventRsvpStatus);
+          if (payload.new.userId === uid) next.userRsvp = payload.new.rsvpStatus as EventRsvpStatus;
+        }
+
+        return { ...prev, [row.eventId]: next };
+      });
+    };
+
+    const patchComments = (payload: { eventType: string; new: EventComment | null; old: EventComment | null }) => {
+      const row = (payload.new || payload.old) as EventComment | null;
+      if (!row?.eventId || !eventIdSetRef.current.has(row.eventId)) return;
+      if (payload.eventType === 'INSERT' && row.userId === uid) return;
+
+      setEventComments((prev) => {
+        const list = prev[row.eventId] ?? [];
+        if (payload.eventType === 'DELETE' && payload.old) {
+          return {
+            ...prev,
+            [row.eventId]: list.filter((c) => c.id !== payload.old!.id),
+          };
+        }
+        if (payload.new) {
+          const updated = payload.new;
+          const idx = list.findIndex((c) => c.id === updated.id);
+          if (idx >= 0) {
+            const next = [...list];
+            next[idx] = updated;
+            return { ...prev, [row.eventId]: next };
+          }
+          return { ...prev, [row.eventId]: [...list, updated] };
+        }
+        return prev;
+      });
+    };
+
     const unsubRsvps = subscribePostgresChanges<EventRsvp>(
       { channelName: 'live-event-rsvps', table: 'event_rsvps', event: '*' },
-      (payload) => {
-        const row = (payload.new || payload.old) as EventRsvp | null;
-        if (!row?.eventId || !eventIdSetRef.current.has(row.eventId)) return;
-        if (row.userId === uid && payload.eventType !== 'DELETE') return;
-        reloadEngagementForEvents([row.eventId]);
-      },
+      (payload) => patchRsvps(payload as { eventType: string; new: EventRsvp | null; old: EventRsvp | null }),
     );
 
     const unsubComments = subscribePostgresChanges<EventComment>(
       { channelName: 'live-event-comments', table: 'event_comments', event: '*' },
-      (payload) => {
-        const row = (payload.new || payload.old) as EventComment | null;
-        if (!row?.eventId || !eventIdSetRef.current.has(row.eventId)) return;
-        if (payload.eventType === 'INSERT' && row.userId === uid) return;
-        reloadEngagementForEvents([row.eventId]);
-      },
+      (payload) => patchComments(payload as { eventType: string; new: EventComment | null; old: EventComment | null }),
     );
 
     return () => {
       unsubRsvps();
       unsubComments();
     };
-  }, [uid, eventIds.join('|'), reloadEngagementForEvents]);
+  }, [uid, eventIds.join('|')]);
 
   const handleRsvp = (
     eventId: string,
