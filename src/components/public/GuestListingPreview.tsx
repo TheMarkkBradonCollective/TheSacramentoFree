@@ -3,7 +3,7 @@ import { AlertCircle, Eye, MapPin, Search } from 'lucide-react';
 import { ItemPost } from '../../types';
 import { stripListingMetadata } from '../../lib/itemLocation';
 import { getPostTypeBadgeClass, getPostTypeGridBadgeLabel } from '../../lib/postType';
-import { extractListingImageUrls } from '../../lib/listingContent';
+import { extractListingImageUrls, listingHasPhoto } from '../../lib/listingContent';
 import ListingImage from '../ListingImage';
 import HorizontalSnapRow, { SnapSlide } from '../HorizontalSnapRow';
 import { SITE } from '../../siteContent';
@@ -46,7 +46,9 @@ export default function GuestListingPreview({
 
   const previewItems = useMemo(() => {
     const skip = new Set(excludeIds ?? []);
-    const active = items.filter((item) => item.status === 'active' && !skip.has(item.id));
+    const active = items.filter(
+      (item) => item.status === 'active' && !skip.has(item.id) && listingHasPhoto(item),
+    );
     const q = searchTerm.trim().toLowerCase();
     const matched = q
       ? active.filter((item) => {
