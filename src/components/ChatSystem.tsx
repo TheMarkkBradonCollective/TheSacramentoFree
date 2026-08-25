@@ -218,6 +218,12 @@ export default function ChatSystem({
   const userIsStaff = isStaffRole(userProfile.role) && isStaffActingOfficial(userProfile);
   const staffActingOfficial = isStaffActingOfficial(userProfile);
   const canStaffReports = canViewStaffReports(userProfile.role) && isStaffActingOfficial(userProfile);
+  /** Staff in their own neighbor coordination chat — same tools as user mode. */
+  const actingAsNeighborInSelectedChat = useMemo(() => {
+    if (!staffActingOfficial) return true;
+    if (!selectedChat || isCommunityChat(selectedChat.id)) return false;
+    return selectedChat.participantIds.includes(userProfile.uid);
+  }, [staffActingOfficial, selectedChat, userProfile.uid]);
   const { reports: staffReports } = useStaffUserReports(canStaffReports, userProfile);
   const newStaffReportCount = staffReports.filter((report) => report.status === 'new').length;
   const { confirm, alert } = useConfirm();
@@ -671,6 +677,12 @@ export default function ChatSystem({
         const loadedMessages = await getSupabaseMessages(chatId);
         if (!active) return;
         setMessages(loadedMessages);
+        if (
+          staffActingOfficial &&
+          loadedMessages.some((m) => m.senderId === userProfile.uid && m.postedAsNeighbor)
+        ) {
+          neighborModeChatIdsRef.current.add(chatId);
+        }
         setErrorMsg('');
         if (isCommunityChat(chatId)) {
           const ids = loadedMessages.map((m) => m.senderId);
@@ -1084,6 +1096,9 @@ export default function ChatSystem({
   useTrackPresence(presenceUids);
 
   const selectChat = async (chat: Chat) => {
+    if (staffActingOfficial && chat.participantIds.includes(userProfile.uid)) {
+      neighborModeChatIdsRef.current.add(chat.id);
+    }
     setSelectedChat(chat);
     setSupportView(null);
     onClearInitialChat();
@@ -1853,7 +1868,7 @@ export default function ChatSystem({
                   id="input_tray"
                 >
                   {!isCommunity &&
-                  !staffActingOfficial &&
+                  actingAsNeighborInSelectedChat &&
                   (showSendLocationBtn ||
                     showMarkPendingPickupBtn ||
                     showRequestHoldBtn ||
@@ -1945,7 +1960,7 @@ export default function ChatSystem({
                       ) : null}
                     </div>
                   ) : null}
-                  {!isCommunity && showPosterHandoffActions && claimerUserId && linkedItem && !staffActingOfficial ? (
+                  {!isCommunity && showPosterHandoffActions && claimerUserId && linkedItem && actingAsNeighborInSelectedChat ? (
                     <ChatClaimActions
                       chatId={selectedChat.id}
                       linkedItem={linkedItem}
