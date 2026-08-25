@@ -26,18 +26,14 @@ test('route bearing ignores a tiny catty-corner jog', () => {
   assert.ok(Math.abs(headingDeltaDegrees(0, heading)) < 18, `heading ${heading} should stay northish`);
 });
 
-test('on-route heading holds through GPS/compass wiggles', () => {
+test('on-route heading holds through GPS wiggles', () => {
   const route = northStreetWithJog();
   const here = { lat: 38.58008, lng: -121.49 };
   const locked = resolveNavHeading({
     previous: 2,
-    gpsHeading: 70,
     lastPosition: { lat: 38.58007, lng: -121.49 },
     currentPosition: here,
     routeCoords: route,
-    compassHeading: 95,
-    speedMps: 8,
-    travelMode: 'driving',
     offRouteMeters: 4,
   });
   assert.ok(
@@ -51,14 +47,32 @@ test('a real left turn on the route updates heading quickly', () => {
   const atTurn = { lat: 38.58002, lng: -121.4896 };
   const next = resolveNavHeading({
     previous: 90,
-    gpsHeading: 88,
     lastPosition: { lat: 38.58, lng: -121.4897 },
     currentPosition: atTurn,
     routeCoords: route,
-    compassHeading: 40,
-    speedMps: 9,
-    travelMode: 'driving',
     offRouteMeters: 3,
   });
   assert.ok(Math.abs(headingDeltaDegrees(0, next)) < 40, `expected north after the turn, got ${next}`);
+});
+
+test('stationary off-route heading ignores phone rotation and holds previous', () => {
+  const held = resolveNavHeading({
+    previous: 45,
+    lastPosition: { lat: 38.58, lng: -121.49 },
+    currentPosition: { lat: 38.58, lng: -121.49 },
+    routeCoords: null,
+    offRouteMeters: 80,
+  });
+  assert.equal(held, 45);
+});
+
+test('movement bearing drives heading when traveling off-route', () => {
+  const next = resolveNavHeading({
+    previous: 10,
+    lastPosition: { lat: 38.58, lng: -121.49 },
+    currentPosition: { lat: 38.58006, lng: -121.49 },
+    routeCoords: null,
+    offRouteMeters: 80,
+  });
+  assert.ok(Math.abs(headingDeltaDegrees(0, next)) < 20, `expected northbound movement, got ${next}`);
 });
