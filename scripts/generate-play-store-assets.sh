@@ -5,13 +5,13 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 OUT_DIR="$ROOT_DIR/play-store-assets"
-SITE_LOCKUP="$ROOT_DIR/public/TheSacramentoFree.png"
-FEATURE_LOGO="$SITE_LOCKUP"
+APP_ICON="$ROOT_DIR/public/app-icon.png"
+FEATURE_LOGO="$APP_ICON"
 
 mkdir -p "$OUT_DIR"
 
-if [[ ! -f "$SITE_LOCKUP" ]]; then
-  echo "Missing site lockup at $SITE_LOCKUP"
+if [[ ! -f "$APP_ICON" ]]; then
+  echo "Missing app icon at $APP_ICON"
   exit 1
 fi
 
@@ -20,8 +20,8 @@ if ! command -v ffmpeg >/dev/null 2>&1; then
   exit 1
 fi
 
-# Google Play: 512×512 store icon — website masthead, inset so masks do not clip the wordmark.
-node "$ROOT_DIR/scripts/generate-play-store-icon.mjs" "$SITE_LOCKUP" "$OUT_DIR/icon-512.png"
+# Google Play: 512×512 store icon — same green rounded-square as the app and website.
+node "$ROOT_DIR/scripts/generate-play-store-icon.mjs" "$APP_ICON" "$OUT_DIR/icon-512.png"
 
 # Google Play: 1024×500 feature graphic (logo + name + tagline).
 FONT_BOLD="${PLAY_STORE_FONT_BOLD:-/usr/share/fonts/truetype/macos/Inter-Bold.ttf}"

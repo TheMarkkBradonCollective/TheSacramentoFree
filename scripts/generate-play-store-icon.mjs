@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
- * Build the 512×512 Play Store icon from the website masthead lockup.
- * Scales the art down and centers it on the newsprint fill so Play/Android
- * circle masks do not clip the wordmark.
+ * Build the 512×512 Play Store icon from public/app-icon.png.
+ * When the source is already 512×512, copy it as 32-bit RGBA. Legacy masthead
+ * lockups are scaled down and centered on their corner fill.
  */
 import { execFileSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
@@ -32,7 +32,30 @@ function sampleCornerFillHex(src) {
   return `0x${[r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('')}`;
 }
 
+function readDimensions(src) {
+  const probe = execFileSync(
+    'ffprobe',
+    ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=width,height', '-of', 'csv=p=0', src],
+    { encoding: 'utf8' },
+  ).trim();
+  const [width, height] = probe.split(',').map(Number);
+  if (!width || !height) {
+    throw new Error(`Could not read dimensions for ${src}`);
+  }
+  return { width, height };
+}
+
 export function generatePlayStoreIcon(src, dest) {
+  const { width, height } = readDimensions(src);
+  if (width === 512 && height === 512) {
+    execFileSync(
+      'ffmpeg',
+      ['-y', '-loglevel', 'error', '-i', src, '-frames:v', '1', '-pix_fmt', 'rgba', dest],
+      { stdio: 'inherit' },
+    );
+    return;
+  }
+
   const bg = sampleCornerFillHex(src);
   execFileSync(
     'ffmpeg',
@@ -60,7 +83,7 @@ export function generatePlayStoreIcon(src, dest) {
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-  const src = process.argv[2] || join(root, 'public', 'TheSacramentoFree.png');
+  const src = process.argv[2] || join(root, 'public', 'app-icon.png');
   const dest = process.argv[3] || join(root, 'play-store-assets', 'icon-512.png');
   generatePlayStoreIcon(src, dest);
   console.log(`wrote ${dest}`);
