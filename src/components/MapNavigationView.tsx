@@ -78,10 +78,10 @@ import { fitRoutePreviewToViewport, measureMapFitPadding } from '../lib/mapRoute
 import { SBN_MAP_TILE_OPTIONS, SBN_MAP_TILE_URL } from '../lib/mapTiles';
 import { isPlayStoreDemo } from '../preview/playStoreDemo';
 import {
-  ROUTE_LINE_CASING,
-  ROUTE_LINE_MAIN,
   ROUTE_LINE_TRAVELED,
   ROUTE_LINE_TRAVELED_CASING,
+  NAV_ROUTE_LINE_CASING,
+  NAV_ROUTE_LINE_MAIN,
 } from '../lib/mapRouteLineStyle';
 
 export interface NavProgressUpdate {
@@ -296,7 +296,7 @@ function NavigationDetailsSheet({
   return (
     <motion.div
       id="nav_details_sheet"
-      className={`sbn-nav-sheet relative z-30 flex flex-col w-full safe-area-pb ${
+      className={`sbn-nav-sheet relative z-30 flex flex-col w-full ${
         expanded ? 'is-expanded' : ''
       }`}
       initial={false}
@@ -472,8 +472,8 @@ function gpsFollowZoom(mode: NavTravelMode): number {
   return 17;
 }
 
-/** Hide the city-wide route during GPS follow; only paint the last meters to the pin. */
-const GPS_APPROACH_LINE_METERS = 380;
+/** Always paint the remaining path in GPS follow — clip far ahead so the line stays readable. */
+const GPS_LOOKAHEAD_METERS = 4500;
 
 type RoutePolylineHandles = {
   traveledCasing: L.Polyline | null;
@@ -519,8 +519,8 @@ function updateRoutePolylines(
 ): void {
   upsertRoutePolyline(layer, handles, 'traveledCasing', traveled, ROUTE_LINE_TRAVELED_CASING);
   upsertRoutePolyline(layer, handles, 'traveled', traveled, ROUTE_LINE_TRAVELED);
-  upsertRoutePolyline(layer, handles, 'remainingCasing', remaining, ROUTE_LINE_CASING);
-  upsertRoutePolyline(layer, handles, 'remaining', remaining, ROUTE_LINE_MAIN);
+  upsertRoutePolyline(layer, handles, 'remainingCasing', remaining, NAV_ROUTE_LINE_CASING);
+  upsertRoutePolyline(layer, handles, 'remaining', remaining, NAV_ROUTE_LINE_MAIN);
 }
 
 function debounceMapInvalidate(map: L.Map, delayMs = 160): () => void {
@@ -1309,7 +1309,7 @@ export default function MapNavigationView({
   useEffect(() => {
     const marker = destMarkerRef.current;
     if (!marker) return;
-    const showPin = !followUser || arrived || remainingMeters <= GPS_APPROACH_LINE_METERS;
+    const showPin = !followUser || arrived || remainingMeters <= 420;
     marker.setOpacity(showPin ? 1 : 0);
   }, [followUser, arrived, remainingMeters, route]);
 
@@ -1422,14 +1422,16 @@ export default function MapNavigationView({
 
     lastRouteDrawRef.current = { lat: logicPos.lat, lng: logicPos.lng, at: now };
     const split = splitRouteProgress(route.coords, logicPos);
-    if (followUserRef.current) {
-      const remainingM = remainingRouteMeters(route.coords, logicPos);
-      const approach =
-        remainingM <= GPS_APPROACH_LINE_METERS ? clipRouteAhead(split.remaining, remainingM) : [];
-      updateRoutePolylines(routeLayerRef.current, routePolylineHandlesRef.current, [], approach);
-    } else {
-      updateRoutePolylines(routeLayerRef.current, routePolylineHandlesRef.current, split.traveled, split.remaining);
-    }
+    const remaining = followUserRef.current
+      ? clipRouteAhead(split.remaining, GPS_LOOKAHEAD_METERS)
+      : split.remaining;
+    const remainingLine = remaining.length >= 2 ? remaining : split.remaining;
+    updateRoutePolylines(
+      routeLayerRef.current,
+      routePolylineHandlesRef.current,
+      followUserRef.current ? [] : split.traveled,
+      remainingLine,
+    );
   }, [route, userPos, loading, followUser]);
 
   const handleGpsUpdate = useCallback(
@@ -1973,7 +1975,7 @@ export default function MapNavigationView({
           </div>
 
           {!loading && route && (
-            <div className="min-w-0 min-h-0 pointer-events-auto">
+            <div className="sbn-nav-sheet-dock pointer-events-auto">
               <NavigationDetailsSheet
                 snap={sheetSnap}
                 onSnapChange={setSheetSnap}
