@@ -121,7 +121,7 @@ export default function PublicNav({ route, onNavigate, hideBrandOnLarge = false 
             imgClassName={
               newspaper
                 ? 'h-10 w-10 max-w-[2.5rem] max-h-[2.5rem] object-contain'
-                : 'h-9 w-9 object-contain rounded-xl shrink-0'
+                : 'h-9 w-9 object-contain shrink-0 bg-transparent'
             }
           />
         </button>
