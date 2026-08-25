@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Gift } from 'lucide-react';
-import { APP_LOGO_SRC, SITE_LOGO_SRC, SITE } from '../siteContent';
+import { APP_LOGO_SRC, SITE } from '../siteContent';
 import { NEWSPAPER } from '../preview/newspaperBrand';
 import { useNewspaperSkin } from '../preview/NewspaperSkinContext';
 
@@ -14,30 +14,6 @@ interface BrandLogoProps {
   compact?: boolean;
   /** Show name + tagline beside a crest-sized lockup (mobile header). */
   showTitleBesideLockup?: boolean;
-}
-
-/** Keep the uploaded masthead intact — no square crop, rounding, or extra ink frame. */
-function siteLockupClass(imgClassName: string) {
-  const parts = imgClassName.split(/\s+/).filter(Boolean);
-  const hasExplicitSquareCap =
-    parts.some((p) => p.startsWith('max-h-')) && parts.some((p) => p.startsWith('max-w-'));
-  const next: string[] = [];
-  for (const part of parts) {
-    if (part === 'object-cover') {
-      next.push('object-contain');
-      continue;
-    }
-    if (part.startsWith('rounded-') || part.startsWith('shadow-')) continue;
-    if (!hasExplicitSquareCap && /^w-(7|8|9|10|11|12|16)$/.test(part)) {
-      next.push('w-auto');
-      continue;
-    }
-    next.push(part);
-  }
-  if (!hasExplicitSquareCap && !next.some((p) => p.startsWith('max-w-'))) next.push('max-w-[8.5rem]');
-  if (!next.includes('object-contain')) next.push('object-contain');
-  next.push('tsf-lockup');
-  return next.join(' ');
 }
 
 function BrandTitleBlock({
@@ -69,6 +45,53 @@ function BrandTitleBlock({
   );
 }
 
+/** Text-only newspaper nameplate — no logo artwork on the site. */
+function NewspaperBrandMark({
+  className = '',
+  compact = false,
+  showTitle = false,
+  showTitleBesideLockup = false,
+  tagline,
+}: {
+  className?: string;
+  compact?: boolean;
+  showTitle?: boolean;
+  showTitleBesideLockup?: boolean;
+  tagline: string;
+}) {
+  const displayName = `${NEWSPAPER.the} ${NEWSPAPER.title}`;
+  const [city, free] = NEWSPAPER.title.split(' ');
+
+  if (compact) {
+    return (
+      <div className={`${className} tsf-brand-crest`} aria-hidden="true">
+        <span className="tsf-brand-crest__city">{city}</span>
+        <span className="tsf-brand-crest__free">{free}</span>
+      </div>
+    );
+  }
+
+  if (showTitle || showTitleBesideLockup) {
+    return (
+      <div className={className}>
+        <BrandTitleBlock
+          title={displayName}
+          subtitle={tagline}
+          compact={showTitleBesideLockup}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className={`${className} tsf-nav-wordmark`}>
+      <span className="tsf-nav-wordmark__the">{NEWSPAPER.the}</span>
+      <span className="tsf-nav-wordmark__city">{city}</span>
+      <span className="tsf-nav-wordmark__free">{free}</span>
+    </div>
+  );
+}
+
 export default function BrandLogo({
   className = 'flex items-center gap-2.5 min-w-0',
   imgClassName = 'h-9 w-auto max-w-[140px] object-contain rounded-lg shrink-0',
@@ -79,18 +102,22 @@ export default function BrandLogo({
 }: BrandLogoProps) {
   const [failed, setFailed] = useState(false);
   const { enabled: newspaper } = useNewspaperSkin();
-  const title = newspaper ? NEWSPAPER.name : SITE.name;
+  const title = newspaper ? `${NEWSPAPER.the} ${NEWSPAPER.title}` : SITE.name;
   const tagline = subtitle ?? (newspaper ? NEWSPAPER.tagline : SITE.tagline);
-  const iconOnly = compact;
-  const useSiteLockup = newspaper && !iconOnly;
-  const src = useSiteLockup ? SITE_LOGO_SRC : APP_LOGO_SRC;
-  const logoClass = iconOnly
-    ? 'h-8 w-8 object-cover rounded-lg shrink-0'
-    : useSiteLockup
-      ? siteLockupClass(imgClassName)
-      : imgClassName;
-  // Full lockup art includes the wordmark — skip duplicate text unless crest-only header.
-  const showTitleBlock = showTitle && (!useSiteLockup || showTitleBesideLockup);
+
+  if (newspaper) {
+    return (
+      <NewspaperBrandMark
+        className={className}
+        compact={compact}
+        showTitle={showTitle}
+        showTitleBesideLockup={showTitleBesideLockup}
+        tagline={tagline}
+      />
+    );
+  }
+
+  const showTitleBlock = showTitle;
   const titleCompact = compact || showTitleBesideLockup;
 
   if (failed) {
@@ -107,9 +134,9 @@ export default function BrandLogo({
   return (
     <div className={className}>
       <img
-        src={src}
-        alt={newspaper ? NEWSPAPER.name : 'Sacramento Buy Nothing'}
-        className={logoClass}
+        src={APP_LOGO_SRC}
+        alt="Sacramento Buy Nothing"
+        className={imgClassName}
         onError={() => setFailed(true)}
       />
       {showTitleBlock && <BrandTitleBlock title={title} subtitle={tagline} compact={titleCompact} />}

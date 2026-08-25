@@ -142,14 +142,18 @@ export default function AuthPage({
     <div className="lg:flex lg:min-h-full" id="auth_page_root">
       {/* Brand story panel — desktop/tablet-landscape only */}
       <div className="hidden lg:flex lg:w-[42%] xl:w-[38%] sbn-auth-brand-panel flex-col justify-between p-10 lg:p-12">
-        <div className="relative z-10 flex items-center gap-3">
-          <BrandLogo imgClassName="h-24 w-auto max-w-[220px] object-contain" showTitle={false} />
-          {newspaper ? null : (
+        {!newspaper ? (
+          <div className="relative z-10 flex items-center gap-3">
+            <BrandLogo imgClassName="h-24 w-auto max-w-[220px] object-contain" showTitle={false} />
             <span className="font-display font-bold text-lg text-white">
               Sacramento <span className="text-white/80">Buy Nothing</span>
             </span>
-          )}
-        </div>
+          </div>
+        ) : (
+          <div className="relative z-10">
+            <p className="tsf-auth-panel-wordmark">{NEWSPAPER.the} {NEWSPAPER.title}</p>
+          </div>
+        )}
 
         <div className="relative z-10">
           <h2 className="font-display text-3xl font-bold leading-tight text-white">
