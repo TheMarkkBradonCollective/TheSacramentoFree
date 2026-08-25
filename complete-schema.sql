@@ -656,6 +656,17 @@ CREATE TABLE IF NOT EXISTS public.event_comments (
 ALTER TABLE public.event_comments ENABLE ROW LEVEL SECURITY;
 CREATE INDEX IF NOT EXISTS event_comments_event_idx ON public.event_comments ("eventId");
 
+CREATE TABLE IF NOT EXISTS public.event_votes (
+  "eventId" TEXT NOT NULL,
+  "userId" TEXT NOT NULL,
+  "voteType" TEXT NOT NULL CHECK ("voteType" IN ('up', 'down')),
+  "createdAt" TIMESTAMPTZ DEFAULT NOW(),
+  PRIMARY KEY ("eventId", "userId")
+);
+
+ALTER TABLE public.event_votes ENABLE ROW LEVEL SECURITY;
+CREATE INDEX IF NOT EXISTS event_votes_event_idx ON public.event_votes ("eventId");
+
 -- =========================================================
 -- 17b. Events unlock (500 neighbors)
 -- =========================================================
@@ -1267,6 +1278,7 @@ BEGIN
   DELETE FROM public.event_rsvps WHERE "eventId" = target_event_id;
   DELETE FROM public.event_comments WHERE "eventId" = target_event_id;
   DELETE FROM public.event_views WHERE "eventId" = target_event_id;
+  DELETE FROM public.event_votes WHERE "eventId" = target_event_id;
   DELETE FROM public.community_events WHERE id = target_event_id;
   RETURN true;
 END;
@@ -3385,6 +3397,18 @@ CREATE POLICY "event_rsvps_update" ON public.event_rsvps
 CREATE POLICY "event_rsvps_delete" ON public.event_rsvps
   FOR DELETE USING (auth.uid()::text = "userId");
 
+DROP POLICY IF EXISTS "Allow read event votes" ON public.event_votes;
+DROP POLICY IF EXISTS "Allow write event votes" ON public.event_votes;
+DROP POLICY IF EXISTS "event_votes_select" ON public.event_votes;
+DROP POLICY IF EXISTS "event_votes_write_own" ON public.event_votes;
+
+CREATE POLICY "event_votes_select" ON public.event_votes
+  FOR SELECT USING (auth.uid() IS NOT NULL);
+
+CREATE POLICY "event_votes_write_own" ON public.event_votes
+  FOR ALL USING (auth.uid()::text = "userId")
+  WITH CHECK (auth.uid()::text = "userId");
+
 DROP POLICY IF EXISTS "Allow read event comments" ON public.event_comments;
 DROP POLICY IF EXISTS "Allow write event comments" ON public.event_comments;
 DROP POLICY IF EXISTS "event_comments_select" ON public.event_comments;
@@ -4247,6 +4271,7 @@ BEGIN
     'community_events',
     'event_rsvps',
     'event_comments',
+    'event_votes',
     'director_message',
     'staff_messages',
     'staff_applications',

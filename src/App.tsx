@@ -2727,8 +2727,12 @@ export default function App() {
                   currentUserId={userProfile.uid}
                   userProfile={userProfile}
                   rsvpState={eventsEngagement.getRsvpsForEvent(detailEvent.id)}
+                  voteState={eventsEngagement.getVotesForEvent(detailEvent.id)}
                   comments={eventsEngagement.getCommentsForEvent(detailEvent.id)}
                   getOccurrenceRsvps={eventsEngagement.getRsvpsForEvent}
+                  onVote={(direction) =>
+                    eventsEngagement.handleVote(detailEvent.id, detailEvent.userId, direction)
+                  }
                   onRsvp={(status) =>
                     eventsEngagement.handleRsvp(
                       detailEvent.id,

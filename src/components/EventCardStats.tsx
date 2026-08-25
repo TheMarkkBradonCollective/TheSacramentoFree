@@ -1,8 +1,9 @@
-import { Check, Eye, MessageSquare } from 'lucide-react';
+import { ChevronDown, ChevronUp, Eye, MessageSquare } from 'lucide-react';
 import { formatListingViewCount } from './ListingViewBadge';
 
 interface EventCardEngagementProps {
-  goingCount: number;
+  upvotes: number;
+  downvotes: number;
   commentCount: number;
 }
 
@@ -16,13 +17,23 @@ function statItemClass(variant: 'overlay' | 'inline'): string {
     : 'inline-flex items-center gap-0.5 shrink-0 tabular-nums';
 }
 
-/** RSVP + comment counts on grid event thumbnails — each stat hidden at zero. */
-export function EventCardEngagementOverlay({ goingCount, commentCount }: EventCardEngagementProps) {
+/** Vote + comment counts on grid event thumbnails — each stat hidden at zero. */
+export function EventCardEngagementOverlay({
+  upvotes,
+  downvotes,
+  commentCount,
+}: EventCardEngagementProps) {
   const items = [
-    goingCount > 0 ? (
-      <span key="going" className={statItemClass('overlay')} aria-label={`${goingCount} going`} title="Going">
-        <Check className="h-3 w-3 shrink-0" aria-hidden />
-        {goingCount}
+    upvotes > 0 ? (
+      <span key="up" className={statItemClass('overlay')} aria-label={`${upvotes} upvotes`} title="Upvotes">
+        <ChevronUp className="h-3 w-3 shrink-0" aria-hidden />
+        {upvotes}
+      </span>
+    ) : null,
+    downvotes > 0 ? (
+      <span key="down" className={statItemClass('overlay')} aria-label={`${downvotes} downvotes`} title="Downvotes">
+        <ChevronDown className="h-3 w-3 shrink-0" aria-hidden />
+        {downvotes}
       </span>
     ) : null,
     commentCount > 0 ? (
@@ -43,7 +54,7 @@ export function EventCardEngagementOverlay({ goingCount, commentCount }: EventCa
 }
 
 /** Event stats on list cards — each stat hidden at zero. */
-export function EventCardStatsInline({ viewCount, goingCount, commentCount }: EventCardStatsProps) {
+export function EventCardStatsInline({ viewCount, upvotes, downvotes, commentCount }: EventCardStatsProps) {
   return (
     <>
       {viewCount > 0 ? (
@@ -52,10 +63,16 @@ export function EventCardStatsInline({ viewCount, goingCount, commentCount }: Ev
           {formatListingViewCount(viewCount)}
         </span>
       ) : null}
-      {goingCount > 0 ? (
-        <span className={statItemClass('inline')} aria-label={`${goingCount} going`} title="Going">
-          <Check className="h-3 w-3 shrink-0 text-muted" aria-hidden />
-          {goingCount}
+      {upvotes > 0 ? (
+        <span className={statItemClass('inline')} aria-label={`${upvotes} upvotes`} title="Upvotes">
+          <ChevronUp className="h-3 w-3 shrink-0 text-muted" aria-hidden />
+          {upvotes}
+        </span>
+      ) : null}
+      {downvotes > 0 ? (
+        <span className={statItemClass('inline')} aria-label={`${downvotes} downvotes`} title="Downvotes">
+          <ChevronDown className="h-3 w-3 shrink-0 text-muted" aria-hidden />
+          {downvotes}
         </span>
       ) : null}
       {commentCount > 0 ? (

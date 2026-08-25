@@ -72,8 +72,8 @@ export default function EventCard({
   const inactive = isCancelled || isPast;
   const isStaffViewer = isStaffActingOfficial(userProfile);
   const rsvpState = engagement.getRsvpsForEvent(event.id);
+  const voteState = engagement.getVotesForEvent(event.id);
   const comments = engagement.getCommentsForEvent(event.id);
-  const goingCount = rsvpState.going;
   const commentCount = comments.length;
   const coverImage = event.imageUrl;
   const showSeriesBadge = isSeriesEvent(event) && (seriesUpcomingCount ?? 0) > 1;
@@ -107,7 +107,11 @@ export default function EventCard({
               <span className="sbn-badge sbn-badge-give text-[9px] py-0.5 shadow-sm">Event</span>
             </div>
             <ListingViewBadge count={event.viewCount ?? 0} />
-            <EventCardEngagementOverlay goingCount={goingCount} commentCount={commentCount} />
+            <EventCardEngagementOverlay
+              upvotes={voteState.upvotes}
+              downvotes={voteState.downvotes}
+              commentCount={commentCount}
+            />
           </div>
           <div className="item-feed-tile__body p-2">
             <h3 className="font-display text-xs font-bold text-app leading-snug line-clamp-2">{event.title}</h3>
@@ -203,7 +207,8 @@ export default function EventCard({
             </span>
             <EventCardStatsInline
               viewCount={event.viewCount ?? 0}
-              goingCount={goingCount}
+              upvotes={voteState.upvotes}
+              downvotes={voteState.downvotes}
               commentCount={commentCount}
             />
           </div>
@@ -212,8 +217,10 @@ export default function EventCard({
             <EventEngagement
               hostUserId={event.userId}
               currentUserId={currentUserId}
+              voteState={voteState}
               rsvpState={rsvpState}
               comments={comments}
+              onVote={(direction) => engagement.handleVote(event.id, event.userId, direction)}
               onRsvp={(status) => engagement.handleRsvp(event.id, event.userId, status, isPast)}
               onAddComment={() => {}}
               variant="card"

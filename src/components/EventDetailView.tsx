@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { ArrowLeft, Calendar, Check, HelpCircle, LifeBuoy, MapPin, MessageSquare, Pencil, Repeat, UserCheck, UserX, X } from 'lucide-react';
 import { CommunityEvent, EventComment, EventRsvpStatus, UserProfile } from '../types';
 import { EventRsvpState } from '../hooks/useEventsEngagement';
+import { PostVoteState } from '../hooks/useItemsEngagement';
 import EventEngagement from './EventEngagement';
 import EventPinAdjustModal from './EventPinAdjustModal';
 import StaffEventActions from './StaffEventActions';
@@ -30,7 +31,9 @@ interface EventDetailViewProps {
   currentUserId: string;
   userProfile?: UserProfile;
   rsvpState: EventRsvpState;
+  voteState: PostVoteState;
   comments: EventComment[];
+  onVote: (direction: 'up' | 'down') => void;
   onRsvp: (status: EventRsvpStatus) => void;
   onAddComment: (text: string) => void;
   onDeleteComment?: (commentId: string) => void;
@@ -87,7 +90,9 @@ export default function EventDetailView({
   currentUserId,
   userProfile,
   rsvpState,
+  voteState,
   comments,
+  onVote,
   onRsvp,
   onAddComment,
   onDeleteComment,
@@ -417,8 +422,10 @@ export default function EventDetailView({
           <EventEngagement
             hostUserId={event.userId}
             currentUserId={currentUserId}
+            voteState={voteState}
             rsvpState={rsvpState}
             comments={comments}
+            onVote={onVote}
             onRsvp={onRsvp}
             onAddComment={onAddComment}
             onDeleteComment={onDeleteComment}

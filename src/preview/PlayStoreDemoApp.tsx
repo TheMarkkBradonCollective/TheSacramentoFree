@@ -140,8 +140,12 @@ export default function PlayStoreDemoApp() {
               currentUserId={profile.uid}
               userProfile={profile}
               rsvpState={eventsEngagement.getRsvpsForEvent(detailEvent.id)}
+              voteState={eventsEngagement.getVotesForEvent(detailEvent.id)}
               comments={eventsEngagement.getCommentsForEvent(detailEvent.id)}
               getOccurrenceRsvps={eventsEngagement.getRsvpsForEvent}
+              onVote={(direction) =>
+                eventsEngagement.handleVote(detailEvent.id, detailEvent.userId, direction)
+              }
               onRsvp={(status) => eventsEngagement.handleRsvp(detailEvent.id, detailEvent.userId, status)}
               onAddComment={(text) => eventsEngagement.handleAddComment(detailEvent.id, text)}
               onClose={() => setDetailEvent(null)}

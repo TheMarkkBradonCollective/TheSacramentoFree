@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
-import { Check, Flag, HelpCircle, MessageSquare, Trash2, UserCheck, UserX, X } from 'lucide-react';
+import { Check, ChevronDown, ChevronUp, Flag, HelpCircle, MessageSquare, Trash2, UserCheck, UserX, X } from 'lucide-react';
 import { EventComment, EventRsvpStatus, UserProfile } from '../types';
 import ReportNeighborModal from './ReportNeighborModal';
 import { EventRsvpState } from '../hooks/useEventsEngagement';
+import { PostVoteState } from '../hooks/useItemsEngagement';
 import { effectivePastRsvp } from '../lib/eventRsvp';
 import RoleBadge from './RoleBadge';
 import { isStaffActingOfficial } from '../lib/staffInteractionMode';
@@ -15,8 +16,10 @@ import { confirmRemoveComment } from '../lib/destructiveConfirm';
 interface EventEngagementProps {
   hostUserId: string;
   currentUserId: string;
+  voteState: PostVoteState;
   rsvpState: EventRsvpState;
   comments: EventComment[];
+  onVote: (direction: 'up' | 'down') => void;
   onRsvp: (status: EventRsvpStatus) => void;
   onAddComment: (text: string) => void;
   onDeleteComment?: (commentId: string) => void;
@@ -45,8 +48,10 @@ const PAST_RSVP_OPTIONS: { status: EventRsvpStatus; label: string; icon: typeof 
 export default function EventEngagement({
   hostUserId,
   currentUserId,
+  voteState,
   rsvpState,
   comments,
+  onVote,
   onRsvp,
   onAddComment,
   onDeleteComment,
@@ -60,7 +65,10 @@ export default function EventEngagement({
   hideRsvp = false,
 }: EventEngagementProps) {
   const DETAIL_PREVIEW_COUNT = 5;
+  const isHost = hostUserId === currentUserId;
   const { userRsvp, going, maybe, notGoing, gone, missed } = rsvpState;
+  const { userVote, upvotes, downvotes } = voteState;
+  const netScore = upvotes - downvotes;
   const [showAllComments, setShowAllComments] = useState(false);
   const [reportTarget, setReportTarget] = useState<{ userId: string; userName: string } | null>(null);
   const commenterInfo = useUserDisplayInfo(comments.map((comment) => comment.userId), userProfile);
@@ -92,6 +100,15 @@ export default function EventEngagement({
         : 'border-app text-muted hover:border-accent'
     }`;
 
+  const voteBtnClass = (active: boolean, disabled: boolean) =>
+    `flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
+      disabled
+        ? 'opacity-50 cursor-not-allowed border-app text-muted'
+        : active
+          ? 'bg-accent-soft border-accent text-accent'
+          : 'border-app text-muted hover:border-accent'
+    }`;
+
   const countForStatus = (status: EventRsvpStatus): number => {
     if (status === 'going') return going;
     if (status === 'maybe') return maybe;
@@ -106,20 +123,56 @@ export default function EventEngagement({
       {variant === 'detail' && (
         <h3 className="text-xs font-semibold text-muted uppercase tracking-wide">
           {hideRsvp
-            ? commentsLocked
-              ? 'Discussion'
-              : 'Discussion'
+            ? 'Community'
             : commentsLocked
               ? isPast
-                ? 'Attendance'
-                : 'RSVP'
+                ? 'Community & attendance'
+                : 'Community & RSVP'
               : isPast
-                ? 'Attendance & discussion'
-                : 'RSVP & discussion'}
+                ? 'Community, attendance & discussion'
+                : 'Community, RSVP & discussion'}
         </h3>
       )}
 
       <div className={`flex flex-wrap items-center gap-1.5 sm:gap-2 min-w-0 ${variant === 'card' ? 'mt-1' : ''}`}>
+        <button
+          type="button"
+          disabled={isHost}
+          onClick={() => onVote('up')}
+          className={voteBtnClass(userVote === 'up', isHost)}
+          title={isHost ? "You can't vote on your own event" : 'Interested'}
+        >
+          <ChevronUp className="w-3.5 h-3.5" />
+          {upvotes}
+        </button>
+        <span className="text-xs font-bold text-app min-w-[1.5rem] text-center">
+          {netScore > 0 ? `+${netScore}` : netScore}
+        </span>
+        <button
+          type="button"
+          disabled={isHost}
+          onClick={() => onVote('down')}
+          className={`flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
+            isHost
+              ? 'opacity-50 cursor-not-allowed border-app text-muted'
+              : userVote === 'down'
+                ? 'bg-inset border-app text-app'
+                : 'border-app text-muted hover:border-app'
+          }`}
+          title={isHost ? "You can't vote on your own event" : 'Not for me'}
+        >
+          <ChevronDown className="w-3.5 h-3.5" />
+          {downvotes}
+        </button>
+        {variant === 'card' && comments.length > 0 && (
+          <span className="ml-auto text-xs text-muted flex items-center gap-1">
+            <MessageSquare className="w-3.5 h-3.5" />
+            {comments.length}
+          </span>
+        )}
+      </div>
+
+      <div className={`flex flex-wrap items-center gap-1.5 sm:gap-2 min-w-0 ${variant === 'card' ? 'mt-1' : 'pt-1 border-t border-app'}`}>
         {!rsvpDisabled && !hideRsvp &&
           rsvpOptions.map(({ status, label, icon: Icon }) => {
           const count = countForStatus(status);
@@ -139,12 +192,6 @@ export default function EventEngagement({
         })}
         {rsvpDisabled && variant === 'detail' && (
           <p className="text-xs text-muted italic">RSVPs are closed for cancelled events.</p>
-        )}
-        {variant === 'card' && (
-          <span className="ml-auto text-xs text-muted flex items-center gap-1">
-            <MessageSquare className="w-3.5 h-3.5" />
-            {comments.length}
-          </span>
         )}
         {variant === 'detail' && !commentsLocked && (
           <span className="ml-auto text-xs text-muted flex items-center gap-1">

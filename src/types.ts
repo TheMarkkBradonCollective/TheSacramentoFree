@@ -641,6 +641,12 @@ export interface EventRsvp {
   updatedAt?: any;
 }
 
+export interface EventVote {
+  eventId: string;
+  userId: string;
+  voteType: 'up' | 'down';
+}
+
 export interface EventComment {
   id: string;
   eventId: string;
