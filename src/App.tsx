@@ -113,12 +113,12 @@ import GoGetFirstRunPrompt from './components/goget/GoGetFirstRunPrompt';
 import NotificationsFirstRunPrompt from './components/NotificationsFirstRunPrompt';
 import { App as CapacitorApp } from '@capacitor/app';
 import { isNativeApp } from './lib/nativePlatform';
+import { signOutCurrentClient } from './lib/clientSignOut';
 import { applyUserPreferencesToDevice, mergeStoredAppPreferencesIntoProfile } from './lib/appPreferences';
 import { mergeProfileFromDbRead } from './lib/profilePersistence';
 import { subscribePostgresChanges } from './lib/supabaseRealtime';
 import {
   clearLocalNativeSessionId,
-  clearRemoteNativeAppSession,
   registerNativeAppSession,
   subscribeNativeAppSessionGuard,
   verifyNativeAppSession,
@@ -1448,24 +1448,17 @@ export default function App() {
   const handleLogOut = async () => {
     const signedOutUserId =
       userProfile?.uid || sessionUser?.id || lastSignedInUserIdRef.current;
-    if (signedOutUserId) {
-      clearLocalNativeSessionId(signedOutUserId);
-      try {
-        await clearRemoteNativeAppSession(signedOutUserId);
-      } catch (err) {
-        console.warn('Could not clear native session on sign-out:', err);
-      }
-    }
     try {
       logoutCleanupDoneRef.current = true;
       await clearNotificationDataOnLogout(signedOutUserId);
-      const { error } = await supabase.auth.signOut();
+      const { error } = await signOutCurrentClient(signedOutUserId);
       if (error) {
         console.warn('Sign-out did not complete cleanly:', error.message);
         void alert({
-          title: 'Signed out on this device',
-          message:
-            'The server sign-out did not finish. You are signed out here. If this device still looks signed in after a refresh, try again.',
+          title: isNativeApp() ? 'Signed out on this device' : 'Signed out in browser',
+          message: isNativeApp()
+            ? 'The server sign-out did not finish. You are signed out here. If this device still looks signed in after a refresh, try again.'
+            : 'You are signed out in this browser. The Android app on your phone should stay signed in. If the website still looks signed in after a refresh, try again.',
         });
       }
     } catch (err) {
