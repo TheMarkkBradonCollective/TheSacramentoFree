@@ -1,19 +1,21 @@
 import type { LatLng } from './mapRoute';
 import { haversineMeters } from './mapRoute';
-import { bearingAlongRoute, bearingDegrees, headingDeltaDegrees, smoothHeadingDegrees } from './navigationRoute';
+import { bearingAlongRoute, bearingDegrees, headingDeltaDegrees } from './navigationRoute';
 import type { NavTravelMode } from './navigationSettings';
 
 export interface NavHeadingInput {
   previous: number;
-  gpsHeading: number | null | undefined;
   lastPosition: LatLng | null;
   currentPosition: LatLng;
   routeCoords: [number, number][] | null | undefined;
-  compassHeading: number | null;
-  speedMps: number | null | undefined;
-  travelMode: NavTravelMode;
+  gpsHeading?: number | null | undefined;
+  compassHeading?: number | null;
+  speedMps?: number | null | undefined;
+  travelMode?: NavTravelMode;
   /** Distance from the user to the route polyline. On-route locks to the street. */
   offRouteMeters?: number | null;
+  /** When true, device compass may steer the arrow (Navigation settings). */
+  usePhoneCompass?: boolean;
 }
 
 /** Ignore heading noise smaller than this — keeps the arrow on the street. */
@@ -22,8 +24,6 @@ export const NAV_HEADING_HOLD_DEG = 28;
 export const NAV_HEADING_DRAMATIC_DEG = 48;
 /** Stay glued to the route tangent inside this offset. */
 export const NAV_HEADING_ON_ROUTE_M = 32;
-/** Movement bearing needs this much travel so GPS jitter cannot aim catty-corner. */
-const MOVEMENT_MIN_METERS = 6;
 
 function finiteHeading(value: number | null | undefined): number | null {
   if (value == null || Number.isNaN(value) || value < 0) return null;
@@ -45,29 +45,40 @@ export function compassHeadingFromEvent(event: DeviceOrientationEvent): number |
   return (360 - event.alpha) % 360;
 }
 
-function settleToward(previous: number, target: number, dramatic: boolean): number {
+function settleToward(previous: number, target: number, _dramatic: boolean): number {
   const delta = absHeadingDelta(previous, target);
+  // Hold tiny wiggles on straightaways; let the display layer ease real turns.
   if (delta < NAV_HEADING_HOLD_DEG) return previous;
-  if (dramatic || delta >= NAV_HEADING_DRAMATIC_DEG) {
-    return smoothHeadingDegrees(previous, target, 62);
-  }
-  return smoothHeadingDegrees(previous, target, 10);
+  return target;
+}
+
+function movementMinMeters(speedMps: number): number {
+  if (speedMps < 0.6) return 3;
+  if (speedMps < 1.8) return 4;
+  return 5;
+}
+
+function movementBearing(
+  lastPosition: LatLng | null,
+  currentPosition: LatLng,
+  speedMps: number,
+): number | null {
+  if (!lastPosition) return null;
+  const movedMeters = haversineMeters(lastPosition, currentPosition);
+  const minMeters = movementMinMeters(speedMps);
+  if (movedMeters < minMeters) return null;
+  return finiteHeading(bearingDegrees(lastPosition, currentPosition));
 }
 
 /**
- * Keep the puck on the street. GPS/compass wiggles are ignored unless the user
- * actually turns (route tangent jumps, or they leave the road).
+ * Resolve map / live-location heading. Default is movement + route geometry.
+ * Phone compass is only used when `usePhoneCompass` is enabled in GPS settings.
  */
 export function resolveNavHeading(input: NavHeadingInput): number {
   const speed = input.speedMps != null && Number.isFinite(input.speedMps) ? Math.max(0, input.speedMps) : 0;
   const gpsHeading = finiteHeading(input.gpsHeading);
-  const compass = finiteHeading(input.compassHeading);
-  const movedMeters =
-    input.lastPosition != null ? haversineMeters(input.lastPosition, input.currentPosition) : 0;
-  const movement =
-    input.lastPosition && speed >= 1.2 && movedMeters >= MOVEMENT_MIN_METERS
-      ? finiteHeading(bearingDegrees(input.lastPosition, input.currentPosition))
-      : null;
+  const compass = input.usePhoneCompass ? finiteHeading(input.compassHeading) : null;
+  const movement = movementBearing(input.lastPosition, input.currentPosition, speed);
   const alongRoute =
     input.routeCoords && input.routeCoords.length >= 2
       ? finiteHeading(bearingAlongRoute(input.routeCoords, input.currentPosition))
@@ -81,27 +92,77 @@ export function resolveNavHeading(input: NavHeadingInput): number {
     return settleToward(input.previous, alongRoute, streetTurn >= NAV_HEADING_DRAMATIC_DEG);
   }
 
-  const walkingOrBiking = input.travelMode !== 'driving';
-  const movingFast = speed >= (walkingOrBiking ? 2.4 : 2.0);
+  const walkingOrBiking = input.travelMode != null && input.travelMode !== 'driving';
+  const gpsCourseMinSpeed = walkingOrBiking ? 0.8 : 1.2;
 
   let target = input.previous;
-  if (movingFast && movement != null) {
+  if (movement != null) {
     target = movement;
-  } else if (movingFast && gpsHeading != null) {
+  } else if (gpsHeading != null && speed >= gpsCourseMinSpeed) {
     target = gpsHeading;
-  } else if (offRoute && gpsHeading != null && speed >= 1.4) {
-    target = gpsHeading;
-  } else if (offRoute && compass != null) {
-    target = compass;
   } else if (alongRoute != null) {
     target = alongRoute;
   } else if (compass != null) {
     target = compass;
-  } else if (gpsHeading != null) {
-    target = gpsHeading;
   }
 
   return settleToward(input.previous, target, false);
+}
+
+export type NavHeadingTracker = {
+  setCompassHeading: (heading: number | null) => void;
+  reset: (position?: LatLng | null) => void;
+  update: (input: Omit<NavHeadingInput, 'previous' | 'lastPosition' | 'compassHeading'>) => number;
+  readonly heading: number;
+};
+
+export function createNavHeadingTracker(initialHeading = 0): NavHeadingTracker {
+  let previous = initialHeading;
+  let lastPosition: LatLng | null = null;
+  let compassHeading: number | null = null;
+
+  return {
+    setCompassHeading(heading) {
+      compassHeading = heading;
+    },
+    reset(position = null) {
+      lastPosition = position;
+      if (position) previous = initialHeading;
+    },
+    update(input) {
+      const next = resolveNavHeading({
+        ...input,
+        previous,
+        lastPosition,
+        compassHeading,
+      });
+      lastPosition = input.currentPosition;
+      previous = next;
+      return next;
+    },
+    get heading() {
+      return previous;
+    },
+  };
+}
+
+export function headingFromGeolocation(
+  tracker: NavHeadingTracker,
+  position: GeolocationPosition,
+  options: Partial<
+    Omit<NavHeadingInput, 'previous' | 'lastPosition' | 'currentPosition' | 'compassHeading' | 'gpsHeading' | 'speedMps'>
+  > = {},
+): number {
+  return tracker.update({
+    routeCoords: null,
+    ...options,
+    currentPosition: {
+      lat: position.coords.latitude,
+      lng: position.coords.longitude,
+    },
+    gpsHeading: position.coords.heading,
+    speedMps: position.coords.speed,
+  });
 }
 
 export async function requestCompassPermission(): Promise<boolean> {

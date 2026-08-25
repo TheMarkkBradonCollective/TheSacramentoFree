@@ -610,6 +610,8 @@ export type PushEventType =
   | 'go_get_completed'
   | 'go_get_cancelled'
   | 'go_get_ring_expired'
+  | 'go_get_expired'
+  | 'go_get_declined'
   | 'go_get_disputed'
   | 'violation_filed'
   | 'violation_decision'

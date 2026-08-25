@@ -458,11 +458,12 @@ export async function validateClientPush(
     case 'go_get_fulfiller_ready':
     case 'go_get_started':
     case 'go_get_approaching':
-    case 'on_the_way':
     case 'go_get_arrived':
     case 'go_get_completed':
     case 'go_get_cancelled':
     case 'go_get_ring_expired':
+    case 'go_get_expired':
+    case 'go_get_declined':
     case 'go_get_disputed':
       return resolveGoGetSessionRecipient(callerId, body);
 

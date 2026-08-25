@@ -1,5 +1,14 @@
 import { supabase, buildDmChatId, getOrCreateSupabaseChat, createSupabaseMessage, staffGetListingById, getSupabaseProfile, markItemFulfilledFromChat, markTradeCompletedFromChat, recordGiveawayPickupFromGoGet } from '../supabase';
-import type { GoGetFulfillerLiveLocation, GoGetHandshakeMode, GoGetLiveLocation, GoGetSession, GoGetSessionStatus, ItemPost, UserProfile } from '../types';
+import type { CoordinationMode, GoGetFulfillerLiveLocation, GoGetHandshakeMode, GoGetLiveLocation, GoGetSession, GoGetSessionStatus, ItemPost, UserProfile } from '../types';
+import {
+  coordinationModeFromItem,
+  handshakeModeForCoordination,
+  pickupStartActionForItem,
+} from './pickupEngine';
+import {
+  canPerformPickupAction,
+  type PickupTransitionAction,
+} from './pickupStateMachine';
 import { isPlayStoreDemo } from '../preview/playStoreDemo';
 import {
   getPlayStoreDemoActiveGoGetSession,
@@ -28,7 +37,11 @@ export function isInstantClaimCategory(category: string): boolean {
 }
 
 export function goGetHandshakeModeForItem(item: Pick<ItemPost, 'type' | 'category'>): GoGetHandshakeMode {
-  return item.type === 'giveaway' && isInstantClaimCategory(item.category) ? 'instant' : 'availability';
+  return handshakeModeForCoordination(coordinationModeFromItem(item));
+}
+
+export function coordinationModeForItem(item: Pick<ItemPost, 'type' | 'category'>): CoordinationMode {
+  return coordinationModeFromItem(item);
 }
 
 const TERMINAL_STATUSES: GoGetSessionStatus[] = ['completed', 'cancelled', 'expired', 'disputed'];
@@ -75,6 +88,7 @@ function normalizeGoGetSession(row: Record<string, unknown>): GoGetSession {
     requesterName: str(row.requesterName, 'Neighbor'),
     chatId: str(row.chatId),
     handshakeMode: (str(row.handshakeMode, 'availability') as GoGetHandshakeMode) || 'availability',
+    coordinationMode: (nullableStr(row.coordinationMode) as CoordinationMode | null) || undefined,
     status: (str(row.status, 'awaiting_availability') as GoGetSessionStatus) || 'awaiting_availability',
     destinationLat: num(row.destinationLat),
     destinationLng: num(row.destinationLng),
@@ -91,10 +105,12 @@ function normalizeGoGetSession(row: Record<string, unknown>): GoGetSession {
     cancelReason: nullableStr(row.cancelReason),
     fulfillerSharingLocation: row.fulfillerSharingLocation === true,
     ringExpiresAt: nullableStr(row.ringExpiresAt),
+    ringStartedAt: nullableStr(row.ringStartedAt),
     ringDurationSeconds: nullableNum(row.ringDurationSeconds),
     onTheWayNotifiedAt: nullableStr(row.onTheWayNotifiedAt),
     approachingNotifiedAt: nullableStr(row.approachingNotifiedAt),
     ringExpiredNotifiedAt: nullableStr(row.ringExpiredNotifiedAt),
+    readyWindowMinutes: nullableNum(row.readyWindowMinutes),
     createdAt: str(row.createdAt, new Date().toISOString()),
     updatedAt: str(row.updatedAt, new Date().toISOString()),
   };
@@ -171,6 +187,8 @@ export async function getGoGetSessionById(sessionId: string): Promise<GoGetSessi
 
 const LOCK_QUERY_STATUSES: GoGetSessionStatus[] = [
   'awaiting_availability',
+  'awaiting_schedule',
+  'window_offered',
   'scheduled',
   'active',
   'arrived',
@@ -256,6 +274,12 @@ export async function createGoGetSession(
   if (fulfillerUserId === requesterUserId) {
     return { ok: false, errorMessage: 'You cannot Go Get your own listing.' };
   }
+  if (item.status !== 'active') {
+    return { ok: false, errorMessage: 'This listing is no longer available.' };
+  }
+  if (pickupStartActionForItem(item) === 'navigate_only') {
+    return { ok: false, errorMessage: 'Curb alerts are first-come — navigate to the pin instead of starting a coordinated pickup.' };
+  }
 
   // Device + notification gate for whoever is creating the session (signed-in user).
   const { data: authData } = await supabase.auth.getSession();
@@ -340,6 +364,7 @@ export async function createGoGetSession(
   }
 
   const handshakeMode = goGetHandshakeModeForItem(item);
+  const coordinationMode = coordinationModeFromItem(item);
   const now = new Date().toISOString();
   const instant = handshakeMode === 'instant';
 
@@ -359,18 +384,31 @@ export async function createGoGetSession(
     requesterName,
     chatId,
     handshakeMode,
+    coordinationMode,
     status: instant ? 'active' : 'awaiting_availability',
     destinationLat: destination.lat,
     destinationLng: destination.lng,
     destinationLabel,
     startedAt: instant ? now : null,
+    ringStartedAt: instant ? null : now,
     ringExpiresAt,
     ringDurationSeconds: instant ? null : ringDurationSeconds,
+    readyWindowMinutes: 15,
     createdAt: now,
     updatedAt: now,
   };
 
-  const { error } = await supabase.from('go_get_sessions').insert(payload);
+  let { error } = await supabase.from('go_get_sessions').insert(payload);
+  if (error && /coordinationMode|ringStartedAt|readyWindowMinutes|schema cache|PGRST204/i.test(`${error.code || ''} ${error.message || ''}`)) {
+    const {
+      coordinationMode: _mode,
+      ringStartedAt: _started,
+      readyWindowMinutes: _window,
+      ...legacy
+    } = payload;
+    const retry = await supabase.from('go_get_sessions').insert(legacy);
+    error = retry.error;
+  }
   if (error) {
     if (isMissingTableError(error)) return { ok: false, errorMessage: MISSING_TABLE_MESSAGE };
     return { ok: false, errorMessage: error.message };
@@ -416,30 +454,34 @@ export function isGoGetRingActive(session: GoGetSession): boolean {
 /** Move a timed-out live ring into async scheduling for the requester. */
 export async function expireGoGetRing(
   session: GoGetSession,
+  item?: ItemPost | null,
 ): Promise<Result<{ session: GoGetSession }>> {
-  if (session.status !== 'awaiting_availability') {
-    return { ok: false, errorMessage: 'This request is no longer ringing.' };
-  }
-  if (isGoGetRingActive(session)) {
-    return { ok: false, errorMessage: 'Still waiting for a response.' };
-  }
-  const result = await updateSession(session.id, { status: 'awaiting_schedule' });
+  const result = await applyPickupTransition({
+    session,
+    action: 'expire_ring',
+    fallbackPatch: { status: 'awaiting_schedule' },
+  });
   if (!result.ok || !result.session) return result;
 
-  if (!session.ringExpiredNotifiedAt) {
-    const item = await staffGetListingById(session.itemId);
-    if (item) {
-      await runGoGetPushTask(() =>
-        import('./pushEvents').then((m) =>
-          m.notifyGoGetRingExpired({
-            item,
-            requesterUserId: session.requesterUserId,
-            sessionId: session.id,
-          }),
-        ),
-      );
-      await updateSession(session.id, { ringExpiredNotifiedAt: new Date().toISOString() });
-    }
+  if (!session.ringExpiredNotifiedAt && item) {
+    await createSupabaseMessage(
+      session.chatId,
+      `⏳ No response yet for "${item.title}". You can propose a pickup time.`,
+      session.requesterUserId,
+      `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+      { skipPush: true },
+    );
+    await runGoGetPushTask(() =>
+      import('./pushEvents').then((m) =>
+        m.notifyGoGetExpired({
+          item,
+          requesterUserId: session.requesterUserId,
+          fulfillerName: session.fulfillerName,
+          sessionId: session.id,
+        }),
+      ),
+    );
+    await updateSession(session.id, { ringExpiredNotifiedAt: new Date().toISOString() });
   }
 
   return { ok: true, session: result.session };
@@ -450,14 +492,16 @@ export async function abandonGoGetRing(
   session: GoGetSession,
   reason = 'Listing is no longer available',
 ): Promise<Result<{ session: GoGetSession }>> {
-  if (session.status !== 'awaiting_availability') {
-    return { ok: false, errorMessage: 'This request is no longer ringing.' };
-  }
-  const result = await updateSession(session.id, {
-    status: 'cancelled',
-    cancelledAt: new Date().toISOString(),
-    cancelReason: reason,
-    fulfillerSharingLocation: false,
+  const result = await applyPickupTransition({
+    session,
+    action: 'abandon_ring',
+    payload: { cancelReason: reason },
+    fallbackPatch: {
+      status: 'cancelled',
+      cancelledAt: new Date().toISOString(),
+      cancelReason: reason,
+      fulfillerSharingLocation: false,
+    },
   });
   if (!result.ok || !result.session) return result;
 
@@ -467,6 +511,44 @@ export async function abandonGoGetRing(
     session.fulfillerUserId,
     `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
     { skipPush: true },
+  );
+  return { ok: true, session: result.session };
+}
+
+export async function declineGoGetRing(
+  session: GoGetSession,
+  item: ItemPost,
+): Promise<Result<{ session: GoGetSession }>> {
+  const result = await applyPickupTransition({
+    session,
+    action: 'decline',
+    payload: { cancelReason: 'Not available' },
+    fallbackPatch: {
+      status: 'cancelled',
+      cancelledAt: new Date().toISOString(),
+      cancelledByUserId: session.fulfillerUserId,
+      cancelReason: 'Not available',
+      fulfillerSharingLocation: false,
+    },
+  });
+  if (!result.ok || !result.session) return result;
+
+  await createSupabaseMessage(
+    session.chatId,
+    `❌ ${session.fulfillerName} isn't available for "${item.title}" right now.`,
+    session.fulfillerUserId,
+    `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+    { skipPush: true },
+  );
+  await runGoGetPushTask(() =>
+    import('./pushEvents').then((m) =>
+      m.notifyGoGetDeclined({
+        item,
+        requesterUserId: session.requesterUserId,
+        fulfillerName: session.fulfillerName,
+        sessionId: session.id,
+      }),
+    ),
   );
   return { ok: true, session: result.session };
 }
@@ -493,8 +575,19 @@ export async function requesterProposeScheduledMeet(
   if (!isTimeInSharedAvailability(posterSchedule, requesterSchedule, scheduledAt)) {
     return { ok: false, errorMessage: 'Pick a time when both of you are within your pickup availability.' };
   }
+  if (await userHasConflictingLiveTrip(session.requesterUserId, session.id)) {
+    return { ok: false, errorMessage: 'Finish your current pickup before scheduling another.' };
+  }
+  if (await userHasConflictingLiveTrip(session.fulfillerUserId, session.id)) {
+    return { ok: false, errorMessage: `${session.fulfillerName} is already in an active pickup.` };
+  }
 
-  const result = await updateSession(session.id, { status: 'scheduled', scheduledAt });
+  const result = await applyPickupTransition({
+    session,
+    action: 'propose_schedule',
+    payload: { scheduledAt },
+    fallbackPatch: { status: 'scheduled', scheduledAt },
+  });
   if (!result.ok || !result.session) return result;
 
   const whenLabel = chosen.toLocaleString(undefined, {
@@ -505,7 +598,7 @@ export async function requesterProposeScheduledMeet(
 
   await createSupabaseMessage(
     session.chatId,
-    `📅 ${session.requesterName} scheduled pickup for ${whenLabel}.`,
+    `📅 Pickup scheduled for ${whenLabel}.`,
     session.requesterUserId,
     `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
     { skipPush: true },
@@ -542,19 +635,75 @@ async function updateSession(
   return { ok: true, session: normalizeGoGetSession(data as Record<string, unknown>) };
 }
 
+function isMissingRpcError(error: { code?: string; message?: string } | null | undefined): boolean {
+  if (!error) return false;
+  const text = `${error.code || ''} ${error.message || ''}`;
+  return /PGRST202|function.*transition_go_get_session|schema cache/i.test(text);
+}
+
+async function applyPickupTransition(params: {
+  session: GoGetSession;
+  action: PickupTransitionAction;
+  payload?: Record<string, unknown>;
+  fallbackPatch: Record<string, unknown>;
+}): Promise<Result<{ session: GoGetSession }>> {
+  const { data: authData } = await supabase.auth.getSession();
+  const actorUserId = authData.session?.user?.id || '';
+  const cancelReason =
+    typeof params.payload?.cancelReason === 'string' ? params.payload.cancelReason : undefined;
+  const check = canPerformPickupAction({
+    session: params.session,
+    action: params.action,
+    actorUserId,
+    cancelReason,
+  });
+  if (check.ok === false) return { ok: false, errorMessage: check.error };
+
+  const { data, error } = await supabase.rpc('transition_go_get_session', {
+    p_session_id: params.session.id,
+    p_action: params.action,
+    p_payload: params.payload ?? {},
+  });
+  if (!error && data && typeof data === 'object') {
+    const body = data as { ok?: boolean; error?: string; session?: Record<string, unknown> };
+    if (body.ok === false) return { ok: false, errorMessage: body.error || 'Could not update this pickup.' };
+    if (body.session) return { ok: true, session: normalizeGoGetSession(body.session) };
+  }
+  if (error && !isMissingRpcError(error) && !isMissingTableError(error)) {
+    return { ok: false, errorMessage: error.message };
+  }
+  return updateSession(params.session.id, { ...params.fallbackPatch, status: check.nextStatus });
+}
+
+export async function userHasConflictingLiveTrip(userId: string, exceptSessionId?: string): Promise<boolean> {
+  if (!userId) return false;
+  try {
+    const live: GoGetSessionStatus[] = ['active', 'arrived'];
+    const [asRequester, asFulfiller] = await Promise.all([
+      supabase.from('go_get_sessions').select('id,status').eq('requesterUserId', userId).in('status', live).limit(4),
+      supabase.from('go_get_sessions').select('id,status').eq('fulfillerUserId', userId).in('status', live).limit(4),
+    ]);
+    const rows = [...(asRequester.data ?? []), ...(asFulfiller.data ?? [])];
+    return rows.some((row) => String(row.id) !== exceptSessionId);
+  } catch {
+    return false;
+  }
+}
+
 /** Fulfiller: "Yes, I'm available now" — starts the ready-to-drive state immediately. */
 export async function respondAvailableNow(
   session: GoGetSession,
   item: ItemPost,
 ): Promise<Result<{ session: GoGetSession }>> {
-  if (session.status !== 'awaiting_availability') {
-    return { ok: false, errorMessage: 'This request was already answered.' };
-  }
   const now = new Date().toISOString();
-  const result = await updateSession(session.id, {
-    status: 'scheduled',
-    scheduledAt: now,
-    fulfillerReadyAt: now,
+  const result = await applyPickupTransition({
+    session,
+    action: 'available_now',
+    fallbackPatch: {
+      status: 'scheduled',
+      scheduledAt: now,
+      fulfillerReadyAt: now,
+    },
   });
   if (!result.ok || !result.session) return result;
 
@@ -591,10 +740,15 @@ export async function proposeAvailabilityWindow(
     return { ok: false, errorMessage: 'The end time must be after the start time.' };
   }
 
-  const result = await updateSession(session.id, {
-    status: 'window_offered',
-    availableFrom: window.from,
-    availableUntil: window.until,
+  const result = await applyPickupTransition({
+    session,
+    action: 'propose_window',
+    payload: { availableFrom: window.from, availableUntil: window.until },
+    fallbackPatch: {
+      status: 'window_offered',
+      availableFrom: window.from,
+      availableUntil: window.until,
+    },
   });
   if (!result.ok || !result.session) return result;
 
@@ -639,8 +793,16 @@ export async function pickScheduledTime(
   if (Number.isNaN(chosen) || chosen < from || chosen > until) {
     return { ok: false, errorMessage: 'Pick a time inside the available window.' };
   }
+  if (await userHasConflictingLiveTrip(session.requesterUserId, session.id)) {
+    return { ok: false, errorMessage: 'Finish your current pickup before scheduling another.' };
+  }
 
-  const result = await updateSession(session.id, { status: 'scheduled', scheduledAt });
+  const result = await applyPickupTransition({
+    session,
+    action: 'pick_time',
+    payload: { scheduledAt },
+    fallbackPatch: { status: 'scheduled', scheduledAt },
+  });
   if (!result.ok || !result.session) return result;
 
   const whenLabel = new Date(scheduledAt).toLocaleString(undefined, {
@@ -675,10 +837,11 @@ export async function markFulfillerReady(
   session: GoGetSession,
   item: ItemPost,
 ): Promise<Result<{ session: GoGetSession }>> {
-  if (session.status !== 'scheduled' || session.fulfillerReadyAt) {
-    return { ok: false, errorMessage: 'Nothing to confirm right now.' };
-  }
-  const result = await updateSession(session.id, { fulfillerReadyAt: new Date().toISOString() });
+  const result = await applyPickupTransition({
+    session,
+    action: 'mark_ready',
+    fallbackPatch: { fulfillerReadyAt: new Date().toISOString() },
+  });
   if (!result.ok || !result.session) return result;
 
   await createSupabaseMessage(
@@ -706,11 +869,34 @@ export async function startGoGetTrip(
   session: GoGetSession,
   item: ItemPost,
 ): Promise<Result<{ session: GoGetSession }>> {
-  if (session.status !== 'scheduled' || !session.fulfillerReadyAt) {
-    return { ok: false, errorMessage: `${session.fulfillerName} hasn't confirmed they're ready yet.` };
+  if (item.status !== 'active' && item.status !== 'pending_pickup') {
+    return { ok: false, errorMessage: 'This listing is no longer available.' };
   }
-  const result = await updateSession(session.id, { status: 'active', startedAt: new Date().toISOString() });
+  const { checkLocationPermission, requestLocationPermission } = await import('./systemPermissions');
+  let locationState = await checkLocationPermission();
+  if (locationState === 'prompt') {
+    locationState = await requestLocationPermission();
+  }
+  if (locationState === 'denied') {
+    return { ok: false, errorMessage: 'Location permission is required to start navigation.' };
+  }
+  if (locationState === 'unsupported') {
+    return { ok: false, errorMessage: 'This device cannot start navigation without GPS.' };
+  }
+  const result = await applyPickupTransition({
+    session,
+    action: 'start_trip',
+    fallbackPatch: { status: 'active', startedAt: new Date().toISOString() },
+  });
   if (!result.ok || !result.session) return result;
+
+  await createSupabaseMessage(
+    session.chatId,
+    `📍 ${session.requesterName} started the trip to pick up "${item.title}".`,
+    session.requesterUserId,
+    `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+    { skipPush: true },
+  );
 
   await runGoGetPushTask(() =>
     import('./pushEvents').then((m) =>
@@ -729,11 +915,20 @@ export async function markGoGetArrived(
   session: GoGetSession,
   item: ItemPost,
 ): Promise<Result<{ session: GoGetSession }>> {
-  if (session.status !== 'active') {
-    return { ok: false, errorMessage: 'This trip is not active.' };
-  }
-  const result = await updateSession(session.id, { status: 'arrived', arrivedAt: new Date().toISOString() });
+  const result = await applyPickupTransition({
+    session,
+    action: 'mark_arrived',
+    fallbackPatch: { status: 'arrived', arrivedAt: new Date().toISOString() },
+  });
   if (!result.ok || !result.session) return result;
+
+  await createSupabaseMessage(
+    session.chatId,
+    `📍 ${session.requesterName} arrived for "${item.title}".`,
+    session.requesterUserId,
+    `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+    { skipPush: true },
+  );
 
   await runGoGetPushTask(() =>
     import('./pushEvents').then((m) =>
@@ -784,15 +979,23 @@ export async function completeGoGetItemForSession(
 
 /** Fulfiller confirms the handoff actually happened — separate item-type completion is handled by the caller. */
 export async function confirmGoGetCompletion(session: GoGetSession): Promise<Result<{ session: GoGetSession }>> {
-  if (session.status !== 'arrived') {
-    return { ok: false, errorMessage: 'Nothing to confirm yet.' };
-  }
-  const result = await updateSession(session.id, {
-    status: 'completed',
-    completedAt: new Date().toISOString(),
-    fulfillerSharingLocation: false,
+  const result = await applyPickupTransition({
+    session,
+    action: 'confirm_complete',
+    fallbackPatch: {
+      status: 'completed',
+      completedAt: new Date().toISOString(),
+      fulfillerSharingLocation: false,
+    },
   });
   if (!result.ok || !result.session) return result;
+  await createSupabaseMessage(
+    session.chatId,
+    `✅ Pickup completed.`,
+    session.fulfillerUserId,
+    `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+    { skipPush: true },
+  );
   await clearLiveLocation(session.id);
   await clearFulfillerLiveLocation(session.id);
   return { ok: true, session: result.session };
@@ -803,11 +1006,23 @@ export async function disputeGoGetCompletion(
   session: GoGetSession,
   reason: string,
 ): Promise<Result<{ session: GoGetSession }>> {
-  if (session.status !== 'arrived') {
-    return { ok: false, errorMessage: 'Nothing to dispute yet.' };
-  }
-  const result = await updateSession(session.id, { status: 'disputed', cancelReason: reason, fulfillerSharingLocation: false });
+  const result = await applyPickupTransition({
+    session,
+    action: 'dispute',
+    payload: { cancelReason: reason },
+    fallbackPatch: { status: 'disputed', cancelReason: reason, fulfillerSharingLocation: false },
+  });
   if (!result.ok || !result.session) return result;
+  await runGoGetPushTask(() =>
+    import('./pushEvents').then((m) =>
+      m.notifyGoGetDisputed({
+        sessionId: session.id,
+        recipientUserId: session.requesterUserId,
+        title: 'Pickup reported',
+        body: 'A neighbor reported a problem with this pickup. Moderators will review it.',
+      }),
+    ),
+  );
   await clearLiveLocation(session.id);
   await clearFulfillerLiveLocation(session.id);
   return { ok: true, session: result.session };
@@ -822,12 +1037,17 @@ export async function cancelGoGetSession(
   if (isTerminalGoGetStatus(session.status)) {
     return { ok: false, errorMessage: 'This Go Get is already finished.' };
   }
-  const result = await updateSession(session.id, {
-    status: 'cancelled',
-    cancelledAt: new Date().toISOString(),
-    cancelledByUserId,
-    cancelReason: reason ?? null,
-    fulfillerSharingLocation: false,
+  const result = await applyPickupTransition({
+    session,
+    action: 'cancel',
+    payload: { cancelReason: reason ?? '' },
+    fallbackPatch: {
+      status: 'cancelled',
+      cancelledAt: new Date().toISOString(),
+      cancelledByUserId,
+      cancelReason: reason ?? null,
+      fulfillerSharingLocation: false,
+    },
   });
   if (!result.ok || !result.session) return result;
 

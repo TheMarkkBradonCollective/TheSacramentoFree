@@ -829,6 +829,17 @@ ALTER TABLE public.go_get_sessions ADD COLUMN IF NOT EXISTS "ringDurationSeconds
 ALTER TABLE public.go_get_sessions ADD COLUMN IF NOT EXISTS "onTheWayNotifiedAt" TIMESTAMPTZ;
 ALTER TABLE public.go_get_sessions ADD COLUMN IF NOT EXISTS "approachingNotifiedAt" TIMESTAMPTZ;
 ALTER TABLE public.go_get_sessions ADD COLUMN IF NOT EXISTS "ringExpiredNotifiedAt" TIMESTAMPTZ;
+-- Go Get 2.0 pickup engine (Aug 25, 2026)
+ALTER TABLE public.go_get_sessions ADD COLUMN IF NOT EXISTS "coordinationMode" TEXT NOT NULL DEFAULT 'go_get';
+ALTER TABLE public.go_get_sessions ADD COLUMN IF NOT EXISTS "ringStartedAt" TIMESTAMPTZ;
+ALTER TABLE public.go_get_sessions ADD COLUMN IF NOT EXISTS "readyWindowMinutes" INTEGER NOT NULL DEFAULT 15;
+
+ALTER TABLE public.go_get_sessions DROP CONSTRAINT IF EXISTS go_get_sessions_mode_check;
+ALTER TABLE public.go_get_sessions ADD CONSTRAINT go_get_sessions_mode_check
+  CHECK ("coordinationMode" IN ('go_get', 'curb_alert', 'porch_pickup', 'drop_off', 'meet_up'));
+ALTER TABLE public.go_get_sessions DROP CONSTRAINT IF EXISTS go_get_sessions_ready_window_check;
+ALTER TABLE public.go_get_sessions ADD CONSTRAINT go_get_sessions_ready_window_check
+  CHECK ("readyWindowMinutes" >= 5 AND "readyWindowMinutes" <= 60);
 
 ALTER TABLE public.go_get_sessions DROP CONSTRAINT IF EXISTS go_get_sessions_item_type_check;
 ALTER TABLE public.go_get_sessions ADD CONSTRAINT go_get_sessions_item_type_check
@@ -899,6 +910,254 @@ CREATE TABLE IF NOT EXISTS public.go_get_location_trail (
 ALTER TABLE public.go_get_location_trail ENABLE ROW LEVEL SECURITY;
 
 CREATE INDEX IF NOT EXISTS location_trail_session_idx ON public.go_get_location_trail ("sessionId", "recordedAt" ASC);
+
+-- =========================================================
+-- 20b. Pickup engine — validated session transitions
+-- Clients must not write status directly when this RPC is available.
+-- Live map still uses go_get_live_locations; this trail is oversight only.
+-- =========================================================
+CREATE OR REPLACE FUNCTION public.transition_go_get_session(
+  p_session_id text,
+  p_action text,
+  p_payload jsonb DEFAULT '{}'::jsonb
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  sess public.go_get_sessions%ROWTYPE;
+  actor text := auth.uid()::text;
+  is_staff boolean := public.is_staff();
+  role text;
+  payload jsonb := COALESCE(p_payload, '{}'::jsonb);
+  now_ts timestamptz := NOW();
+  window_mins int;
+  scheduled_ts timestamptz;
+  listing_status text;
+  next_status text;
+BEGIN
+  IF actor IS NULL OR actor = '' THEN
+    RETURN jsonb_build_object('ok', false, 'error', 'Sign in to update this pickup.');
+  END IF;
+
+  SELECT * INTO sess FROM public.go_get_sessions WHERE id = p_session_id FOR UPDATE;
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('ok', false, 'error', 'Pickup session not found.');
+  END IF;
+
+  IF actor = sess."fulfillerUserId" THEN
+    role := 'fulfiller';
+  ELSIF actor = sess."requesterUserId" THEN
+    role := 'requester';
+  ELSIF is_staff THEN
+    role := 'staff';
+  ELSE
+    RETURN jsonb_build_object('ok', false, 'error', 'You are not part of this pickup.');
+  END IF;
+
+  IF sess.status IN ('completed', 'cancelled', 'expired', 'disputed') AND p_action <> 'cancel' THEN
+    RETURN jsonb_build_object('ok', false, 'error', 'This pickup is already finished.');
+  END IF;
+
+  window_mins := COALESCE(sess."readyWindowMinutes", 15);
+
+  IF p_action = 'expire_ring' THEN
+    IF role NOT IN ('requester', 'fulfiller', 'staff') THEN
+      RETURN jsonb_build_object('ok', false, 'error', 'That action is not available for your role.');
+    END IF;
+    IF sess.status <> 'awaiting_availability' THEN
+      RETURN jsonb_build_object('ok', false, 'error', 'This request is no longer ringing.');
+    END IF;
+    IF sess."ringExpiresAt" IS NOT NULL AND now_ts < sess."ringExpiresAt" THEN
+      RETURN jsonb_build_object('ok', false, 'error', 'Still waiting for a response.');
+    END IF;
+    next_status := 'awaiting_schedule';
+
+  ELSIF p_action IN ('abandon_ring', 'decline') THEN
+    IF p_action = 'decline' AND role NOT IN ('fulfiller', 'staff') THEN
+      RETURN jsonb_build_object('ok', false, 'error', 'That action is not available for your role.');
+    END IF;
+    IF sess.status <> 'awaiting_availability' THEN
+      RETURN jsonb_build_object('ok', false, 'error', 'This request is no longer ringing.');
+    END IF;
+    next_status := 'cancelled';
+    sess."cancelledAt" := now_ts;
+    sess."cancelledByUserId" := actor;
+    sess."cancelReason" := COALESCE(payload->>'cancelReason', payload->>'reason', 'Not available');
+    sess."fulfillerSharingLocation" := false;
+
+  ELSIF p_action = 'available_now' THEN
+    IF role NOT IN ('fulfiller', 'staff') THEN
+      RETURN jsonb_build_object('ok', false, 'error', 'That action is not available for your role.');
+    END IF;
+    IF sess.status <> 'awaiting_availability' THEN
+      RETURN jsonb_build_object('ok', false, 'error', 'This request was already answered.');
+    END IF;
+    next_status := 'scheduled';
+    sess."scheduledAt" := now_ts;
+    sess."fulfillerReadyAt" := now_ts;
+
+  ELSIF p_action = 'propose_window' THEN
+    IF role NOT IN ('fulfiller', 'staff') THEN
+      RETURN jsonb_build_object('ok', false, 'error', 'That action is not available for your role.');
+    END IF;
+    IF sess.status <> 'awaiting_availability' THEN
+      RETURN jsonb_build_object('ok', false, 'error', 'This request was already answered.');
+    END IF;
+    IF payload->>'availableFrom' IS NULL OR payload->>'availableUntil' IS NULL THEN
+      RETURN jsonb_build_object('ok', false, 'error', 'Pick a start and end time.');
+    END IF;
+    IF (payload->>'availableUntil')::timestamptz <= (payload->>'availableFrom')::timestamptz THEN
+      RETURN jsonb_build_object('ok', false, 'error', 'The end time must be after the start time.');
+    END IF;
+    next_status := 'window_offered';
+    sess."availableFrom" := (payload->>'availableFrom')::timestamptz;
+    sess."availableUntil" := (payload->>'availableUntil')::timestamptz;
+
+  ELSIF p_action = 'pick_time' THEN
+    IF role NOT IN ('requester', 'staff') THEN
+      RETURN jsonb_build_object('ok', false, 'error', 'That action is not available for your role.');
+    END IF;
+    IF sess.status <> 'window_offered' THEN
+      RETURN jsonb_build_object('ok', false, 'error', 'This pickup is not awaiting a scheduled time.');
+    END IF;
+    scheduled_ts := (payload->>'scheduledAt')::timestamptz;
+    IF scheduled_ts IS NULL THEN
+      RETURN jsonb_build_object('ok', false, 'error', 'Pick a valid time.');
+    END IF;
+    IF sess."availableFrom" IS NOT NULL AND scheduled_ts < sess."availableFrom" THEN
+      RETURN jsonb_build_object('ok', false, 'error', 'Pick a time inside the available window.');
+    END IF;
+    IF sess."availableUntil" IS NOT NULL AND scheduled_ts > sess."availableUntil" THEN
+      RETURN jsonb_build_object('ok', false, 'error', 'Pick a time inside the available window.');
+    END IF;
+    next_status := 'scheduled';
+    sess."scheduledAt" := scheduled_ts;
+
+  ELSIF p_action = 'propose_schedule' THEN
+    IF role NOT IN ('requester', 'staff') THEN
+      RETURN jsonb_build_object('ok', false, 'error', 'That action is not available for your role.');
+    END IF;
+    IF sess.status <> 'awaiting_schedule' THEN
+      RETURN jsonb_build_object('ok', false, 'error', 'This pickup is not awaiting a scheduled time.');
+    END IF;
+    scheduled_ts := (payload->>'scheduledAt')::timestamptz;
+    IF scheduled_ts IS NULL THEN
+      RETURN jsonb_build_object('ok', false, 'error', 'Pick a valid time.');
+    END IF;
+    next_status := 'scheduled';
+    sess."scheduledAt" := scheduled_ts;
+
+  ELSIF p_action = 'mark_ready' THEN
+    IF role NOT IN ('fulfiller', 'staff') THEN
+      RETURN jsonb_build_object('ok', false, 'error', 'That action is not available for your role.');
+    END IF;
+    IF sess.status <> 'scheduled' OR sess."fulfillerReadyAt" IS NOT NULL THEN
+      RETURN jsonb_build_object('ok', false, 'error', 'Nothing to confirm right now.');
+    END IF;
+    IF sess."scheduledAt" IS NOT NULL AND now_ts < (sess."scheduledAt" - make_interval(mins => window_mins)) THEN
+      RETURN jsonb_build_object('ok', false, 'error', 'Too early to mark ready. Wait until the pickup window opens.');
+    END IF;
+    next_status := 'scheduled';
+    sess."fulfillerReadyAt" := now_ts;
+
+  ELSIF p_action = 'start_trip' THEN
+    IF role NOT IN ('requester', 'staff') THEN
+      RETURN jsonb_build_object('ok', false, 'error', 'That action is not available for your role.');
+    END IF;
+    IF sess.status <> 'scheduled' OR sess."fulfillerReadyAt" IS NULL THEN
+      RETURN jsonb_build_object('ok', false, 'error', sess."fulfillerName" || ' hasn''t confirmed they''re ready yet.');
+    END IF;
+    IF sess."scheduledAt" IS NOT NULL AND now_ts < (sess."scheduledAt" - make_interval(mins => window_mins)) THEN
+      RETURN jsonb_build_object('ok', false, 'error', 'Too early to start this pickup.');
+    END IF;
+    SELECT status INTO listing_status FROM public.items WHERE id = sess."itemId";
+    IF listing_status IS NOT NULL AND listing_status NOT IN ('active', 'pending_pickup') THEN
+      RETURN jsonb_build_object('ok', false, 'error', 'This listing is no longer available.');
+    END IF;
+    next_status := 'active';
+    sess."startedAt" := now_ts;
+
+  ELSIF p_action = 'mark_arrived' THEN
+    IF role NOT IN ('requester', 'staff') THEN
+      RETURN jsonb_build_object('ok', false, 'error', 'That action is not available for your role.');
+    END IF;
+    IF sess.status <> 'active' THEN
+      RETURN jsonb_build_object('ok', false, 'error', 'This trip is not active.');
+    END IF;
+    next_status := 'arrived';
+    sess."arrivedAt" := now_ts;
+
+  ELSIF p_action = 'confirm_complete' THEN
+    IF role NOT IN ('fulfiller', 'staff') THEN
+      RETURN jsonb_build_object('ok', false, 'error', 'That action is not available for your role.');
+    END IF;
+    IF sess.status <> 'arrived' THEN
+      RETURN jsonb_build_object('ok', false, 'error', 'Nothing to confirm yet.');
+    END IF;
+    next_status := 'completed';
+    sess."completedAt" := now_ts;
+    sess."fulfillerSharingLocation" := false;
+
+  ELSIF p_action = 'dispute' THEN
+    IF role NOT IN ('requester', 'fulfiller', 'staff') THEN
+      RETURN jsonb_build_object('ok', false, 'error', 'That action is not available for your role.');
+    END IF;
+    IF sess.status <> 'arrived' THEN
+      RETURN jsonb_build_object('ok', false, 'error', 'Nothing to dispute yet.');
+    END IF;
+    next_status := 'disputed';
+    sess."cancelReason" := COALESCE(payload->>'cancelReason', payload->>'reason', 'Disputed');
+    sess."fulfillerSharingLocation" := false;
+
+  ELSIF p_action = 'cancel' THEN
+    IF sess.status IN ('completed', 'cancelled', 'expired', 'disputed') THEN
+      RETURN jsonb_build_object('ok', false, 'error', 'This pickup is already finished.');
+    END IF;
+    IF sess.status IN ('scheduled', 'active', 'arrived')
+       AND NULLIF(btrim(COALESCE(payload->>'cancelReason', '')), '') IS NULL THEN
+      RETURN jsonb_build_object('ok', false, 'error', 'Choose a reason to cancel this pickup.');
+    END IF;
+    next_status := 'cancelled';
+    sess."cancelledAt" := now_ts;
+    sess."cancelledByUserId" := actor;
+    sess."cancelReason" := NULLIF(payload->>'cancelReason', '');
+    sess."fulfillerSharingLocation" := false;
+
+  ELSE
+    RETURN jsonb_build_object('ok', false, 'error', 'Unknown pickup action.');
+  END IF;
+
+  UPDATE public.go_get_sessions SET
+    status = next_status,
+    "availableFrom" = sess."availableFrom",
+    "availableUntil" = sess."availableUntil",
+    "scheduledAt" = sess."scheduledAt",
+    "fulfillerReadyAt" = sess."fulfillerReadyAt",
+    "startedAt" = sess."startedAt",
+    "arrivedAt" = sess."arrivedAt",
+    "completedAt" = sess."completedAt",
+    "cancelledAt" = sess."cancelledAt",
+    "cancelledByUserId" = sess."cancelledByUserId",
+    "cancelReason" = sess."cancelReason",
+    "fulfillerSharingLocation" = sess."fulfillerSharingLocation",
+    "updatedAt" = now_ts
+  WHERE id = sess.id
+  RETURNING * INTO sess;
+
+  IF next_status IN ('completed', 'cancelled', 'expired', 'disputed') THEN
+    DELETE FROM public.go_get_live_locations WHERE "sessionId" = sess.id;
+    DELETE FROM public.go_get_fulfiller_live_locations WHERE "sessionId" = sess.id;
+  END IF;
+
+  RETURN jsonb_build_object('ok', true, 'session', to_jsonb(sess));
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.transition_go_get_session(text, text, jsonb) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.transition_go_get_session(text, text, jsonb) TO authenticated;
 
 CREATE POLICY "location_trail_select" ON public.go_get_location_trail
   FOR SELECT USING (

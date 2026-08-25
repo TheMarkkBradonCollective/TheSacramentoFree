@@ -3,9 +3,7 @@ import { haversineMeters, isRouteInSacramentoServiceArea } from './mapRoute';
 import { apiUrl } from './appOrigin';
 import { lanesFromOsrmIntersections, type NavLane } from './navLanes';
 import type { NavTravelMode } from './navigationSettings';
-
-export type { NavLane };
-export type { NavTravelMode };
+import { buildOsrmRouteUrl, OSRM_MIRROR_ENDPOINTS } from './navigation/osrmProfile';
 
 export interface NavigationStep {
   id: string;
@@ -27,11 +25,8 @@ export interface NavigationRouteResult {
   travelMode: NavTravelMode;
 }
 
-const OSRM_PROFILE_ENDPOINTS: Record<NavTravelMode, readonly string[]> = {
-  driving: ['https://router.project-osrm.org', 'https://routing.openstreetmap.de/routed-car'],
-  cycling: ['https://routing.openstreetmap.de/routed-bike'],
-  walking: ['https://routing.openstreetmap.de/routed-foot'],
-};
+export type { NavLane };
+export type { NavTravelMode };
 
 export function bearingModifierToPhrase(modifier?: string): string | null {
   if (!modifier) return null;
@@ -173,12 +168,12 @@ export async function fetchNavigationRoute(
 
   const coordPath = `${from.lng},${from.lat};${to.lng},${to.lat}`;
 
-  for (const base of OSRM_PROFILE_ENDPOINTS[travelMode]) {
+  for (const base of OSRM_MIRROR_ENDPOINTS[travelMode]) {
     const controller = new AbortController();
     const timeoutId = window.setTimeout(() => controller.abort(), 16_000);
 
     try {
-      const url = `${base}/route/v1/driving/${coordPath}?overview=full&geometries=geojson&steps=true&annotations=false`;
+      const url = buildOsrmRouteUrl(base, coordPath, travelMode, true);
       const res = await fetch(url, { signal: controller.signal, headers: { Accept: 'application/json' } });
       if (!res.ok) continue;
 

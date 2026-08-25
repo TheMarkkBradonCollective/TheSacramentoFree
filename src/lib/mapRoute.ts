@@ -1,5 +1,6 @@
 import { apiUrl } from './appOrigin';
 import { readNavigationSettings, type NavTravelMode } from './navigationSettings';
+import { buildOsrmRouteUrl, OSRM_MIRROR_ENDPOINTS } from './navigation/osrmProfile';
 
 export interface LatLng {
   lat: number;
@@ -39,11 +40,6 @@ export function isRouteInSacramentoServiceArea(from: LatLng, to: LatLng): boolea
   return isLatLngInSacramentoServiceArea(from) && isLatLngInSacramentoServiceArea(to);
 }
 
-const OSRM_PROFILE_ENDPOINTS: Record<NavTravelMode, readonly string[]> = {
-  driving: ['https://router.project-osrm.org', 'https://routing.openstreetmap.de/routed-car'],
-  cycling: ['https://routing.openstreetmap.de/routed-bike'],
-  walking: ['https://routing.openstreetmap.de/routed-foot'],
-};
 
 /** Straight-line distance in meters (Haversine). */
 export function haversineMeters(from: LatLng, to: LatLng): number {
@@ -182,9 +178,9 @@ async function fetchOsrmDirect(
 ): Promise<DrivingRouteResult | null> {
   const coordPath = `${from.lng},${from.lat};${to.lng},${to.lat}`;
 
-  for (const base of OSRM_PROFILE_ENDPOINTS[travelMode]) {
+  for (const base of OSRM_MIRROR_ENDPOINTS[travelMode]) {
     try {
-      const url = `${base}/route/v1/driving/${coordPath}?overview=full&geometries=geojson&steps=false`;
+      const url = buildOsrmRouteUrl(base, coordPath, travelMode, false);
       const res = await fetch(url, { signal, headers: { Accept: 'application/json' } });
       if (!res.ok) continue;
 

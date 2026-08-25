@@ -22,6 +22,8 @@ const NATIVE_PICKUP_PUSH_EVENT_NAMES = new Set<string>([
   'go_get_completed',
   'go_get_cancelled',
   'go_get_ring_expired',
+  'go_get_expired',
+  'go_get_declined',
   'go_get_disputed',
   'contactless_pickup_arrived',
   'contactless_pickup_left',

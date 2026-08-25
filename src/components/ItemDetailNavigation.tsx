@@ -32,6 +32,7 @@ import {
   confirmGoGetCompletion,
   createGoGetSession,
   completeGoGetItemForSession,
+  declineGoGetRing,
   disputeGoGetCompletion,
   getActiveGoGetSession,
   isTerminalGoGetStatus,
@@ -47,6 +48,9 @@ import {
   getFulfillerLiveLocation,
 } from '../lib/goGetSessions';
 import { isGoGetTripLocked } from '../lib/goGetTripLock';
+import { cancelRequiresReason, isWithinReadyWindow } from '../lib/pickupStateMachine';
+import GoGetScheduledCard from './goget/GoGetScheduledCard';
+import CancelPickupDialog from './goget/CancelPickupDialog';
 import { fileGoGetViolation } from '../lib/violations';
 import { getListingSubitems, getSupabaseProfile } from '../supabase';
 import type { GoGetFulfillerLiveLocation, GoGetSession, ListingSubItem } from '../types';
@@ -141,6 +145,7 @@ export default function ItemDetailNavigation({
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [reportOpen, setReportOpen] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
   const [fulfillerLiveLocation, setFulfillerLiveLocation] = useState<GoGetFulfillerLiveLocation | null>(null);
   const [subitems, setSubitems] = useState<ListingSubItem[]>([]);
   const [posterProfile, setPosterProfile] = useState<UserProfile | null>(null);
@@ -499,10 +504,6 @@ export default function ItemDetailNavigation({
           distanceMeters: update.distanceMeters,
         });
       }
-      if (update.arrived && !arrivalHandledRef.current && session.status === 'active') {
-        arrivalHandledRef.current = true;
-        void markGoGetArrived(session, item);
-      }
     },
     [session, item, isContactless],
   );
@@ -553,16 +554,15 @@ export default function ItemDetailNavigation({
     if (result.session) setSession(result.session);
   };
 
-  const handleCancel = async () => {
+  const handleCancel = () => {
     if (!session) return;
-    const confirmed = await confirm({
-      title: 'Cancel Go Get',
-      message: `Cancel this pickup with ${otherUserName}?`,
-      confirmLabel: 'Cancel Go Get',
-      variant: 'danger',
-    });
-    if (!confirmed) return;
-    await run(() => cancelGoGetSession(session, item, currentUserId));
+    setCancelOpen(true);
+  };
+
+  const handleConfirmCancel = async (reason: string) => {
+    if (!session) return;
+    setCancelOpen(false);
+    await run(() => cancelGoGetSession(session, item, currentUserId, reason));
   };
 
   const handleConfirmCompletion = async () => {
@@ -652,10 +652,12 @@ export default function ItemDetailNavigation({
           icon: <Navigation className="w-4 h-4" />,
         });
       } else if (session.status === 'scheduled' && isFulfiller && !session.fulfillerReadyAt) {
-        const timeHasArrived = session.scheduledAt
-          ? new Date(session.scheduledAt).getTime() <= Date.now()
-          : false;
-        if (timeHasArrived) {
+        const readyWindowOpen = isWithinReadyWindow(
+          session.scheduledAt,
+          new Date(),
+          session.readyWindowMinutes ?? 15,
+        );
+        if (readyWindowOpen) {
           actions.push({
             id: 'fulfiller_ready',
             label: "I'm ready",
@@ -808,6 +810,7 @@ export default function ItemDetailNavigation({
               submitting={busy}
               onAvailableNow={() => void run(() => respondAvailableNow(session, item))}
               onProposeWindow={(w) => void run(() => proposeAvailabilityWindow(session, item, w))}
+              onDecline={() => void run(() => declineGoGetRing(session, item))}
             />
           </div>
         );
@@ -874,19 +877,21 @@ export default function ItemDetailNavigation({
     }
 
     if (session.status === 'scheduled') {
-      const whenLabel = session.scheduledAt
-        ? new Date(session.scheduledAt).toLocaleString(undefined, { weekday: 'short', hour: 'numeric', minute: '2-digit' })
-        : '';
-      const timeHasArrived = session.scheduledAt ? new Date(session.scheduledAt).getTime() <= Date.now() : false;
+      const readyWindowOpen = isWithinReadyWindow(session.scheduledAt, new Date(), session.readyWindowMinutes ?? 15);
 
       if (isFulfiller) {
         if (!session.fulfillerReadyAt) {
           return (
-            <div className="sbn-card p-4 space-y-3">
+            <GoGetScheduledCard
+              scheduledAt={session.scheduledAt || ''}
+              locationLabel={session.destinationLabel}
+              otherName={otherUserName}
+              role="fulfiller"
+              ready={false}
+              readyWindowOpen={readyWindowOpen}
+            >
               {errorBanner}
-              <p className="text-sm text-app">Pickup scheduled for <strong>{whenLabel}</strong> with {otherUserName}.</p>
-              {timeHasArrived ? (
-                !pinActionsToFooter ? (
+              {readyWindowOpen && !pinActionsToFooter ? (
                 <button
                   type="button"
                   disabled={busy}
@@ -896,42 +901,51 @@ export default function ItemDetailNavigation({
                   <CheckCircle className="w-4 h-4" />
                   I'm ready
                 </button>
-                ) : null
-              ) : (
-                <p className="text-xs text-muted">Come back at {whenLabel} to confirm you're ready.</p>
-              )}
+              ) : null}
               {cancelLink}
-            </div>
+            </GoGetScheduledCard>
           );
         }
         return (
-          <div className="sbn-card p-4 space-y-2">
+          <GoGetScheduledCard
+            scheduledAt={session.scheduledAt || ''}
+            locationLabel={session.destinationLabel}
+            otherName={otherUserName}
+            role="fulfiller"
+            ready
+            readyWindowOpen={readyWindowOpen}
+          >
             {errorBanner}
-            <p className="text-sm text-app flex items-center gap-2">
-              <Loader2 className="w-4 h-4 animate-spin text-accent" />
-              You're ready — waiting for {otherUserName} to Go Get it.
-            </p>
             {cancelLink}
-          </div>
+          </GoGetScheduledCard>
         );
       }
 
-      // isRequester
       if (!session.fulfillerReadyAt) {
         return (
-          <div className="sbn-card p-4 space-y-2">
+          <GoGetScheduledCard
+            scheduledAt={session.scheduledAt || ''}
+            locationLabel={session.destinationLabel}
+            otherName={otherUserName}
+            role="requester"
+            ready={false}
+            readyWindowOpen={readyWindowOpen}
+          >
             {errorBanner}
-            <p className="text-sm text-app">
-              Pickup scheduled for <strong>{whenLabel}</strong>. Waiting for {otherUserName} to confirm they're ready.
-            </p>
             {cancelLink}
-          </div>
+          </GoGetScheduledCard>
         );
       }
       return (
-        <div className="sbn-card p-4 space-y-3">
+        <GoGetScheduledCard
+          scheduledAt={session.scheduledAt || ''}
+          locationLabel={session.destinationLabel}
+          otherName={otherUserName}
+          role="requester"
+          ready
+          readyWindowOpen={readyWindowOpen}
+        >
           {errorBanner}
-          <p className="text-sm text-app">{otherUserName} is ready for pickup now.</p>
           {!pinActionsToFooter && (
           <button
             type="button"
@@ -943,11 +957,11 @@ export default function ItemDetailNavigation({
             }}
             className="sbn-btn sbn-btn-primary w-full justify-center disabled:opacity-60"
           >
-            Go Get it
+            Start trip
           </button>
           )}
           {cancelLink}
-        </div>
+        </GoGetScheduledCard>
       );
     }
 
@@ -1097,7 +1111,23 @@ export default function ItemDetailNavigation({
     setContactlessBusy(false);
   };
 
-  if (!destination) return null;
+  if (!destination) {
+    return (
+      <div className="sbn-card p-4 text-sm text-muted leading-relaxed">
+        {isOwner ? (
+          <>
+            No map pin on this listing yet. Edit the listing and set a pickup pin to appear on the map and let
+            neighbors navigate here.
+          </>
+        ) : (
+          <>
+            This listing has no public map pin. Message the poster for pickup details — it only appears in the Stuff
+            feed until they pin a location.
+          </>
+        )}
+      </div>
+    );
+  }
 
   return (
     <>
@@ -1217,6 +1247,17 @@ export default function ItemDetailNavigation({
         />
       )}
 
+      {session && (
+        <CancelPickupDialog
+          open={cancelOpen}
+          otherName={otherUserName}
+          requireReason={cancelRequiresReason(session.status)}
+          busy={busy}
+          onClose={() => setCancelOpen(false)}
+          onConfirm={(reason) => void handleConfirmCancel(reason)}
+        />
+      )}
+
       {navigationOpen && lockedOrigin && destination && !(session && isGoGetTripLocked(session, currentUserId)) && (
         createPortal(
           <Fragment key={item.id}>
@@ -1234,6 +1275,12 @@ export default function ItemDetailNavigation({
               otherPartyLabel={otherUserName}
               navigationStartMessage={session ? goGetNavigationVoice.start : undefined}
               navigationFollowUpMessages={session ? goGetNavigationVoice.followUp : undefined}
+              onConfirmArrival={
+                session && session.status === 'active'
+                  ? () => void run(() => markGoGetArrived(session, item))
+                  : undefined
+              }
+              onSafety={session ? () => setReportOpen(true) : undefined}
               onExit={handleExitNavigation}
             />
           </Fragment>,

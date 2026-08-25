@@ -54,6 +54,8 @@ export type PushEventType =
   | 'go_get_completed'
   | 'go_get_cancelled'
   | 'go_get_ring_expired'
+  | 'go_get_expired'
+  | 'go_get_declined'
   | 'go_get_disputed'
   | 'contactless_pickup_arrived'
   | 'contactless_pickup_left'
@@ -216,6 +218,8 @@ const EVENT_PREF_MAP: Record<PushEventType, keyof NotificationPreferencesRow | '
   go_get_completed: 'goGetAlerts',
   go_get_cancelled: 'goGetAlerts',
   go_get_ring_expired: 'goGetAlerts',
+  go_get_expired: 'goGetAlerts',
+  go_get_declined: 'goGetAlerts',
   go_get_disputed: 'goGetAlerts',
   contactless_pickup_arrived: 'pickupCoordination',
   contactless_pickup_left: 'pickupCoordination',

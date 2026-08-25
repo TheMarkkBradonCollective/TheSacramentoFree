@@ -67,6 +67,8 @@ export type NotificationEventType =
   | 'go_get_completed'
   | 'go_get_cancelled'
   | 'go_get_ring_expired'
+  | 'go_get_expired'
+  | 'go_get_declined'
   | 'go_get_disputed'
   | 'contactless_pickup_arrived'
   | 'contactless_pickup_left'
@@ -167,6 +169,8 @@ export const EVENT_METADATA: Record<NotificationEventType, EventMetadata> = {
   go_get_completed: { priority: 'normal', deliveryMode: 'push_and_in_app', androidChannel: 'pickup' },
   go_get_cancelled: { priority: 'important', deliveryMode: 'push_and_in_app', androidChannel: 'pickup' },
   go_get_ring_expired: { priority: 'normal', deliveryMode: 'push_and_in_app', androidChannel: 'pickup' },
+  go_get_expired: { priority: 'normal', deliveryMode: 'push_and_in_app', androidChannel: 'pickup' },
+  go_get_declined: { priority: 'important', deliveryMode: 'push_and_in_app', androidChannel: 'pickup' },
   go_get_disputed: { priority: 'important', deliveryMode: 'push_and_in_app', androidChannel: 'account', bypassQuietHours: true },
   contactless_pickup_arrived: { priority: 'urgent', deliveryMode: 'urgent_push', androidChannel: 'urgent', bypassQuietHours: true },
   contactless_pickup_left: { priority: 'normal', deliveryMode: 'push_and_in_app', androidChannel: 'pickup' },

@@ -19,6 +19,7 @@ import { RULES } from '../siteContent';
 import { getPostTypeModalTitle } from '../lib/postType';
 import ListingPostedReminderModal from './ListingPostedReminderModal';
 import { openNotificationsHub } from '../contexts/NotificationsHubContext';
+import { useConfirm } from '../contexts/ConfirmContext';
 import { useNewspaperExperience } from '../preview/NewspaperExperienceContext';
 import { useNewspaperSkin } from '../preview/NewspaperSkinContext';
 
@@ -42,6 +43,7 @@ export default function PostItemModal({
   const isReposting = isEditing && editItem?.status === 'withdrawn';
   const { play } = useNewspaperExperience();
   const { enabled: newspaper } = useNewspaperSkin();
+  const { confirm } = useConfirm();
   const [title, setTitle] = useState('');
   const [details, setDetails] = useState('');
   const [pickupNotes, setPickupNotes] = useState('');
@@ -285,6 +287,20 @@ export default function PostItemModal({
       setIsSubmitting(false);
       setErrorMsg('Curb Alert and Porch Pickup require a pinned pickup spot. Use GPS or tap the map.');
       return;
+    }
+
+    if (!customCoords) {
+      const postWithoutPin = await confirm({
+        title: 'Post without a map pin?',
+        message:
+          'Without a GPS pin, your listing will only appear in the Stuff feed — not on the map — and neighbors cannot navigate to it. Share pickup details in chat instead.',
+        confirmLabel: 'Post anyway',
+        cancelLabel: 'Add a pin',
+      });
+      if (!postWithoutPin) {
+        setIsSubmitting(false);
+        return;
+      }
     }
 
     let finalDescription = buildListingDescription({
@@ -603,9 +619,15 @@ export default function PostItemModal({
               </label>
               <p className="text-[10px] text-muted mt-1 leading-snug">
                 Pin the spot on the map and add a street address. Curb Alert and Porch Pickup require a GPS pin.
-                If the pin is hidden from the public map, share GPS and address in messages.
+                Without a pin, your listing stays in the Stuff feed only — it will not appear on the map and neighbors cannot navigate to it.
               </p>
             </div>
+
+            {!customCoords && (
+              <p className="text-xs text-muted leading-relaxed rounded-xl border border-app bg-inset/50 px-3 py-2">
+                No map pin yet. Neighbors will only see this listing in Stuff until you set a pickup pin here.
+              </p>
+            )}
 
             <div className="rounded-xl border border-app bg-inset/40 p-3 space-y-2">
               <span className="text-[10px] font-bold text-muted uppercase tracking-wider block">Map pin (GPS)</span>

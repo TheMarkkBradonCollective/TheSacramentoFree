@@ -1,10 +1,11 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { ItemPost, SACRAMENTO_NEIGHBORHOODS, UserProfile, ITEM_CATEGORIES, ISO_CATEGORIES, extractGPSCoordinates, NEIGHBORHOOD_COORDS, NEIGHBORHOOD_LAT_LONGS, convertPercentToLatLng, CommunityEvent, InitiateChatOptions } from '../types';
+import { ItemPost, SACRAMENTO_NEIGHBORHOODS, UserProfile, ITEM_CATEGORIES, ISO_CATEGORIES, extractGPSCoordinates, NEIGHBORHOOD_COORDS, convertPercentToLatLng, CommunityEvent, InitiateChatOptions } from '../types';
 import {
   canViewerSeeExactLocation,
   getItemMapDestination,
   hasExactMapPin,
+  hasNavigablePin,
   hasStoredGps,
   isLocationPrivate,
   stripListingMetadata,
@@ -757,6 +758,7 @@ export default function SacramentoMapView({
 
   const neighborListingUsesNavigate = (post: ItemPost): boolean => {
     if (post.userId === userProfile.uid || post.status !== 'active') return false;
+    if (!hasNavigablePin(post, userProfile.uid)) return false;
     const posterCoord = posterCoordByUid[post.userId];
     return canShowAppPickupCoordination({
       item: post,
@@ -850,9 +852,12 @@ export default function SacramentoMapView({
   const userNeighborhood = userProfile?.neighborhood || 'Midtown';
   const defaultCoord = NEIGHBORHOOD_COORDS[userNeighborhood] || { x: 53, y: 40 };
   const fallbackLatLng = useMemo(() => convertPercentToLatLng(defaultCoord.x, defaultCoord.y), [defaultCoord]);
+  const resolveUserGpsLocation = useCallback((): LatLng | null => {
+    return userLocationRef.current ?? userLocation ?? getLastLiveLatLng();
+  }, [userLocation]);
   const resolveNavOrigin = useCallback((): LatLng => {
-    return userLocationRef.current ?? userLocation ?? getLastLiveLatLng() ?? fallbackLatLng;
-  }, [userLocation, fallbackLatLng]);
+    return resolveUserGpsLocation() ?? fallbackLatLng;
+  }, [resolveUserGpsLocation, fallbackLatLng]);
 
   useEffect(() => {
     routeAutoFitEnabledRef.current = true;
@@ -991,8 +996,8 @@ export default function SacramentoMapView({
   framePinInViewRef.current = framePinInView;
 
   const lockNavOrigin = useCallback(() => {
-    setLockedNavOrigin(resolveNavOrigin());
-  }, [resolveNavOrigin]);
+    setLockedNavOrigin(resolveUserGpsLocation());
+  }, [resolveUserGpsLocation]);
 
   useEffect(() => {
     routePreviewActiveRef.current = Boolean(selectedPost || selectedEvent);
@@ -1155,6 +1160,21 @@ export default function SacramentoMapView({
 
   const handleGeolocationError = (error: GeolocationPositionError) => {
     console.warn('Geolocation failed:', error);
+    if (error.code === error.PERMISSION_DENIED) {
+      hasGpsFixRef.current = false;
+      userLocationRef.current = null;
+      lastGpsStateUpdateRef.current = null;
+      lastMarkerPositionRef.current = null;
+      setUserLocation(null);
+      if (userMarkerRef.current) {
+        try {
+          userMarkerRef.current.remove();
+        } catch {
+          // Marker may already be gone.
+        }
+        userMarkerRef.current = null;
+      }
+    }
     if (hasGpsFixRef.current || error.code === error.TIMEOUT) return;
 
     if (isLocatingRef.current) {
@@ -1273,11 +1293,33 @@ export default function SacramentoMapView({
     [activeEvents],
   );
 
+  // Only listings with an exact, viewer-visible GPS pin appear on the map.
+  const blipPositions = useMemo(() => {
+    return activeItems.flatMap((item) => {
+      if (!hasExactMapPin(item, userProfile?.uid)) return [];
+      const customCoords = extractGPSCoordinates(item.description)!;
+      const { lat, lng } = convertPercentToLatLng(customCoords.x, customCoords.y);
+      return [
+        {
+          item,
+          lat,
+          lng,
+          color: getCategoryColor(item.category),
+        },
+      ];
+    });
+  }, [activeItems, userProfile?.uid]);
+
+  const mapPinnedItems = useMemo(
+    () => blipPositions.map((entry) => entry.item),
+    [blipPositions],
+  );
+
   // Find current listing index in filtered list for pagination
   const currentIndex = useMemo(() => {
     if (!selectedPost) return -1;
-    return activeItems.findIndex(item => item.id === selectedPost.id);
-  }, [selectedPost, activeItems]);
+    return mapPinnedItems.findIndex((item) => item.id === selectedPost.id);
+  }, [selectedPost, mapPinnedItems]);
 
   const currentEventIndex = useMemo(() => {
     if (!selectedEvent) return -1;
@@ -1285,17 +1327,17 @@ export default function SacramentoMapView({
   }, [selectedEvent, mapDisplayEvents]);
 
   const handleNextPost = () => {
-    if (activeItems.length <= 1 || currentIndex === -1) return;
+    if (mapPinnedItems.length <= 1 || currentIndex === -1) return;
     setSlideDirection('right');
-    const nextIdx = (currentIndex + 1) % activeItems.length;
-    setSelectedPost(activeItems[nextIdx]);
+    const nextIdx = (currentIndex + 1) % mapPinnedItems.length;
+    setSelectedPost(mapPinnedItems[nextIdx]);
   };
 
   const handlePrevPost = () => {
-    if (activeItems.length <= 1 || currentIndex === -1) return;
+    if (mapPinnedItems.length <= 1 || currentIndex === -1) return;
     setSlideDirection('left');
-    const prevIdx = (currentIndex - 1 + activeItems.length) % activeItems.length;
-    setSelectedPost(activeItems[prevIdx]);
+    const prevIdx = (currentIndex - 1 + mapPinnedItems.length) % mapPinnedItems.length;
+    setSelectedPost(mapPinnedItems[prevIdx]);
   };
 
   const handleNextEvent = () => {
@@ -1311,37 +1353,6 @@ export default function SacramentoMapView({
     const prevIdx = (currentEventIndex - 1 + mapDisplayEvents.length) % mapDisplayEvents.length;
     setSelectedEvent(mapDisplayEvents[prevIdx]);
   };
-
-  // Every active listing gets a map pin: exact GPS when set, otherwise neighborhood center.
-  // All pins use the same solid circle style (no dashed approximate markers).
-  const blipPositions = useMemo(() => {
-    return activeItems.flatMap((item) => {
-      if (hasExactMapPin(item, userProfile?.uid)) {
-        const customCoords = extractGPSCoordinates(item.description)!;
-        const { lat, lng } = convertPercentToLatLng(customCoords.x, customCoords.y);
-        return [
-          {
-            item,
-            lat,
-            lng,
-            color: getCategoryColor(item.category),
-          },
-        ];
-      }
-
-      const neighborhood = NEIGHBORHOOD_LAT_LONGS[item.neighborhood];
-      if (!neighborhood) return [];
-
-      return [
-        {
-          item,
-          lat: neighborhood.lat,
-          lng: neighborhood.lng,
-          color: getCategoryColor(item.category),
-        },
-      ];
-    });
-  }, [activeItems, userProfile?.uid]);
 
   const eventBlipPositions = useMemo(() => {
     return mapDisplayEvents.flatMap((event) => {
@@ -1736,11 +1747,12 @@ export default function SacramentoMapView({
   }, [selectedPost, selectedEvent, routeDestination, userProfile.uid]);
 
   const openNavigation = useCallback(() => {
+    if (!resolveUserGpsLocation()) return;
     unlockNavigationSpeech();
     lockNavOrigin();
     persistNavigationSession();
     setNavigationOpen(true);
-  }, [lockNavOrigin, persistNavigationSession]);
+  }, [lockNavOrigin, persistNavigationSession, resolveUserGpsLocation]);
 
   const handleExitNavigation = useCallback(() => {
     clearActiveNavSession();
@@ -1769,6 +1781,10 @@ export default function SacramentoMapView({
 
     if (!selectedPost) return;
     if (selectedPost.userId === userProfile.uid) {
+      if (!getItemMapDestination(selectedPost, userProfile.uid)) {
+        openItemDetail?.(selectedPost);
+        return;
+      }
       openNavigation();
       return;
     }
@@ -2148,12 +2164,12 @@ export default function SacramentoMapView({
                 onOpenExternalMaps={handleOpenExternalMaps}
               />
             )}
-            {selectedPost && (
+            {selectedPost && hasExactMapPin(selectedPost, userProfile?.uid) && (
               <MapSelectedListingCard
                 compact
                 post={selectedPost}
                 currentIndex={currentIndex}
-                total={activeItems.length}
+                total={mapPinnedItems.length}
                 slideDirection={slideDirection}
                 onClose={() => setSelectedPost(null)}
                 onPrev={handlePrevPost}
@@ -2543,7 +2559,7 @@ export default function SacramentoMapView({
                 <p className="text-[10px] text-muted font-semibold leading-relaxed">
                   {showingEvents
                     ? 'No events with a map pin match your filters. Events without a set location still appear in the list.'
-                    : 'No listings match your filters. Every listing appears at its neighborhood center until a pickup pin is added.'}
+                    : 'No pinned listings match your filters. Listings without a map pin only appear in the Stuff feed.'}
                 </p>
               </div>
             </div>
@@ -2577,12 +2593,12 @@ export default function SacramentoMapView({
             onOpenExternalMaps={handleOpenExternalMaps}
           />
         )}
-        {selectedPost && (
+        {selectedPost && hasExactMapPin(selectedPost, userProfile?.uid) && (
           <MapSelectedListingCard
 
             post={selectedPost}
             currentIndex={currentIndex}
-            total={activeItems.length}
+            total={mapPinnedItems.length}
             slideDirection={slideDirection}
             onClose={() => setSelectedPost(null)}
             onPrev={handlePrevPost}

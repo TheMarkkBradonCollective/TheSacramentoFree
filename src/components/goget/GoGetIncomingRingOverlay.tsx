@@ -1,14 +1,16 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { Clock, Loader2, Phone } from 'lucide-react';
+import { Loader2, Phone } from 'lucide-react';
 import type { GoGetSession, ItemPost, UserProfile } from '../../types';
 import {
   abandonGoGetRing,
+  declineGoGetRing,
   expireGoGetRing,
   isGoGetRingActive,
   respondAvailableNow,
   proposeAvailabilityWindow,
 } from '../../lib/goGetSessions';
+import { formatRingCountdown } from '../../lib/pickupEngine';
 import { getGoGetRingDuration, getGoGetRingPattern, startGoGetRingAlert, stopGoGetRingAlert } from '../../lib/goGetRing';
 import GoGetAvailabilityPrompt from './GoGetAvailabilityPrompt';
 import GoGetLiveTripMap from './GoGetLiveTripMap';
@@ -112,7 +114,7 @@ export default function GoGetIncomingRingOverlay({
         <div className="pointer-events-none absolute inset-x-0 top-0 z-10 p-4 safe-area-pt">
           <div className="pointer-events-auto sbn-card px-3 py-2 flex items-center gap-2 shadow-lg border border-accent/40">
             <Phone className="w-5 h-5 text-accent animate-pulse shrink-0" />
-            <p className="text-sm font-bold text-app">Incoming pickup request</p>
+            <p className="text-sm font-bold text-app">Go Get request</p>
           </div>
         </div>
         <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 safe-area-pb">
@@ -152,9 +154,11 @@ export default function GoGetIncomingRingOverlay({
     <>
       {active ? (
         <>
-          <p className="text-xs text-muted flex items-center gap-2">
-            <Clock className="w-3.5 h-3.5" />
-            {remaining > 0 ? `${remaining}s left to respond` : 'Ring ended'}
+          <p className="text-4xl font-black tabular-nums text-app text-center py-1" aria-live="polite">
+            {formatRingCountdown(remaining)}
+          </p>
+          <p className="text-xs text-muted text-center">
+            {session.destinationLabel}
           </p>
           <GoGetAvailabilityPrompt
             requesterName={session.requesterName}
@@ -162,6 +166,8 @@ export default function GoGetIncomingRingOverlay({
             submitting={busy}
             onAvailableNow={() => void run(() => respondAvailableNow(session, item))}
             onProposeWindow={(w) => void run(() => proposeAvailabilityWindow(session, item, w))}
+            onDecline={() => void run(() => declineGoGetRing(session, item))}
+            onIgnore={onClose}
             embedded
           />
         </>

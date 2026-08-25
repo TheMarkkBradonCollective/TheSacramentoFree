@@ -130,6 +130,7 @@ export interface NavigationSettingsPreference {
   travelMode: 'driving' | 'walking' | 'cycling';
   voiceEnabled: boolean;
   headingUp: boolean;
+  usePhoneCompass?: boolean;
   followAppTheme: boolean;
   showLaneGuidance: boolean;
   speakOnRecenter: boolean;
@@ -434,11 +435,14 @@ export interface ListingSubItem {
 }
 
 // =========================================================
-// "Go Get" pickup sessions — Uber/DoorDash-style pickup coordination.
+// "Go Get" pickup sessions — neighbor pickup coordination (availability, schedule, trip, handoff).
 // See complete-schema.sql section 20/21 for the full lifecycle + strike rules.
 // =========================================================
 
 export type GoGetHandshakeMode = 'instant' | 'availability';
+
+/** Unified pickup engine configuration. Curb Alert is navigation-only; other modes share one session lifecycle. */
+export type CoordinationMode = 'go_get' | 'curb_alert' | 'porch_pickup' | 'drop_off' | 'meet_up';
 
 /**
  * Lifecycle: awaiting_availability -> (window_offered -> scheduled ->) active
@@ -472,6 +476,8 @@ export interface GoGetSession {
   requesterName: string;
   chatId: string;
   handshakeMode: GoGetHandshakeMode;
+  /** Pickup engine mode. Older rows default to go_get. */
+  coordinationMode?: CoordinationMode;
   status: GoGetSessionStatus;
   destinationLat: number;
   destinationLng: number;
@@ -490,11 +496,14 @@ export interface GoGetSession {
   fulfillerSharingLocation?: boolean;
   /** When the live "available now?" ring ends if the poster does not answer. */
   ringExpiresAt?: string | null;
+  ringStartedAt?: string | null;
   /** Snapshot of poster ring duration when the session was created. */
   ringDurationSeconds?: number | null;
   onTheWayNotifiedAt?: string | null;
   approachingNotifiedAt?: string | null;
   ringExpiredNotifiedAt?: string | null;
+  /** Minutes before scheduledAt when Ready / Start trip become available. */
+  readyWindowMinutes?: number | null;
   createdAt: string;
   updatedAt: string;
 }

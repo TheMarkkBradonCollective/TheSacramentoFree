@@ -3,6 +3,9 @@ import { Loader2, MapPin } from 'lucide-react';
 import type { GoGetSession } from '../../types';
 import { subscribeLiveGeolocation } from '../../lib/liveGeolocation';
 import { setFulfillerSharingLocation, upsertFulfillerLiveLocation } from '../../lib/goGetSessions';
+import { createNavHeadingTracker, headingFromGeolocation } from '../../lib/navHeading';
+import { readNavigationSettings } from '../../lib/navigationSettings';
+import { usePhoneCompassHeading, usePhoneCompassSetting } from '../../hooks/usePhoneCompassHeading';
 
 interface GoGetShareLocationToggleProps {
   session: GoGetSession;
@@ -25,11 +28,17 @@ export default function GoGetShareLocationToggle({
   const [busy, setBusy] = useState(false);
   const sharing = session.fulfillerSharingLocation === true;
   const lastUploadRef = useRef(0);
+  const headingTrackerRef = useRef(createNavHeadingTracker());
+  const usePhoneCompass = usePhoneCompassSetting();
+
+  usePhoneCompassHeading(sharing && usePhoneCompass, usePhoneCompass, (degrees) => {
+    headingTrackerRef.current.setCompassHeading(degrees);
+  });
 
   useEffect(() => {
     if (!sharing) return;
 
-    const upload = (lat: number, lng: number, heading: number | null) => {
+    const upload = (lat: number, lng: number, heading: number) => {
       const now = Date.now();
       if (now - lastUploadRef.current < UPLOAD_INTERVAL_MS) return;
       lastUploadRef.current = now;
@@ -37,15 +46,16 @@ export default function GoGetShareLocationToggle({
     };
 
     const unsubscribe = subscribeLiveGeolocation((position) => {
-      upload(
-        position.coords.latitude,
-        position.coords.longitude,
-        Number.isFinite(position.coords.heading) ? position.coords.heading : null,
-      );
+      const settings = readNavigationSettings();
+      const heading = headingFromGeolocation(headingTrackerRef.current, position, {
+        travelMode: settings.travelMode,
+        usePhoneCompass: settings.usePhoneCompass,
+      });
+      upload(position.coords.latitude, position.coords.longitude, heading);
     });
 
     return unsubscribe;
-  }, [sharing, session.id]);
+  }, [sharing, session.id, usePhoneCompass]);
 
   const handleToggle = async () => {
     setBusy(true);
