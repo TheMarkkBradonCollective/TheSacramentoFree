@@ -149,3 +149,17 @@ export function clipRouteAhead(
   }
   return out.length >= 2 ? out : [];
 }
+
+/**
+ * Live GPS remaining line: starts at the user (consumed path shrinks behind)
+ * and keeps the next `aheadMeters` of route (the far end extends as they move).
+ */
+export function followRouteLine(
+  coords: [number, number][],
+  user: LatLng,
+  aheadMeters: number,
+): [number, number][] {
+  const { remaining } = splitRouteProgress(coords, user);
+  const clipped = clipRouteAhead(remaining, aheadMeters);
+  return clipped.length >= 2 ? clipped : remaining;
+}

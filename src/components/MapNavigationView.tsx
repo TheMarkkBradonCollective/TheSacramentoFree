@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import type { LatLng } from '../lib/mapRoute';
 import { haversineMeters, geolocationAgeMs, openDrivingDirections, googleMapsDirectionsUrl } from '../lib/mapRoute';
-import { clipRouteAhead, projectOntoRoute, splitRouteProgress, snapPositionToRoute } from '../lib/navMapGeometry';
+import { followRouteLine, projectOntoRoute, splitRouteProgress, snapPositionToRoute } from '../lib/navMapGeometry';
 import NavManeuverShield from './navigation/NavManeuverShield';
 import NavigationSettingsForm from './NavigationSettingsForm';
 import NavTravelModeSwitcher from './NavTravelModeSwitcher';
@@ -39,6 +39,7 @@ import {
   formatNavDuration,
   formatSpeedMph,
   getDisplayedNavGuidance,
+  headingDeltaDegrees,
   remainingRouteMeters,
   shouldFireVoiceCue,
   maneuverIconKind,
@@ -523,6 +524,24 @@ function updateRoutePolylines(
   upsertRoutePolyline(layer, handles, 'remaining', remaining, NAV_ROUTE_LINE_MAIN);
 }
 
+/** Paint remaining from the puck: shrinks behind, extends a lookahead window ahead. */
+function paintLiveRouteLine(
+  layer: L.LayerGroup,
+  handles: RoutePolylineHandles,
+  coords: [number, number][],
+  pos: LatLng,
+  follow: boolean,
+): void {
+  if (coords.length < 2) return;
+  if (follow) {
+    const remaining = followRouteLine(coords, pos, GPS_LOOKAHEAD_METERS);
+    updateRoutePolylines(layer, handles, [], remaining.length >= 2 ? remaining : []);
+    return;
+  }
+  const split = splitRouteProgress(coords, pos);
+  updateRoutePolylines(layer, handles, split.traveled, split.remaining);
+}
+
 function debounceMapInvalidate(map: L.Map, delayMs = 160): () => void {
   let timer: number | null = null;
   return () => {
@@ -708,20 +727,22 @@ export default function MapNavigationView({
   const routeFetchedForDestRef = useRef<string | null>(null);
   const routeRequestIdRef = useRef(0);
   const lastBearingApplyRef = useRef(0);
+  const lastAppliedRotationRef = useRef(0);
   const compassHeadingRef = useRef<number | null>(null);
   const settingsRef = useRef<NavigationSettings>(readNavigationSettings());
   const handleGpsUpdateRef = useRef<(position: GeolocationPosition) => void>(() => undefined);
   const onProgressUpdateRef = useRef(onProgressUpdate);
   onProgressUpdateRef.current = onProgressUpdate;
 
-  const NAV_GPS_FOLLOW_METERS_DRIVING = 8;
-  const NAV_GPS_FOLLOW_METERS_WALK_BIKE = 3;
-  const NAV_UI_TICK_MS = 700;
-  const NAV_MAP_SYNC_MS = 220;
-  const NAV_ROUTE_DRAW_MIN_METERS = 14;
-  const NAV_ROUTE_DRAW_MIN_MS = 1400;
-  const NAV_HEADING_ICON_DEG = 12;
-  const NAV_DISPLAY_SMOOTH_ALPHA = 0.72;
+  const NAV_GPS_FOLLOW_METERS_DRIVING = 4;
+  const NAV_GPS_FOLLOW_METERS_WALK_BIKE = 2;
+  const NAV_UI_TICK_MS = 450;
+  const NAV_MAP_SYNC_MS = 90;
+  const NAV_ROUTE_DRAW_MIN_METERS = 10;
+  const NAV_ROUTE_DRAW_MIN_MS = 900;
+  const NAV_HEADING_ICON_DEG = 18;
+  const NAV_MAP_ROTATE_DEG = 10;
+  const NAV_DISPLAY_SMOOTH_ALPHA = 0.58;
   const NAV_OFF_ROUTE_THRESHOLD_M = 55;
   const NAV_OFF_ROUTE_EVAL_MS = 900;
   const NAV_OFF_ROUTE_TICKS = 4;
@@ -1267,6 +1288,8 @@ export default function MapNavigationView({
       if (route.coords.length >= 2) {
         const initialHeading = bearingAlongRoute(route.coords, start);
         headingRef.current = initialHeading;
+        lastAppliedRotationRef.current = initialHeading;
+        lastMarkerHeadingRef.current = initialHeading;
         lastGpsPosRef.current = start;
         setHeading(initialHeading);
       }
@@ -1352,7 +1375,7 @@ export default function MapNavigationView({
 
     const headingChanged =
       !userMarkerRef.current ||
-      Math.abs(((markerHeading - lastMarkerHeadingRef.current + 540) % 360) - 180) >= NAV_HEADING_ICON_DEG;
+      Math.abs(headingDeltaDegrees(lastMarkerHeadingRef.current, markerHeading)) >= NAV_HEADING_ICON_DEG;
 
     try {
       if (userMarkerRef.current) {
@@ -1379,11 +1402,13 @@ export default function MapNavigationView({
       settingsRef.current.travelMode === 'driving' ? NAV_GPS_FOLLOW_METERS_DRIVING : NAV_GPS_FOLLOW_METERS_WALK_BIKE;
     const movedEnough = !last || haversineMeters(last, next) >= followMeters;
     const now = Date.now();
-    const bearingDue = now - lastBearingApplyRef.current >= NAV_MAP_SYNC_MS;
+    const rotationDelta = Math.abs(headingDeltaDegrees(lastAppliedRotationRef.current, nextHeading));
+    const shouldRotate = !northUpRef.current && (movedEnough || rotationDelta >= NAV_MAP_ROTATE_DEG);
 
     if (!movedEnough) {
-      if (!northUpRef.current && bearingDue) {
+      if (shouldRotate) {
         lastBearingApplyRef.current = now;
+        lastAppliedRotationRef.current = nextHeading;
         applyHeadingUpRotation(mapRotatorRef.current, map, next, nextHeading, false);
       }
       return;
@@ -1405,6 +1430,7 @@ export default function MapNavigationView({
         Math.max(liveMap.getZoom(), gpsFollowZoom(settingsRef.current.travelMode)),
         !northUpRef.current,
       );
+      lastAppliedRotationRef.current = headingRef.current;
       applyHeadingUpRotation(mapRotatorRef.current, liveMap, target, headingRef.current, northUpRef.current);
     });
   }, []);
@@ -1412,25 +1438,24 @@ export default function MapNavigationView({
   useEffect(() => {
     if (!route || !routeLayerRef.current || loading) return;
 
-    const now = Date.now();
-    const lastDraw = lastRouteDrawRef.current;
-    const logicPos = logicPosRef.current;
-    const moved = lastDraw ? haversineMeters({ lat: lastDraw.lat, lng: lastDraw.lng }, logicPos) : Infinity;
-    if (lastDraw && moved < NAV_ROUTE_DRAW_MIN_METERS && now - lastDraw.at < NAV_ROUTE_DRAW_MIN_MS) {
-      return;
+    const pos = displayedPosRef.current ?? logicPosRef.current;
+    const follow = followUserRef.current;
+    if (!follow) {
+      const now = Date.now();
+      const lastDraw = lastRouteDrawRef.current;
+      const moved = lastDraw ? haversineMeters({ lat: lastDraw.lat, lng: lastDraw.lng }, pos) : Infinity;
+      if (lastDraw && moved < NAV_ROUTE_DRAW_MIN_METERS && now - lastDraw.at < NAV_ROUTE_DRAW_MIN_MS) {
+        return;
+      }
+      lastRouteDrawRef.current = { lat: pos.lat, lng: pos.lng, at: now };
     }
 
-    lastRouteDrawRef.current = { lat: logicPos.lat, lng: logicPos.lng, at: now };
-    const split = splitRouteProgress(route.coords, logicPos);
-    const remaining = followUserRef.current
-      ? clipRouteAhead(split.remaining, GPS_LOOKAHEAD_METERS)
-      : split.remaining;
-    const remainingLine = remaining.length >= 2 ? remaining : split.remaining;
-    updateRoutePolylines(
+    paintLiveRouteLine(
       routeLayerRef.current,
       routePolylineHandlesRef.current,
-      followUserRef.current ? [] : split.traveled,
-      remainingLine,
+      route.coords,
+      pos,
+      follow,
     );
   }, [route, userPos, loading, followUser]);
 
@@ -1461,6 +1486,16 @@ export default function MapNavigationView({
       logicPosRef.current = snapped;
       displayedPosRef.current = displayPos;
 
+      if (followUserRef.current && activeRoute && routeLayerRef.current && !arrivedRef.current) {
+        paintLiveRouteLine(
+          routeLayerRef.current,
+          routePolylineHandlesRef.current,
+          activeRoute.coords,
+          displayPos,
+          true,
+        );
+      }
+
       const dest = destinationRef.current;
       const gpsHeading = position.coords.heading;
       const speed = position.coords.speed;
@@ -1474,6 +1509,7 @@ export default function MapNavigationView({
         compassHeading: compassHeadingRef.current,
         speedMps: speed,
         travelMode: settingsRef.current.travelMode,
+        offRouteMeters: offRouteDistance,
       });
       lastGpsPosRef.current = snapped;
 
