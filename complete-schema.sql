@@ -157,6 +157,21 @@ ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
 CREATE INDEX IF NOT EXISTS messages_chat_id_idx ON public.messages ("chatId");
 CREATE INDEX IF NOT EXISTS messages_created_at_idx ON public.messages ("createdAt");
 
+-- Per-chat meet pin: poster shares a meet spot with one neighbor (not on the public map).
+CREATE TABLE IF NOT EXISTS public.chat_meet_locations (
+  "chatId" TEXT PRIMARY KEY REFERENCES public.chats(id) ON DELETE CASCADE,
+  "itemId" TEXT NOT NULL REFERENCES public.items(id) ON DELETE CASCADE,
+  "setByUserId" TEXT NOT NULL,
+  lat DOUBLE PRECISION NOT NULL,
+  lng DOUBLE PRECISION NOT NULL,
+  label TEXT,
+  "createdAt" TIMESTAMPTZ DEFAULT NOW(),
+  "updatedAt" TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.chat_meet_locations ENABLE ROW LEVEL SECURITY;
+CREATE INDEX IF NOT EXISTS chat_meet_locations_item_idx ON public.chat_meet_locations ("itemId");
+
 -- Per-user read receipts (DM + group chats). Honors users.appPreferences.readReceiptsEnabled.
 CREATE TABLE IF NOT EXISTS public.message_reads (
   "messageId" TEXT NOT NULL REFERENCES public.messages(id) ON DELETE CASCADE,
@@ -1070,7 +1085,8 @@ BEGIN
     IF sess."scheduledAt" IS NOT NULL AND now_ts < (sess."scheduledAt" - make_interval(mins => window_mins)) THEN
       RETURN jsonb_build_object('ok', false, 'error', 'Too early to start this pickup.');
     END IF;
-    IF COALESCE(sess."coordinationMode", 'go_get') <> 'meet_up' AND role NOT IN ('requester', 'staff') THEN
+    IF COALESCE(sess."coordinationMode", 'go_get') IN ('curb_alert', 'porch_pickup')
+       AND role NOT IN ('requester', 'staff') THEN
       RETURN jsonb_build_object('ok', false, 'error', 'That action is not available for your role.');
     END IF;
     IF role NOT IN ('requester', 'fulfiller', 'staff') THEN
@@ -1084,7 +1100,7 @@ BEGIN
     sess."startedAt" := now_ts;
 
   ELSIF p_action = 'mark_arrived' THEN
-    IF COALESCE(sess."coordinationMode", 'go_get') = 'meet_up' THEN
+    IF COALESCE(sess."coordinationMode", 'go_get') IN ('go_get', 'drop_off', 'meet_up') THEN
       IF role NOT IN ('requester', 'fulfiller', 'staff') THEN
         RETURN jsonb_build_object('ok', false, 'error', 'That action is not available for your role.');
       END IF;
@@ -3423,6 +3439,43 @@ CREATE POLICY "messages_delete_own" ON public.messages
 DROP POLICY IF EXISTS "message_reads_select" ON public.message_reads;
 CREATE POLICY "message_reads_select" ON public.message_reads
   FOR SELECT USING (public.can_read_chat("chatId"));
+
+DROP POLICY IF EXISTS "chat_meet_locations_select" ON public.chat_meet_locations;
+DROP POLICY IF EXISTS "chat_meet_locations_insert" ON public.chat_meet_locations;
+DROP POLICY IF EXISTS "chat_meet_locations_update" ON public.chat_meet_locations;
+
+CREATE POLICY "chat_meet_locations_select" ON public.chat_meet_locations
+  FOR SELECT USING (public.can_read_chat("chatId"));
+
+CREATE POLICY "chat_meet_locations_insert" ON public.chat_meet_locations
+  FOR INSERT WITH CHECK (
+    auth.uid()::text = "setByUserId"
+    AND public.can_write_chat("chatId")
+    AND EXISTS (
+      SELECT 1
+      FROM public.chats c
+      JOIN public.items i ON i.id = "itemId"
+      WHERE c.id = "chatId"
+        AND i."userId" = auth.uid()::text
+        AND (c."itemId" IS NULL OR c."itemId" = "itemId")
+    )
+  );
+
+CREATE POLICY "chat_meet_locations_update" ON public.chat_meet_locations
+  FOR UPDATE USING (
+    auth.uid()::text = "setByUserId"
+    AND public.can_write_chat("chatId")
+  )
+  WITH CHECK (
+    auth.uid()::text = "setByUserId"
+    AND public.can_write_chat("chatId")
+    AND EXISTS (
+      SELECT 1
+      FROM public.items i
+      WHERE i.id = "itemId"
+        AND i."userId" = auth.uid()::text
+    )
+  );
 
 -- ---------------------------------------------------------
 -- 5. ITEM VOTES & COMMENTS

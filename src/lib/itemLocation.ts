@@ -124,6 +124,11 @@ export function formatPickupLocationMessage(item: ItemPost): string {
   return `📍 This item is in ${item.neighborhood}. Message me here for the exact pickup spot.`;
 }
 
+export function formatChatMeetLocationMessage(itemTitle: string, lat: number, lng: number): string {
+  const mapsUrl = `https://www.google.com/maps?q=${lat},${lng}`;
+  return `📍 Meet spot for "${itemTitle}" (only you can see this on the map):\n${mapsUrl}`;
+}
+
 export function parseItemForEditForm(item: ItemPost) {
   const full = item.description || '';
   let collectionMethod = 'Willing to pick up (I have transport)';

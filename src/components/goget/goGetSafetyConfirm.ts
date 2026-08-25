@@ -17,9 +17,9 @@ export async function confirmGoGetAsRequester(
     return confirm({
       title: 'Pick up this item?',
       message:
-        `Navigate straight to ${posterName}'s ${itemTitle}. The poster won't be notified you're coming — ` +
-        `you can optionally let them know once you arrive or after you've picked up.`,
-      confirmLabel: 'Pick Up',
+        `Navigate to ${posterName}'s ${itemTitle}. Your live trip is shared with them while you're on the way. ` +
+        `After you pick up, choose what you took (if there are multiple items) — they'll confirm in chat.`,
+      confirmLabel: 'Pick Up & share trip',
       cancelLabel: 'Not now',
     });
   }

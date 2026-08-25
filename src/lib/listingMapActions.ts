@@ -23,9 +23,9 @@ export function getChatCoordinationLabel(item: Pick<ItemPost, 'type'>): string {
   return 'Go Get';
 }
 
-/** Curb alerts navigate straight to the pin — no Go Get handshake. */
+/** Legacy helper — instant curb/porch now use auto trip sessions after confirm. */
 export function navigatesDirectlyToPin(item: Pick<ItemPost, 'type' | 'category'>): boolean {
-  return item.type === 'giveaway' && isContactlessClaimCategory(item.category);
+  return false;
 }
 
 /** Contactless "I picked up" — curb alerts only, when the neighbor is at the pin. */

@@ -395,6 +395,17 @@ export interface PendingChatCompose {
   postedAsNeighbor?: boolean;
 }
 
+export interface ChatMeetLocation {
+  chatId: string;
+  itemId: string;
+  setByUserId: string;
+  lat: number;
+  lng: number;
+  label?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Message {
   id: string;
   senderId: string;

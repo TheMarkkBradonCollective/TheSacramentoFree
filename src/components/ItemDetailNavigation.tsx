@@ -4,6 +4,9 @@ import { AlertTriangle, Bell, BellOff, CheckCircle, Loader2, LogOut, MessageCirc
 import type { ItemPost, UserProfile } from '../types';
 import { extractGPSCoordinates } from '../types';
 import { canViewerSeeExactLocation, convertPercentToLatLng, getItemMapDestination } from '../lib/itemLocation';
+import { resolveCoordinationDestination } from '../lib/coordinationDestination';
+import { getChatMeetLocation } from '../lib/chatMeetLocation';
+import { buildDmChatId, getListingSubitems, getSupabaseProfile } from '../supabase';
 import {
   getListingNavigateLabel,
   isContactlessClaimCategory,
@@ -50,12 +53,12 @@ import {
 import { isGoGetTripLocked } from '../lib/goGetTripLock';
 import { cancelRequiresReason, isWithinReadyWindow } from '../lib/pickupStateMachine';
 import { meetCopyForSession } from '../lib/meetCopy';
-import { normalizeCoordinationMode, PICKUP_MODE_CONFIG } from '../lib/pickupEngine';
+import { normalizeCoordinationMode, PICKUP_MODE_CONFIG, itemUsesInstantTripSharing } from '../lib/pickupEngine';
 import GoGetScheduledCard from './goget/GoGetScheduledCard';
+import InstantPickupHandoffPanel from './goget/InstantPickupHandoffPanel';
 import CancelPickupDialog from './goget/CancelPickupDialog';
 import { fileGoGetViolation } from '../lib/violations';
-import { getListingSubitems, getSupabaseProfile } from '../supabase';
-import type { GoGetFulfillerLiveLocation, GoGetSession, ListingSubItem } from '../types';
+import type { ChatMeetLocation, GoGetFulfillerLiveLocation, GoGetSession, ListingSubItem } from '../types';
 import MapNavigationView, { type NavProgressUpdate } from './MapNavigationView';
 import {
   buildGoGetNavigationFollowUpMessages,
@@ -119,27 +122,16 @@ export default function ItemDetailNavigation({
   const [sessionLoaded, setSessionLoaded] = useState(false);
 
   // Contactless pickup state (curb alerts) — no Go Get session, no GPS to poster.
+  const instantTripSharing = itemUsesInstantTripSharing(item);
+  const sessionSharesLiveLocation =
+    session != null &&
+    PICKUP_MODE_CONFIG[normalizeCoordinationMode(session.coordinationMode)].liveLocation;
   const isContactless = isContactlessClaimCategory(item.category) && item.type === 'giveaway';
   const [contactlessNavActive, setContactlessNavActive] = useState(false);
   const [contactlessArrived, setContactlessArrived] = useState(false);
   const [contactlessNotifiedArrived, setContactlessNotifiedArrived] = useState(false);
   const [contactlessNotifiedLeft, setContactlessNotifiedLeft] = useState(false);
   const [contactlessBusy, setContactlessBusy] = useState(false);
-
-  // Once a session exists, its own destination is authoritative. Before that:
-  // Looking/Trade navigate to the poster's pin (fulfiller) — resolve with the
-  // poster's uid so private pins still become the drop-off/meetup destination
-  // (same as ChatSystem). Giveaways use the viewer uid for privacy rules.
-  const itemPinDestination = useMemo<LatLng | null>(() => {
-    const locationOwnerId =
-      item.type === 'looking' || item.type === 'trade' ? item.userId : currentUserId;
-    return getItemMapDestination(item, locationOwnerId);
-  }, [item, currentUserId]);
-
-  const destination = useMemo<LatLng | null>(() => {
-    if (session) return { lat: session.destinationLat, lng: session.destinationLng };
-    return itemPinDestination;
-  }, [session, itemPinDestination]);
 
   const [userLocation, setUserLocation] = useState<LatLng | null>(() => getLastLiveLatLng());
   const [navigationOpen, setNavigationOpen] = useState(false);
@@ -150,13 +142,42 @@ export default function ItemDetailNavigation({
   const [cancelOpen, setCancelOpen] = useState(false);
   const [fulfillerLiveLocation, setFulfillerLiveLocation] = useState<GoGetFulfillerLiveLocation | null>(null);
   const [subitems, setSubitems] = useState<ListingSubItem[]>([]);
-  const [posterProfile, setPosterProfile] = useState<UserProfile | null>(null);
   const arrivalHandledRef = useRef(false);
   const autoStartAttemptedRef = useRef(false);
 
   const isOwner = item.userId === currentUserId;
   const isStaffOfficial = isStaffActingOfficial(userProfile);
   const pinActionsToFooter = primaryActionPlacement === 'footer' && !!onFooterActions;
+
+  const [posterProfile, setPosterProfile] = useState<UserProfile | null>(null);
+  const [chatMeetLocation, setChatMeetLocation] = useState<ChatMeetLocation | null>(null);
+  const dmChatId = useMemo(() => {
+    if (!currentUserId || isOwner) return null;
+    return buildDmChatId(currentUserId, item.userId);
+  }, [currentUserId, isOwner, item.userId]);
+
+  useEffect(() => {
+    if (!dmChatId) {
+      setChatMeetLocation(null);
+      return;
+    }
+    let cancelled = false;
+    void getChatMeetLocation(dmChatId).then((loc) => {
+      if (!cancelled) setChatMeetLocation(loc);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [dmChatId]);
+
+  const itemPinDestination = useMemo<LatLng | null>(() => {
+    return resolveCoordinationDestination(item, currentUserId, chatMeetLocation);
+  }, [item, currentUserId, chatMeetLocation]);
+
+  const destination = useMemo<LatLng | null>(() => {
+    if (session) return { lat: session.destinationLat, lng: session.destinationLng };
+    return itemPinDestination;
+  }, [session, itemPinDestination]);
 
   const coordinationGate = useMemo(() => {
     if (isOwner || !userProfile) return { ok: true as const };
@@ -496,7 +517,7 @@ export default function ItemDetailNavigation({
         }
         return;
       }
-      if (session.handshakeMode !== 'instant') {
+      if (sessionSharesLiveLocation && session.requesterUserId === currentUserId) {
         void upsertLiveLocation(session.id, {
           lat: update.lat,
           lng: update.lng,
@@ -507,7 +528,7 @@ export default function ItemDetailNavigation({
         });
       }
     },
-    [session, item, isContactless],
+    [session, sessionSharesLiveLocation, currentUserId, isContactless],
   );
 
   const handleExitNavigation = useCallback(() => {
@@ -569,6 +590,10 @@ export default function ItemDetailNavigation({
 
   const handleConfirmCompletion = async () => {
     if (!session) return;
+    if (instantTripSharing) {
+      setErr('Confirm pickup in chat when they tell you what they took.');
+      return;
+    }
     setBusy(true);
     setErr('');
     const sessionResult = await confirmGoGetCompletion(session);
@@ -1003,7 +1028,40 @@ export default function ItemDetailNavigation({
 
     if (session.status === 'active') {
       const bothTravel = PICKUP_MODE_CONFIG[normalizeCoordinationMode(session.coordinationMode)].bothTravel;
+      const modeConfig = PICKUP_MODE_CONFIG[normalizeCoordinationMode(session.coordinationMode)];
       if (isRequester || bothTravel) {
+        if (instantTripSharing && isRequester && userProfile) {
+          return (
+            <div className="sbn-card p-4 space-y-3">
+              {errorBanner}
+              <p className="text-sm text-app">
+                Live trip sharing is on — {item.userDisplayName} can follow your drive.
+              </p>
+              {renderPickerMeetingMap()}
+              {!pinActionsToFooter && (
+                <button
+                  type="button"
+                  onClick={openNavigation}
+                  className="sbn-btn sbn-btn-primary w-full justify-center"
+                >
+                  Resume navigation
+                </button>
+              )}
+              <InstantPickupHandoffPanel
+                item={item}
+                session={session}
+                picker={userProfile}
+                disabled={busy}
+                onSubmitted={() => {
+                  clearActiveNavSession();
+                  setNavigationOpen(false);
+                  void getActiveGoGetSession(item.id, currentUserId).then(setSession);
+                }}
+              />
+              {cancelLink}
+            </div>
+          );
+        }
         return (
           <div className="sbn-card p-4 space-y-3">
             {errorBanner}
@@ -1030,22 +1088,26 @@ export default function ItemDetailNavigation({
       }
       return (
         <div className="space-y-3">
-          {session.handshakeMode === 'instant' ? (
-            <div className="sbn-card p-4 space-y-2">
-              {errorBanner}
-              <p className="text-sm text-app">
-                {session.requesterName} is heading to your {item.category.toLowerCase()}.
-              </p>
-              <p className="text-xs text-muted">No notification was sent — curb and porch pickups are first-come.</p>
-            </div>
-          ) : (
+          {modeConfig.liveLocation ? (
             <GoGetLiveTrackingCard
               sessionId={session.id}
               requesterName={session.requesterName}
               destinationLabel={session.destinationLabel}
               onOpenChat={() => onOpenChat?.(session.chatId)}
             />
+          ) : (
+            <div className="sbn-card p-4 space-y-2">
+              {errorBanner}
+              <p className="text-sm text-app">
+                {session.requesterName} is heading to your {item.category.toLowerCase()}.
+              </p>
+            </div>
           )}
+          {instantTripSharing ? (
+            <p className="text-xs text-muted px-1">
+              They'll tell you what they picked up — confirm in chat when you're ready.
+            </p>
+          ) : null}
           {renderPosterShareToggle()}
         </div>
       );
@@ -1259,8 +1321,8 @@ export default function ItemDetailNavigation({
       )}
       {!session && destination && !coordinationGate.ok && !isOwner && (
         <p className="text-sm text-muted sbn-card p-3">
-          App pickup coordination isn&apos;t available for this listing right now (neighbor opted out or outside
-          pickup hours). Message the poster to arrange pickup manually.
+          Meet isn&apos;t available yet — you or the poster need Meet & pickup coordination turned on in Account
+          settings (and within pickup hours). Message the poster to arrange pickup manually.
         </p>
       )}
 

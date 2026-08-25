@@ -3,6 +3,7 @@ import type { CoordinationMode, GoGetFulfillerLiveLocation, GoGetHandshakeMode, 
 import {
   coordinationModeFromItem,
   handshakeModeForCoordination,
+  itemUsesInstantTripSharing,
   normalizeCoordinationMode,
   pickupStartActionForItem,
   PICKUP_MODE_CONFIG,
@@ -383,7 +384,8 @@ export async function createGoGetSession(
   const coordinationMode = coordinationModeFromItem(item);
   const now = new Date().toISOString();
   const instant = handshakeMode === 'instant';
-  const posterInitiatedMeet = params.posterInitiated === true && coordinationMode === 'meet_up';
+  const posterInitiatedMeet =
+    params.posterInitiated === true && PICKUP_MODE_CONFIG[coordinationMode].bothTravel;
 
   const id = `ggs_${item.id}_${requesterUserId}_${Date.now()}`;
   const ringDurationSeconds = fulfillerProfile ? getGoGetRingDuration(fulfillerProfile) : 140;
@@ -438,19 +440,37 @@ export async function createGoGetSession(
 
   const messageId = `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
   if (posterInitiatedMeet) {
-    await createSupabaseMessage(
-      chatId,
-      `🔁 ${fulfillerName} is ready to meet to trade "${item.title}". You can both navigate to the meetup pin.`,
-      fulfillerUserId,
-      messageId,
-      { skipPush: true },
-    );
+    const meetLine =
+      coordinationMode === 'meet_up'
+        ? `🔁 ${fulfillerName} is ready to meet to trade "${item.title}". You can both navigate to the meetup pin.`
+        : coordinationMode === 'drop_off'
+          ? `📍 ${fulfillerName} is ready for drop-off at the meet spot for "${item.title}".`
+          : `📍 ${fulfillerName} is ready — you can both navigate to the meet spot for "${item.title}".`;
+    await createSupabaseMessage(chatId, meetLine, fulfillerUserId, messageId, { skipPush: true });
     await runGoGetPushTask(() =>
       import('./pushEvents').then((m) =>
         m.notifyGoGetFulfillerReady({
           item,
           requesterUserId,
           fulfillerName,
+          sessionId: id,
+        }),
+      ),
+    );
+  } else if (instant && itemUsesInstantTripSharing(item)) {
+    await createSupabaseMessage(
+      chatId,
+      `📍 ${requesterName} is heading to pick up "${item.title}" — live trip sharing is on until they finish.`,
+      requesterUserId,
+      messageId,
+      { skipPush: true },
+    );
+    await runGoGetPushTask(() =>
+      import('./pushEvents').then((m) =>
+        m.notifyGoGetStarted({
+          item,
+          recipientUserId: fulfillerUserId,
+          travelerName: requesterName,
           sessionId: id,
         }),
       ),
@@ -1114,6 +1134,35 @@ export async function cancelGoGetSession(
       m.notifyGoGetCancelled({ item, recipientUserId: otherUserId, cancelledByName, sessionId: session.id }),
     ),
   );
+  await clearLiveLocation(session.id);
+  await clearFulfillerLiveLocation(session.id);
+  return { ok: true, session: result.session };
+}
+
+/** Picker ends instant curb/porch trip after submitting a claim — poster confirms in chat. */
+export async function finishInstantPickupTrip(
+  session: GoGetSession,
+  item: ItemPost,
+): Promise<Result<{ session: GoGetSession }>> {
+  if (!itemUsesInstantTripSharing(item)) {
+    return { ok: false, errorMessage: 'This pickup does not use instant trip sharing.' };
+  }
+  if (isTerminalGoGetStatus(session.status)) {
+    return { ok: true, session };
+  }
+  const result = await applyPickupTransition({
+    session,
+    action: 'cancel',
+    payload: { cancelReason: 'Pickup submitted — awaiting poster confirmation' },
+    fallbackPatch: {
+      status: 'cancelled',
+      cancelledAt: new Date().toISOString(),
+      cancelledByUserId: session.requesterUserId,
+      cancelReason: 'Pickup submitted — awaiting poster confirmation',
+      fulfillerSharingLocation: false,
+    },
+  });
+  if (!result.ok || !result.session) return result;
   await clearLiveLocation(session.id);
   await clearFulfillerLiveLocation(session.id);
   return { ok: true, session: result.session };
