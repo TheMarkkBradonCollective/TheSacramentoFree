@@ -330,16 +330,15 @@ function OriginalHomePage({
           <div>
             <BrandLogo imgClassName="sbn-hero-logo h-14 w-auto max-w-[220px] object-contain bg-transparent mb-6" />
 
-            <span className="sbn-badge sbn-badge-give">
-              <Heart className="w-3 h-3 inline mr-1" />
+            <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold text-app leading-[1.08] tracking-tight">
               {name}
-            </span>
+            </h1>
 
-            <h1 className="mt-6 font-display text-4xl md:text-5xl lg:text-6xl font-bold text-app leading-[1.08] tracking-tight">
+            <p className="mt-4 text-xl md:text-2xl lg:text-3xl font-display font-semibold text-app leading-snug">
               Give freely.
               <br />
               <span className="text-accent">Ask kindly.</span>
-            </h1>
+            </p>
 
             <p className="mt-5 text-base lg:text-lg text-muted leading-relaxed max-w-lg">{description}</p>
 
