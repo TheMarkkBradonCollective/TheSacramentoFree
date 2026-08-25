@@ -333,9 +333,9 @@ function OriginalHomePage({
               aria-label={NEWSPAPER.name}
             >
               <span className="sbn-hero-wordmark__the block font-semibold text-muted">{NEWSPAPER.the}</span>
-              <span className="sbn-hero-wordmark__name block">
-                {city}
-                <span className="text-accent">{free}</span>
+              <span className="sbn-hero-wordmark__name">
+                <span className="sbn-hero-wordmark__city">{city}</span>
+                <span className="sbn-hero-wordmark__free text-accent">{free}</span>
               </span>
             </h1>
 
