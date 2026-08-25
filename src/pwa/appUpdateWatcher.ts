@@ -49,23 +49,28 @@ function reloadNow(): void {
 }
 
 /**
- * Apply a new deploy without flashing the live UI. Reload only after the
- * user leaves the tab so the map/feed stay usable while data still updates live.
+ * Apply a new deploy without flashing the live UI. Reload when the user returns
+ * so the WebView is not left on a blank page mid-reload after multitasking.
  */
 function reloadWhenQuiet(): void {
   if (Date.now() < pausedUntil) return;
-  if (document.visibilityState === 'hidden') {
-    reloadNow();
-    return;
-  }
 
-  const onHidden = () => {
-    if (document.visibilityState !== 'hidden') return;
-    document.removeEventListener('visibilitychange', onHidden);
+  const doReload = () => {
     if (Date.now() < pausedUntil) return;
     reloadNow();
   };
-  document.addEventListener('visibilitychange', onHidden);
+
+  if (document.visibilityState === 'visible') {
+    window.setTimeout(doReload, 400);
+    return;
+  }
+
+  const onVisible = () => {
+    if (document.visibilityState !== 'visible') return;
+    document.removeEventListener('visibilitychange', onVisible);
+    window.setTimeout(doReload, 400);
+  };
+  document.addEventListener('visibilitychange', onVisible);
 }
 
 /**
@@ -99,6 +104,8 @@ export function startAppUpdateWatcher(): void {
     }
 
     if (knownVersion !== serverVersion) {
+      knownVersion = serverVersion;
+      writeStoredVersion(serverVersion);
       scheduleReload();
     }
   };

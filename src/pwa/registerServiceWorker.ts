@@ -1,9 +1,26 @@
 import { ensurePushSubscription } from '../lib/pushNotifications';
-import { startAppUpdateWatcher } from './appUpdateWatcher';
+import { pauseAppUpdateWatcher, startAppUpdateWatcher } from './appUpdateWatcher';
 import { clearAppAssetCaches } from './clearAppCaches';
 
 /** How often to ask the browser to re-fetch service-worker.js and check for changes. */
 const SW_POLL_INTERVAL_MS = 60 * 1000;
+
+function scheduleControllerReload(): void {
+  pauseAppUpdateWatcher(12_000);
+  const reload = () => window.location.reload();
+
+  if (document.visibilityState === 'visible') {
+    window.setTimeout(reload, 400);
+    return;
+  }
+
+  const onVisible = () => {
+    if (document.visibilityState !== 'visible') return;
+    document.removeEventListener('visibilitychange', onVisible);
+    window.setTimeout(reload, 400);
+  };
+  document.addEventListener('visibilitychange', onVisible);
+}
 
 async function unregisterLegacyServiceWorkers(): Promise<void> {
   if (!('serviceWorker' in navigator)) return;
@@ -23,16 +40,16 @@ function activateWhenQuiet(worker: ServiceWorker) {
   const skipWaiting = () => {
     worker.postMessage({ type: 'SKIP_WAITING' });
   };
-  if (document.visibilityState === 'hidden') {
-    skipWaiting();
+  if (document.visibilityState === 'visible') {
+    window.setTimeout(skipWaiting, 400);
     return;
   }
-  const onHidden = () => {
-    if (document.visibilityState !== 'hidden') return;
-    document.removeEventListener('visibilitychange', onHidden);
-    skipWaiting();
+  const onVisible = () => {
+    if (document.visibilityState !== 'visible') return;
+    document.removeEventListener('visibilitychange', onVisible);
+    window.setTimeout(skipWaiting, 400);
   };
-  document.addEventListener('visibilitychange', onHidden);
+  document.addEventListener('visibilitychange', onVisible);
 }
 
 function setupServiceWorker(registration: ServiceWorkerRegistration) {
@@ -88,7 +105,7 @@ export async function registerServiceWorker() {
     // First install has no previous controller; this document is already live.
     if (!hadController) return;
     refreshing = true;
-    window.location.reload();
+    scheduleControllerReload();
   });
 
   navigator.serviceWorker.addEventListener('message', (event) => {
