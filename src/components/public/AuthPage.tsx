@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { AlertCircle, ArrowLeft, CheckCircle2, FileText, Gift, Info, Lock, Mail, Shield, Sparkles, User } from 'lucide-react';
+import { AlertCircle, ArrowLeft, CheckCircle2, FileText, Gift, Info, Lock, Mail, Shield, User } from 'lucide-react';
 import { SACRAMENTO_NEIGHBORHOODS } from '../../types';
 import { PRIVACY, RULES, SITE } from '../../siteContent';
 import { usePublicRoute } from '../../public/usePublicRoute';
@@ -178,19 +178,10 @@ export default function AuthPage({
       {/* Form panel */}
       <div className="flex-1 flex items-center justify-center px-4 sm:px-6 py-8 lg:py-14">
         <div className="w-full max-w-md">
-          {/* Compact brand hero — mobile/tablet only; nav already shows the lockup in newspaper mode */}
+          {/* Logo only on mobile — same as home hero, without the green bar */}
           {!newspaper ? (
             <div className="lg:hidden mb-6">
-              <div className="sbn-native-hero flex items-center gap-3">
-                <BrandLogo imgClassName="h-16 w-auto max-w-[160px] object-contain shrink-0" showTitle={false} />
-                <div className="min-w-0">
-                  <p className="font-display font-bold leading-tight">{brandName}</p>
-                  <p className="text-[11px] mt-0.5 flex items-center gap-1 sbn-auth-brand-footnote">
-                    <Sparkles className="w-3 h-3 shrink-0" />
-                    {SITE.freeRule}
-                  </p>
-                </div>
-              </div>
+              <BrandLogo imgClassName="sbn-hero-logo h-14 w-auto max-w-[220px] object-contain bg-transparent" showTitle={false} />
             </div>
           ) : null}
 
