@@ -3,16 +3,16 @@
 ═══════════════════════════════════════════════════════════════
 
 Release title (Play Console → Release name):
-  0.2.0 (54)
+  0.2.0 (55)
 
 Beta label (for your records / changelog):
-  beta v0.2.0.0054
+  beta v0.2.0.0055
 
 Public AAB download link (share / verify after deploy):
-  https://www.sacramentobuynothing.com/downloads/sac-buy-nothing-beta-v0.2.0.0054.aab
+  https://www.sacramentobuynothing.com/downloads/sac-buy-nothing-beta-v0.2.0.0055.aab
 
 Public APK download link (sideload page):
-  https://www.sacramentobuynothing.com/downloads/sac-buy-nothing-beta-v0.2.0.0054.apk
+  https://www.sacramentobuynothing.com/downloads/sac-buy-nothing-beta-v0.2.0.0055.apk
 
 Package name:
   org.sacramentobuynothing.app
@@ -24,7 +24,7 @@ Store listing (after opt-in):
   https://play.google.com/store/apps/details?id=org.sacramentobuynothing.app
 
 Upload this file in Play Console:
-  public/downloads/sac-buy-nothing-beta-v0.2.0.0054.aab
+  public/downloads/sac-buy-nothing-beta-v0.2.0.0055.aab
   (local build copy: dist/android/sac-buy-nothing-release.aab)
 
 Play Console path:
@@ -32,11 +32,10 @@ Play Console path:
 
 Release notes (paste into Play Console release notes field):
 ───────────────────────────────────────────────────────────────
-Android beta 0.2.0 (54)
+Android beta 0.2.0 (55)
 
-• Cleaner app icon — no green fringe or bleeding around the hands artwork
-• Homepage logo no longer sits on a green glow halo
-• Android launcher icon inset for cleaner circle mask on install
+• Rebuilt app icon from clean 3D hands artwork — no green smear in the white hands
+• Separate maskable icon for Install app / home screen — no dark fringe on circle mask
 • Same community — give freely, ask kindly, neighbors helping neighbors
 • Closed testing opt-in: https://play.google.com/apps/testing/org.sacramentobuynothing.app
 ───────────────────────────────────────────────────────────────
@@ -44,8 +43,8 @@ Android beta 0.2.0 (54)
 Steps — upload build:
   1. Open Play Console → SacramentoBuyNothing
   2. Testing → Closed testing → Create release
-  3. Upload: public/downloads/sac-buy-nothing-beta-v0.2.0.0054.aab
-  4. Release name: 0.2.0 (54)
+  3. Upload: public/downloads/sac-buy-nothing-beta-v0.2.0.0055.aab
+  4. Release name: 0.2.0 (55)
   5. Paste release notes above
   6. Save → Review release → Start rollout to Closed testing
   7. Share the closed-testing opt-in link above (not the old internal-test URL)

@@ -1,6 +1,6 @@
 Android beta 0.2.0 (55)
 
-• Rebuilt app icon from clean 3D hands artwork — no green smear in the white hands
-• Separate maskable icon for Install app / home screen — no dark fringe on circle mask
+• Restored the original Sacramento green 3D hands logo
+• Website, Install app, and Android home screen all use that artwork
 • Same community — give freely, ask kindly, neighbors helping neighbors
 • Closed testing opt-in: https://play.google.com/apps/testing/org.sacramentobuynothing.app
