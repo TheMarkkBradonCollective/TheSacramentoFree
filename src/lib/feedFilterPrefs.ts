@@ -1,7 +1,12 @@
 import type { FeedFilterPreferences, UserProfile } from '../types';
 import { SACRAMENTO_NEIGHBORHOODS } from '../types';
 import { LISTING_TYPE_FILTERS, type ListingTypeFilter } from './postType';
-import { PRIMARY_FEED_SORTS, MORE_FEED_SORTS, type FeedSortMode } from './feedSort';
+import {
+  COORDINATION_FEED_SORTS,
+  MORE_FEED_SORTS,
+  PRIMARY_FEED_SORTS,
+  type FeedSortMode,
+} from './feedSort';
 import {
   persistUserAppPreferencesCached,
   readStoredAppPrefs,
@@ -15,6 +20,7 @@ export type FeedVoteFilter = 'all' | 'i_interested' | 'has_interest' | 'has_comm
 const FEED_SORTS: FeedSortMode[] = [
   ...PRIMARY_FEED_SORTS.map((s) => s.value),
   ...MORE_FEED_SORTS.map((s) => s.value),
+  ...COORDINATION_FEED_SORTS.map((s) => s.value),
 ];
 const FEED_QUICK_PICKS: FeedListingQuickPick[] = ['saved', 'my_neighborhood', 'with_photos', 'needs_pickup'];
 const FEED_STATUS_FILTERS: FeedStatusFilter[] = ['all', 'active', 'pending_pickup', 'on_hold', 'completed'];

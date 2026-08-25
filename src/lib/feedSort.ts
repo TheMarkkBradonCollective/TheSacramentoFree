@@ -1,4 +1,5 @@
 import type { ItemPost } from '../types';
+import { getListingNavigateLabel } from './listingMapActions';
 
 /** Primary feed sort modes — Reddit-style browsing. */
 export type FeedSortMode =
@@ -8,7 +9,11 @@ export type FeedSortMode =
   | 'active'
   | 'oldest'
   | 'most_upvotes'
-  | 'most_comments';
+  | 'most_comments'
+  | 'go_get'
+  | 'drop_off'
+  | 'meet_up'
+  | 'pick_up';
 
 export interface FeedEngagementSlice {
   upvotes: number;
@@ -28,6 +33,39 @@ export const MORE_FEED_SORTS: { value: FeedSortMode; label: string }[] = [
   { value: 'most_upvotes', label: 'Most upvotes' },
   { value: 'most_comments', label: 'Most comments' },
 ];
+
+/** Pickup & coordination labels — filter feed by navigate action. */
+export const COORDINATION_FEED_SORTS: { value: FeedSortMode; label: string; hint: string }[] = [
+  { value: 'go_get', label: 'Go Get', hint: 'Giveaways to pick up in person' },
+  { value: 'drop_off', label: 'Drop off', hint: 'Neighbors looking for something' },
+  { value: 'meet_up', label: 'Meet up', hint: 'Trades to coordinate in person' },
+  { value: 'pick_up', label: 'Pick Up', hint: 'Curb alerts — grab at the pin' },
+];
+
+const COORDINATION_SORT_LABELS: Record<
+  Extract<FeedSortMode, 'go_get' | 'drop_off' | 'meet_up' | 'pick_up'>,
+  string
+> = {
+  go_get: 'Go Get',
+  drop_off: 'Drop off',
+  meet_up: 'Meet up',
+  pick_up: 'Pick Up',
+};
+
+export function isCoordinationFeedSort(
+  mode: FeedSortMode,
+): mode is Extract<FeedSortMode, 'go_get' | 'drop_off' | 'meet_up' | 'pick_up'> {
+  return mode in COORDINATION_SORT_LABELS;
+}
+
+export function itemMatchesCoordinationFeedSort(item: ItemPost, mode: FeedSortMode): boolean {
+  if (!isCoordinationFeedSort(mode)) return true;
+  return getListingNavigateLabel(item) === COORDINATION_SORT_LABELS[mode];
+}
+
+function feedSortCompareMode(mode: FeedSortMode): Exclude<FeedSortMode, 'go_get' | 'drop_off' | 'meet_up' | 'pick_up'> {
+  return isCoordinationFeedSort(mode) ? 'new' : mode;
+}
 
 export function feedEngagementSlice(
   upvotes: number,
@@ -80,8 +118,9 @@ export function compareFeedItems(
 ): number {
   const engA = getEngagement(a.id);
   const engB = getEngagement(b.id);
+  const compareMode = feedSortCompareMode(mode);
 
-  switch (mode) {
+  switch (compareMode) {
     case 'oldest':
       return itemTime(a.createdAt) - itemTime(b.createdAt);
     case 'most_upvotes':
