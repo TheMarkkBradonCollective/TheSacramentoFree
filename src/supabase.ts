@@ -1266,7 +1266,7 @@ export async function getSupabaseItemById(itemId: string): Promise<ItemPost | nu
 
 let listingViewRpcAvailable: boolean | null = null;
 
-/** Count one unique neighbor view when opening listing detail (RPC + items.viewCount). */
+/** Record one unique neighbor view when the full listing detail is opened (not feed cards). */
 export async function recordListingView(itemId: string): Promise<{ ok: boolean; viewCount?: number }> {
   if (!itemId || listingViewRpcAvailable === false) return { ok: false };
 
