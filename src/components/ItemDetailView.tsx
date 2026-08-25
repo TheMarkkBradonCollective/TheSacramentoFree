@@ -1,4 +1,4 @@
-import { ArrowLeft, Bookmark, Calendar, ExternalLink, LifeBuoy, MapPin, MessageSquare, Pencil, Tag, Trash2 } from 'lucide-react';
+import { ArrowLeft, Bookmark, Calendar, ExternalLink, MapPin, MessageSquare, Pencil, Tag, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ItemPost, extractGPSCoordinates, ItemComment, ListingSubItem, UserProfile } from '../types';
@@ -295,7 +295,7 @@ export default function ItemDetailView({
       const hasPrimaryNav = navFooterActions.some((a) => a.variant !== 'secondary' && a.variant !== 'ghost');
       actions.push({
         id: 'message',
-        label: getListingContactButtonLabel(item.type),
+        label: isStaffViewer ? 'Message about pickup' : getListingContactButtonLabel(item.type),
         onClick: onMessage,
         icon: <MessageSquare className="w-4 h-4" />,
         variant: hasPrimaryNav ? 'secondary' : undefined,
@@ -306,6 +306,7 @@ export default function ItemDetailView({
   }, [
     isOwner,
     navFooterActions,
+    isStaffViewer,
     isOpenForCoordination,
     onMessage,
     item.type,
