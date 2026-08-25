@@ -27,15 +27,15 @@ function readSkinFromLocation(): boolean | null {
 }
 
 function defaultNewspaperEnabled(): boolean {
-  // 0.2.0 (50) is The Sacramento Free, including production.
-  // Escape hatch: ?skin=original (handled in readEnabled).
-  return true;
+  // Original Sacramento Buy Nothing layout is the default again.
+  // Escape hatch: ?skin=newspaper (handled in readEnabled).
+  return false;
 }
 
 function readEnabled(): boolean {
   const fromUrl = readSkinFromLocation();
   if (fromUrl !== null) return fromUrl;
-  if (typeof window === 'undefined') return true;
+  if (typeof window === 'undefined') return false;
   const stored = sessionStorage.getItem(STORAGE_KEY);
   if (stored === '0') return false;
   if (stored === '1') return true;
