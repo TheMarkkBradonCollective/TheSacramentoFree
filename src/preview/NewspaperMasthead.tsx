@@ -1,4 +1,3 @@
-import { SITE_LOGO_SRC } from '../siteContent';
 import { formatNewspaperDate, NEWSPAPER } from './newspaperBrand';
 import { useNewspaperSkin } from './NewspaperSkinContext';
 
@@ -9,19 +8,15 @@ interface NewspaperMastheadProps {
   onHomeClick?: () => void;
 }
 
-function MastheadLockup({
-  variant,
-  onHomeClick,
-}: {
-  variant: NewspaperMastheadProps['variant'];
-  onHomeClick?: () => void;
-}) {
-  const img = (
-    <img
-      src={SITE_LOGO_SRC}
-      alt={NEWSPAPER.name}
-      className={`tsf-masthead__lockup tsf-masthead__lockup--${variant ?? 'front'}`}
-    />
+function MastheadWordmark({ onHomeClick }: { onHomeClick?: () => void }) {
+  const [city, free] = NEWSPAPER.title.split(' ');
+
+  const content = (
+    <>
+      <span className="tsf-masthead__the">{NEWSPAPER.the}</span>
+      <span className="tsf-masthead__name">{city}</span>
+      <span className="tsf-masthead__free">{free}</span>
+    </>
   );
 
   if (onHomeClick) {
@@ -30,19 +25,19 @@ function MastheadLockup({
         type="button"
         className="tsf-masthead__wordmark"
         onClick={onHomeClick}
-        aria-label={`${NEWSPAPER.name} home`}
+        aria-label={`${NEWSPAPER.the} ${NEWSPAPER.title} home`}
       >
-        {img}
+        {content}
       </button>
     );
   }
 
-  return <div className="tsf-masthead__wordmark">{img}</div>;
+  return <p className="tsf-masthead__wordmark">{content}</p>;
 }
 
 /**
- * The nameplate for The Sacramento Free. Uses the uploaded lockup artwork so
- * the masthead title and slogan match the header logo exactly.
+ * The nameplate for The Sacramento Free. The publication title is not a page
+ * headline — the lead story carries the h1.
  */
 export default function NewspaperMasthead({
   variant = 'front',
@@ -66,7 +61,7 @@ export default function NewspaperMasthead({
       )}
 
       <div className="tsf-masthead__crest">
-        <MastheadLockup variant={variant} onHomeClick={onHomeClick} />
+        <MastheadWordmark onHomeClick={onHomeClick} />
       </div>
 
       {variant === 'front' && (

@@ -32,7 +32,7 @@ export default function DashboardRail({
         <div className="space-y-1.5">
           {onOpenAwards && (
             <button type="button" onClick={onOpenAwards} className="sbn-rail-quick-btn" id="rail_awards_btn">
-              <span className="p-1.5 rounded-md bg-amber-500/15 text-amber-500">
+              <span className="p-1.5 rounded-md bg-accent/15 text-accent">
                 <Sparkles className="w-3.5 h-3.5" />
               </span>
               Your badges
@@ -52,7 +52,7 @@ export default function DashboardRail({
       <div className="sbn-rail-card">
         <p className="sbn-rail-card-title">
           Top neighbors
-          <Trophy className="w-3.5 h-3.5 text-amber-500" />
+          <Trophy className="w-3.5 h-3.5 text-accent" />
         </p>
         {loading ? (
           <div className="py-4 text-center text-xs text-muted">Loading leaderboard…</div>

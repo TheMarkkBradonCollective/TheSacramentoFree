@@ -13,6 +13,7 @@ import { resolveProfileIdentity } from '../lib/profilePersistence';
 import { countPastRsvps, effectivePastRsvp } from '../lib/eventRsvp';
 import { useConfirm } from '../contexts/ConfirmContext';
 import { isStaffRole } from '../lib/roles';
+import { isPlayStoreDemo, PLAY_STORE_DEMO_EVENT_COMMENTS, PLAY_STORE_DEMO_EVENT_RSVPS } from '../preview/playStoreDemo';
 
 export interface EventRsvpState {
   userRsvp: EventRsvpStatus | null;
@@ -83,8 +84,12 @@ export function useEventsEngagement(
   userProfile: UserProfile | null,
   blockedUserIds: Set<string> = new Set(),
 ) {
-  const [eventRsvps, setEventRsvps] = useState<Record<string, EventRsvpState>>({});
-  const [eventComments, setEventComments] = useState<Record<string, EventComment[]>>({});
+  const [eventRsvps, setEventRsvps] = useState<Record<string, EventRsvpState>>(
+    () => (isPlayStoreDemo() ? PLAY_STORE_DEMO_EVENT_RSVPS : {}),
+  );
+  const [eventComments, setEventComments] = useState<Record<string, EventComment[]>>(
+    () => (isPlayStoreDemo() ? PLAY_STORE_DEMO_EVENT_COMMENTS : {}),
+  );
 
   const uid = userProfile?.uid ?? '';
   const isStaff = userProfile ? isStaffRole(userProfile.role) : false;
@@ -103,6 +108,7 @@ export function useEventsEngagement(
   );
 
   useEffect(() => {
+    if (isPlayStoreDemo()) return;
     if (!uid || eventIds.length === 0) {
       setEventRsvps({});
       setEventComments({});
@@ -174,7 +180,7 @@ export function useEventsEngagement(
   );
 
   useEffect(() => {
-    if (!uid || eventIds.length === 0) return;
+    if (isPlayStoreDemo() || !uid || eventIds.length === 0) return;
 
     const unsubRsvps = subscribePostgresChanges<EventRsvp>(
       { channelName: 'live-event-rsvps', table: 'event_rsvps', event: '*' },

@@ -57,9 +57,10 @@ export default function AppTopbar({
         )}
         {brandLockup ? (
           <BrandLogo
+            showTitle
+            showTitleBesideLockup
+            className="flex items-center gap-2 min-w-0 flex-1"
             imgClassName="h-9 w-9 max-w-[2.25rem] max-h-[2.25rem] object-contain shrink-0"
-            showTitle={false}
-            className="flex items-center gap-2 min-w-0"
           />
         ) : (
           <div className="min-w-0">

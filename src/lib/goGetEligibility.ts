@@ -1,4 +1,5 @@
 import type { UserProfile } from '../types';
+import { isPlayStoreDemo } from '../preview/playStoreDemo';
 import { isNativeApp } from './nativePlatform';
 import { isProfileWithinPickupAvailability } from './pickupAvailability';
 import {
@@ -19,7 +20,7 @@ export type GoGetEligibility = { ok: true } | { ok: false; reason: GoGetBlockRea
 
 /** Go Get / pickup coordination — Android APK & AAB only (not browser or PWA). */
 export function supportsGoGetCoordination(): boolean {
-  return isNativeApp();
+  return isNativeApp() || isPlayStoreDemo();
 }
 
 /** @deprecated Use supportsGoGetCoordination — kept for existing call sites. */

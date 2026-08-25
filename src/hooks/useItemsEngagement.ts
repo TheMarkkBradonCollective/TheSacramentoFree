@@ -13,6 +13,7 @@ import { resolveProfileIdentity } from '../lib/profilePersistence';
 import { VOTE_COOLDOWN_MESSAGE } from '../lib/voteCooldown';
 import { useConfirm } from '../contexts/ConfirmContext';
 import { isStaffRole } from '../lib/roles';
+import { isPlayStoreDemo, PLAY_STORE_DEMO_ITEM_COMMENTS, PLAY_STORE_DEMO_ITEM_VOTES } from '../preview/playStoreDemo';
 
 export interface PostVoteState {
   userVote: 'up' | 'down' | null;
@@ -25,8 +26,12 @@ export function useItemsEngagement(
   userProfile: UserProfile | null,
   blockedUserIds: Set<string> = new Set(),
 ) {
-  const [itemVotes, setItemVotes] = useState<Record<string, PostVoteState>>({});
-  const [itemComments, setItemComments] = useState<Record<string, ItemComment[]>>({});
+  const [itemVotes, setItemVotes] = useState<Record<string, PostVoteState>>(
+    () => (isPlayStoreDemo() ? PLAY_STORE_DEMO_ITEM_VOTES : {}),
+  );
+  const [itemComments, setItemComments] = useState<Record<string, ItemComment[]>>(
+    () => (isPlayStoreDemo() ? PLAY_STORE_DEMO_ITEM_COMMENTS : {}),
+  );
   const [expandedPostComments, setExpandedPostComments] = useState<Record<string, boolean>>({});
 
   const uid = userProfile?.uid ?? '';
@@ -47,6 +52,7 @@ export function useItemsEngagement(
   );
 
   useEffect(() => {
+    if (isPlayStoreDemo()) return;
     if (!uid || itemIds.length === 0) {
       setItemVotes({});
       setItemComments({});
@@ -132,7 +138,7 @@ export function useItemsEngagement(
   );
 
   useEffect(() => {
-    if (!uid || itemIds.length === 0) return;
+    if (isPlayStoreDemo() || !uid || itemIds.length === 0) return;
 
     const unsubVotes = subscribePostgresChanges<ItemVote>(
       { channelName: 'live-item-votes', table: 'item_votes', event: '*' },

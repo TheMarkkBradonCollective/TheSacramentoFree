@@ -19,8 +19,6 @@
 -- Supabase SQL editor and run it for new projects or after schema changes.
 -- Neighbor Updates/News copy: shared/changelogSeed.ts
 --   (cron /api/cron/publish-changelog upserts + prunes every 4 hours — 0 */4 * * *)
--- Neighbor notification inboxes (bell → Notifications): DELETE below clears all rows.
---   New alerts are created when activity happens; prefs stay in notification_preferences.
 -- =========================================================
 
 -- =========================================================
@@ -646,7 +644,7 @@ INSERT INTO public.director_message (
 VALUES (
   'main',
   'Markeith White',
-  'Buy Nothing Director',
+  'TheSacramentoFree Director',
   'A note from your director',
   'Sacramento Buy Nothing exists so neighbors can give freely, ask kindly, and keep good things out of the landfill — with no money involved. That is the goal, plain and simple.',
   '["This app is 100% free — always.","No ads. Ever.","I keep you in mind with every feature I build.","I do not want your information for anything beyond making the community work, and I will never sell it."]'::jsonb,
@@ -1413,10 +1411,7 @@ WHERE NOT EXISTS (
 UPDATE public.users
 SET role = 'director'
 WHERE role IS DISTINCT FROM 'director'
-  AND (
-    uid = '204b071f-100c-401d-b76d-40c594e1f132'
-    OR lower(email) = 'sigsecspec@gmail.com'
-  );
+  AND lower(email) = 'marknickwhite@gmail.com';
 
 -- 6. Realtime for preference sync across tabs (optional)
 DO $$
@@ -1486,7 +1481,7 @@ WHERE NOT EXISTS (SELECT 1 FROM public.notification_preferences p WHERE p."userI
 
 UPDATE public.users SET role = 'director'
 WHERE role IS DISTINCT FROM 'director'
-  AND (uid = '204b071f-100c-401d-b76d-40c594e1f132' OR lower(email) = 'sigsecspec@gmail.com');
+  AND lower(email) = 'marknickwhite@gmail.com';
 
 DELETE FROM public.push_subscriptions WHERE "updatedAt" < NOW() - INTERVAL '90 days';
 
@@ -1552,6 +1547,7 @@ BEGIN
     ALTER PUBLICATION supabase_realtime ADD TABLE public.user_notifications;
   END IF;
 END $$;
+
 
 -- Clear all neighbor notification inboxes (bell → Notifications).
 -- One-time reset (Aug 2026): runs once, then skipped on re-run via table comment marker.
@@ -1647,7 +1643,6 @@ BEGIN
   END IF;
 END $$;
 
-
 -- =========================================================
 -- HELP, VOTES, COMMENTS
 -- =========================================================
@@ -1739,6 +1734,20 @@ CREATE TABLE IF NOT EXISTS public.feed_posts (
   "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+ALTER TABLE public.feed_posts ADD COLUMN IF NOT EXISTS "postKind" TEXT NOT NULL DEFAULT 'standard';
+ALTER TABLE public.feed_posts ADD COLUMN IF NOT EXISTS "pollOptions" JSONB;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'feed_posts_post_kind_check'
+  ) THEN
+    ALTER TABLE public.feed_posts
+      ADD CONSTRAINT feed_posts_post_kind_check
+      CHECK ("postKind" IN ('standard', 'poll'));
+  END IF;
+END $$;
+
 CREATE INDEX IF NOT EXISTS feed_posts_created_idx ON public.feed_posts ("createdAt" DESC);
 CREATE INDEX IF NOT EXISTS feed_posts_user_idx ON public.feed_posts ("userId");
 
@@ -1773,6 +1782,18 @@ CREATE TABLE IF NOT EXISTS public.feed_post_reactions (
 CREATE INDEX IF NOT EXISTS feed_post_reactions_post_idx ON public.feed_post_reactions ("postId");
 
 ALTER TABLE public.feed_post_reactions ENABLE ROW LEVEL SECURITY;
+
+CREATE TABLE IF NOT EXISTS public.feed_poll_votes (
+  "postId" TEXT NOT NULL REFERENCES public.feed_posts(id) ON DELETE CASCADE,
+  "userId" TEXT NOT NULL,
+  "optionId" TEXT NOT NULL,
+  "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY ("postId", "userId")
+);
+
+CREATE INDEX IF NOT EXISTS feed_poll_votes_post_idx ON public.feed_poll_votes ("postId");
+
+ALTER TABLE public.feed_poll_votes ENABLE ROW LEVEL SECURITY;
 
 
 -- =========================================================
@@ -3224,7 +3245,13 @@ DROP POLICY IF EXISTS "feed_posts_delete" ON public.feed_posts;
 CREATE POLICY "feed_posts_select" ON public.feed_posts
   FOR SELECT USING (auth.uid() IS NOT NULL AND status = 'active');
 CREATE POLICY "feed_posts_insert" ON public.feed_posts
-  FOR INSERT WITH CHECK (auth.uid()::text = "userId");
+  FOR INSERT WITH CHECK (
+    auth.uid()::text = "userId"
+    AND (
+      COALESCE("postKind", 'standard') = 'standard'
+      OR public.is_staff()
+    )
+  );
 CREATE POLICY "feed_posts_update_own" ON public.feed_posts
   FOR UPDATE USING (auth.uid()::text = "userId" OR public.is_staff())
   WITH CHECK (auth.uid()::text = "userId" OR public.is_staff());
@@ -3246,6 +3273,14 @@ DROP POLICY IF EXISTS "feed_post_reactions_write" ON public.feed_post_reactions;
 CREATE POLICY "feed_post_reactions_select" ON public.feed_post_reactions
   FOR SELECT USING (auth.uid() IS NOT NULL);
 CREATE POLICY "feed_post_reactions_write" ON public.feed_post_reactions
+  FOR ALL USING (auth.uid()::text = "userId")
+  WITH CHECK (auth.uid()::text = "userId");
+
+DROP POLICY IF EXISTS "feed_poll_votes_select" ON public.feed_poll_votes;
+DROP POLICY IF EXISTS "feed_poll_votes_write" ON public.feed_poll_votes;
+CREATE POLICY "feed_poll_votes_select" ON public.feed_poll_votes
+  FOR SELECT USING (auth.uid() IS NOT NULL);
+CREATE POLICY "feed_poll_votes_write" ON public.feed_poll_votes
   FOR ALL USING (auth.uid()::text = "userId")
   WITH CHECK (auth.uid()::text = "userId");
 
@@ -3732,21 +3767,21 @@ BEGIN
             WHEN 'city_moderator' THEN 'City Moderator'
             WHEN 'city_administrator' THEN 'City Administrator'
             WHEN 'city_manager' THEN 'City Manager'
-            ELSE 'Sacramento Buy Nothing Director'
+            ELSE 'TheSacramentoFree Director'
           END || '. Staff tools are in the app.'
         WHEN 'maybe' THEN
           'Your ' || CASE app_row.role
             WHEN 'city_moderator' THEN 'City Moderator'
             WHEN 'city_administrator' THEN 'City Administrator'
             WHEN 'city_manager' THEN 'City Manager'
-            ELSE 'Sacramento Buy Nothing Director'
+            ELSE 'TheSacramentoFree Director'
           END || ' application came back as maybe. You can apply again for that role or any other from Account.'
         ELSE
           'Your ' || CASE app_row.role
             WHEN 'city_moderator' THEN 'City Moderator'
             WHEN 'city_administrator' THEN 'City Administrator'
             WHEN 'city_manager' THEN 'City Manager'
-            ELSE 'Sacramento Buy Nothing Director'
+            ELSE 'TheSacramentoFree Director'
           END || ' application was not approved. This account can''t apply for staff roles.'
       END,
       actor_uid,
@@ -4034,14 +4069,17 @@ INSERT INTO public.feed_posts (
 )
 VALUES (
   'feed_welcome_director_2026',
-  '204b071f-100c-401d-b76d-40c594e1f132',
   COALESCE(
-    (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+    (SELECT uid FROM public.users WHERE lower(email) = 'marknickwhite@gmail.com' LIMIT 1),
+    '204b071f-100c-401d-b76d-40c594e1f132'
+  ),
+  COALESCE(
+    (SELECT "displayName" FROM public.users WHERE lower(email) = 'marknickwhite@gmail.com' LIMIT 1),
     'Markeith White'
   ),
-  (SELECT "photoURL" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "photoURL" FROM public.users WHERE lower(email) = 'marknickwhite@gmail.com' LIMIT 1),
   COALESCE(
-    (SELECT neighborhood FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+    (SELECT neighborhood FROM public.users WHERE lower(email) = 'marknickwhite@gmail.com' LIMIT 1),
     'Midtown'
   ),
   'Hey guys — glad to have y''all here!
@@ -4061,6 +4099,66 @@ Say hi when you get a minute. Let me know what you think.',
 )
 ON CONFLICT (id) DO UPDATE SET
   text = EXCLUDED.text,
+  "userDisplayName" = EXCLUDED."userDisplayName",
+  "userPhotoURL" = EXCLUDED."userPhotoURL",
+  neighborhood = EXCLUDED.neighborhood,
+  "updatedAt" = NOW();
+
+
+INSERT INTO public.feed_posts (
+  id,
+  "userId",
+  "userDisplayName",
+  "userPhotoURL",
+  neighborhood,
+  text,
+  "imageUrls",
+  status,
+  "postedAsNeighbor",
+  "postKind",
+  "pollOptions",
+  "createdAt",
+  "updatedAt"
+)
+VALUES (
+  'feed_poll_design_2026',
+  COALESCE(
+    (SELECT uid FROM public.users WHERE lower(email) = 'marknickwhite@gmail.com' LIMIT 1),
+    '204b071f-100c-401d-b76d-40c594e1f132'
+  ),
+  COALESCE(
+    (SELECT "displayName" FROM public.users WHERE lower(email) = 'marknickwhite@gmail.com' LIMIT 1),
+    'Markeith White'
+  ),
+  (SELECT "photoURL" FROM public.users WHERE lower(email) = 'marknickwhite@gmail.com' LIMIT 1),
+  COALESCE(
+    (SELECT neighborhood FROM public.users WHERE lower(email) = 'marknickwhite@gmail.com' LIMIT 1),
+    'Midtown'
+  ),
+  'Style poll: newspaper v2 or original layout in tan and black?
+
+0.2.0 landed as TheSacramentoFree. Same community, same account — but the site and app got a full newspaper redesign: gray ink, columns, section heads, crest lockup in the header. You see it on home, feed, map, listings — all of it.
+
+Why a newspaper? Because that is basically what we are running — a free circular for Sacramento neighbors. Who is giving something away, who needs something, pickup details. Nothing changed under the hood: same listings, chat, map, notifications.
+
+This poll is about style only — not the name. TheSacramentoFree stays either way. I want to know whether you want to keep this newspaper design as the default, or whether I should bring back the original app layout with our new tan-and-black theme instead of the old orange SacramentoBuyNothing look. On a browser you can still peek at the old orange with ?skin=original if you want to compare.
+
+Tap one below. Too plain? Too busy? Hard to read? You love it? You hate it? Say it in the comments — I read them.',
+  '[]'::jsonb,
+  'active',
+  false,
+  'poll',
+  '[
+    {"id":"newspaper","shortLabel":"Keep v2 — newspaper style","label":"Keep v2 — newspaper style (crest, columns, gray ink on home, feed, map, and the app — default now)"},
+    {"id":"original","shortLabel":"Original layout — tan & black","label":"Bring back the original app layout — tan and black TheSacramentoFree theme (same pages and flows as before, not the old orange)"}
+  ]'::jsonb,
+  '2026-08-22 01:00:00-07'::timestamptz,
+  NOW()
+)
+ON CONFLICT (id) DO UPDATE SET
+  text = EXCLUDED.text,
+  "postKind" = EXCLUDED."postKind",
+  "pollOptions" = EXCLUDED."pollOptions",
   "userDisplayName" = EXCLUDED."userDisplayName",
   "userPhotoURL" = EXCLUDED."userPhotoURL",
   neighborhood = EXCLUDED.neighborhood,

@@ -1,5 +1,12 @@
 import { supabase, buildDmChatId, getOrCreateSupabaseChat, createSupabaseMessage, staffGetListingById, getSupabaseProfile } from '../supabase';
 import type { GoGetFulfillerLiveLocation, GoGetHandshakeMode, GoGetLiveLocation, GoGetSession, GoGetSessionStatus, ItemPost, UserProfile } from '../types';
+import { isPlayStoreDemo } from '../preview/playStoreDemo';
+import {
+  getPlayStoreDemoActiveGoGetSession,
+  getPlayStoreDemoFulfillerLiveLocation,
+  getPlayStoreDemoGoGetSession,
+  getPlayStoreDemoLiveLocation,
+} from '../preview/playStoreDemoGoGet';
 import { CLIENT_PUSH_DISPATCH_ENABLED } from './pushConfig';
 import { subscribePostgresChanges } from './supabaseRealtime';
 import { isStaffRole } from './roles';
@@ -121,6 +128,9 @@ function isMissingTableError(error: { code?: string } | null | undefined): boole
 
 /** Any non-terminal session for this item involving this user (either role). */
 export async function getActiveGoGetSession(itemId: string, userId: string): Promise<GoGetSession | null> {
+  if (isPlayStoreDemo()) {
+    return getPlayStoreDemoActiveGoGetSession(itemId, userId);
+  }
   try {
     const { data, error } = await supabase
       .from('go_get_sessions')
@@ -141,6 +151,9 @@ export async function getActiveGoGetSession(itemId: string, userId: string): Pro
 }
 
 export async function getGoGetSessionById(sessionId: string): Promise<GoGetSession | null> {
+  if (isPlayStoreDemo()) {
+    return getPlayStoreDemoGoGetSession(sessionId);
+  }
   try {
     const { data, error } = await supabase.from('go_get_sessions').select('*').eq('id', sessionId).maybeSingle();
     if (error || !data) return null;
@@ -816,6 +829,9 @@ export async function upsertLiveLocation(
 }
 
 export async function getLiveLocation(sessionId: string): Promise<GoGetLiveLocation | null> {
+  if (isPlayStoreDemo()) {
+    return getPlayStoreDemoLiveLocation(sessionId);
+  }
   try {
     const { data, error } = await supabase
       .from('go_get_live_locations')
@@ -860,6 +876,9 @@ export async function upsertFulfillerLiveLocation(
 }
 
 export async function getFulfillerLiveLocation(sessionId: string): Promise<GoGetFulfillerLiveLocation | null> {
+  if (isPlayStoreDemo()) {
+    return getPlayStoreDemoFulfillerLiveLocation(sessionId);
+  }
   try {
     const { data, error } = await supabase
       .from('go_get_fulfiller_live_locations')
@@ -885,6 +904,11 @@ export function subscribeToFulfillerLiveLocationChanges(
   sessionId: string,
   onChange: (location: GoGetFulfillerLiveLocation) => void,
 ): () => void {
+  if (isPlayStoreDemo()) {
+    const loc = getPlayStoreDemoFulfillerLiveLocation(sessionId);
+    if (loc) onChange(loc);
+    return () => undefined;
+  }
   return subscribePostgresChanges<Record<string, unknown>>(
     {
       channelName: `go-get-fulfiller-live-location-${sessionId}`,
@@ -922,6 +946,11 @@ export function subscribeToLiveLocationChanges(
   sessionId: string,
   onChange: (location: GoGetLiveLocation) => void,
 ): () => void {
+  if (isPlayStoreDemo()) {
+    const loc = getPlayStoreDemoLiveLocation(sessionId);
+    if (loc) onChange(loc);
+    return () => undefined;
+  }
   return subscribePostgresChanges<Record<string, unknown>>(
     {
       channelName: `go-get-live-location-${sessionId}`,

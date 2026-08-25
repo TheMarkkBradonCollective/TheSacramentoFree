@@ -44,7 +44,7 @@ export default function StaffWelcomeView({ actor }: StaffWelcomeViewProps) {
       <div className="flex-1 overflow-y-auto min-h-0 p-4">
         <div className="sbn-help-card space-y-4">
           <div className="flex items-start gap-3">
-            <span className="p-2 rounded-lg bg-amber-500/10 text-amber-500 shrink-0">
+            <span className="p-2 rounded-lg bg-accent/10 text-accent shrink-0">
               <Megaphone className="w-5 h-5" />
             </span>
             <div className="min-w-0 space-y-3">

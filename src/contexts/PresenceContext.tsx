@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from 'react';
 import { getUsersLastActive, touchLastActive } from '../supabase';
+import { isPlayStoreDemo } from '../preview/playStoreDemo';
 
 interface PresenceContextValue {
   getLastActive: (uid: string) => string | null | undefined;
@@ -31,6 +32,7 @@ export function PresenceProvider({
   const trackedRef = useRef<Set<string>>(new Set());
 
   const refreshTracked = useCallback(async () => {
+    if (isPlayStoreDemo()) return;
     const uids = [...trackedRef.current];
     if (uids.length === 0) return;
     const next = await getUsersLastActive(uids);

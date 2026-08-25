@@ -3,16 +3,16 @@
 ═══════════════════════════════════════════════════════════════
 
 Release title (Play Console → Release name):
-  0.2.0 (51)
+  0.2.0 (53)
 
 Beta label (for your records / changelog):
-  beta v0.2.0.0051
+  beta v0.2.0.0053
 
 Public AAB download link (share / verify after deploy):
-  https://www.sacramentobuynothing.com/downloads/sac-buy-nothing-beta-v0.2.0.0051.aab
+  https://www.sacramentobuynothing.com/downloads/sac-buy-nothing-beta-v0.2.0.0053.aab
 
 Public APK download link (sideload page):
-  https://www.sacramentobuynothing.com/downloads/sac-buy-nothing-beta-v0.2.0.0051.apk
+  https://www.sacramentobuynothing.com/downloads/sac-buy-nothing-beta-v0.2.0.0053.apk
 
 Package name:
   org.sacramentobuynothing.app
@@ -24,7 +24,7 @@ Store listing (after opt-in):
   https://play.google.com/store/apps/details?id=org.sacramentobuynothing.app
 
 Upload this file in Play Console:
-  public/downloads/sac-buy-nothing-beta-v0.2.0.0051.aab
+  public/downloads/sac-buy-nothing-beta-v0.2.0.0053.aab
   (local build copy: dist/android/sac-buy-nothing-release.aab)
 
 Play Console path:
@@ -32,22 +32,29 @@ Play Console path:
 
 Release notes (paste into Play Console release notes field):
 ───────────────────────────────────────────────────────────────
-Android beta 0.2.0 (51)
+Android beta 0.2.0 (53)
 
-• Smaller Sacramento Free lockup on the website and app
-• Home, sign-in, and map no longer overlap or cut off
-• Map filters and listing cards fit on the screen
-• Notification inboxes can be cleared with the schema run
+• Home-screen icon now matches the Sacramento green squircle logo on the website
+• Transparent pop-out icon — no white box behind the hands artwork
+• Same community — give freely, ask kindly, neighbors helping neighbors
+• Closed testing opt-in: https://play.google.com/apps/testing/org.sacramentobuynothing.app
 ───────────────────────────────────────────────────────────────
 
-Steps:
+Steps — upload build:
   1. Open Play Console → SacramentoBuyNothing
   2. Testing → Closed testing → Create release
-  3. Upload: public/downloads/sac-buy-nothing-beta-v0.2.0.0051.aab
-  4. Release name: 0.2.0 (51)
+  3. Upload: public/downloads/sac-buy-nothing-beta-v0.2.0.0053.aab
+  4. Release name: 0.2.0 (53)
   5. Paste release notes above
   6. Save → Review release → Start rollout to Closed testing
   7. Share the closed-testing opt-in link above (not the old internal-test URL)
+
+Steps — rename store listing (can do before or after upload):
+  1. Grow → Store presence → Main store listing
+  2. App name: TheSacramentoFree
+  3. Short description (80 chars): Sacramento neighbor gifting — give items, request what you need, meet locally.
+  4. Update full description to say TheSacramentoFree instead of SacramentoBuyNothing
+  5. Save → Send for review (if prompted)
 
 Retire internal testing (old link still works until you do this):
   • Testing → Internal testing → halt rollout / stop promoting that track

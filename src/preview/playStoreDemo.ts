@@ -1,0 +1,500 @@
+/**
+ * Local-only Play Store screenshot fixtures.
+ *
+ * Enabled solely when Vite is started with VITE_PLAY_STORE_DEMO=1.
+ * Production / Play / Vercel builds never set that flag, so this never
+ * ships as a live “fake community.”
+ */
+import type {
+  AwardsUnlockStatus,
+  Chat,
+  CommunityEvent,
+  EventComment,
+  EventRsvpStatus,
+  FeedPost,
+  FeedPostComment,
+  FeedPostReaction,
+  ItemComment,
+  ItemPost,
+  UserProfile,
+} from '../types';
+import { buildListingDescription } from '../lib/itemLocation';
+import { buildGlobalCommunityChatRow } from '../lib/communityChats';
+import { parseTabFromPathname } from '../lib/appNavigation';
+
+export function isPlayStoreDemo(): boolean {
+  return String((import.meta as { env?: Record<string, string> }).env?.VITE_PLAY_STORE_DEMO || '') === '1';
+}
+
+export function isPlayStoreDemoPublicHome(): boolean {
+  if (typeof window === 'undefined') return true;
+  if (parseTabFromPathname(window.location.pathname)) return false;
+  return true;
+}
+
+function hoursAgo(hours: number): string {
+  return new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
+}
+
+function daysFromNow(days: number, hour = 10): string {
+  const next = new Date();
+  next.setDate(next.getDate() + days);
+  next.setHours(hour, 0, 0, 0);
+  return next.toISOString();
+}
+
+function avatar(seed: string): string {
+  return `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(seed)}`;
+}
+
+function listing(
+  partial: Omit<ItemPost, 'description' | 'createdAt' | 'updatedAt' | 'status'> & {
+    details: string;
+    pickupNotes?: string;
+    createdHoursAgo: number;
+    status?: ItemPost['status'];
+  },
+): ItemPost {
+  const createdAt = hoursAgo(partial.createdHoursAgo);
+  return {
+    id: partial.id,
+    title: partial.title,
+    type: partial.type,
+    category: partial.category,
+    userId: partial.userId,
+    userDisplayName: partial.userDisplayName,
+    userPhotoURL: partial.userPhotoURL,
+    neighborhood: partial.neighborhood,
+    status: partial.status ?? 'active',
+    imageUrl: partial.imageUrl,
+    imageUrls: partial.imageUrls ?? (partial.imageUrl ? [partial.imageUrl] : []),
+    createdAt,
+    updatedAt: createdAt,
+    description: buildListingDescription({
+      type: partial.type,
+      details: partial.details,
+      pickupNotes: partial.pickupNotes,
+      customCoords: null,
+      locationIsPublic: false,
+    }),
+  };
+}
+
+export const PLAY_STORE_DEMO_PROFILE: UserProfile = {
+  uid: 'demo-neighbor-alex',
+  displayName: 'Alex Hart',
+  email: 'alex.hart.demo@example.com',
+  neighborhood: 'Midtown',
+  bio: 'Midtown neighbor — giving away extras and borrowing what I need.',
+  photoURL: avatar('Alex Hart'),
+  role: 'user',
+  accountStatus: 'active',
+  goGetEnabled: true,
+  createdAt: hoursAgo(24 * 40),
+  lastActiveAt: hoursAgo(0.2),
+  appPreferences: {
+    feedViewMode: 'grid',
+    eventsViewMode: 'grid',
+    theme: 'light',
+    feedAudienceScope: 'everyone',
+    feedContentFilter: 'all',
+  },
+};
+
+const NEIGHBORS = {
+  avery: { uid: 'demo-neighbor-avery', name: 'Avery Quinn', neighborhood: 'East Sacramento', photo: avatar('Avery Quinn') },
+  jordan: { uid: 'demo-neighbor-jordan', name: 'Jordan Hale', neighborhood: 'Midtown', photo: avatar('Jordan Hale') },
+  sam: { uid: 'demo-neighbor-sam', name: 'Sam Rivera', neighborhood: 'Oak Park', photo: avatar('Sam Rivera') },
+  casey: { uid: 'demo-neighbor-casey', name: 'Casey Brooks', neighborhood: 'Tahoe Park', photo: avatar('Casey Brooks') },
+  riley: { uid: 'demo-neighbor-riley', name: 'Riley Nguyen', neighborhood: 'Land Park', photo: avatar('Riley Nguyen') },
+  morgan: { uid: 'demo-neighbor-morgan', name: 'Morgan Ellis', neighborhood: 'Curtis Park', photo: avatar('Morgan Ellis') },
+} as const;
+
+export const PLAY_STORE_DEMO_ITEMS: ItemPost[] = [
+  listing({
+    id: 'demo-item-chair',
+    title: 'Solid oak dining chair',
+    type: 'giveaway',
+    category: 'Furniture',
+    userId: NEIGHBORS.avery.uid,
+    userDisplayName: NEIGHBORS.avery.name,
+    userPhotoURL: NEIGHBORS.avery.photo,
+    neighborhood: NEIGHBORS.avery.neighborhood,
+    imageUrl: '/play-store-demo/chair.jpg',
+    details: 'One sturdy oak dining chair, light wear on the seat. Smoke-free home. Porch pickup after 5.',
+    pickupNotes: 'Leave a message and I’ll set it on the porch.',
+    createdHoursAgo: 4,
+  }),
+  listing({
+    id: 'demo-item-plants',
+    title: 'Spider plant cuttings',
+    type: 'giveaway',
+    category: 'Garden & Outdoors',
+    userId: NEIGHBORS.jordan.uid,
+    userDisplayName: NEIGHBORS.jordan.name,
+    userPhotoURL: NEIGHBORS.jordan.photo,
+    neighborhood: NEIGHBORS.jordan.neighborhood,
+    imageUrl: '/play-store-demo/plants.jpg',
+    details: 'Three rooted spider plant cuttings in jars. Grab one or take all three.',
+    createdHoursAgo: 8,
+  }),
+  listing({
+    id: 'demo-item-books',
+    title: 'Kids picture books — free stack',
+    type: 'giveaway',
+    category: 'Books & Education',
+    userId: NEIGHBORS.sam.uid,
+    userDisplayName: NEIGHBORS.sam.name,
+    userPhotoURL: NEIGHBORS.sam.photo,
+    neighborhood: NEIGHBORS.sam.neighborhood,
+    imageUrl: '/play-store-demo/books.jpg',
+    details: 'A small stack of picture books our kids outgrew. Clean pages, no writing inside.',
+    createdHoursAgo: 14,
+  }),
+  listing({
+    id: 'demo-item-kitchen',
+    title: 'Mixing bowls and baking pans',
+    type: 'giveaway',
+    category: 'Kitchen & Dining',
+    userId: NEIGHBORS.casey.uid,
+    userDisplayName: NEIGHBORS.casey.name,
+    userPhotoURL: NEIGHBORS.casey.photo,
+    neighborhood: NEIGHBORS.casey.neighborhood,
+    imageUrl: '/play-store-demo/kitchen.jpg',
+    details: 'Nested mixing bowls plus two baking pans. Come as a set.',
+    createdHoursAgo: 20,
+  }),
+  listing({
+    id: 'demo-item-lamp',
+    title: 'Looking for a spare floor lamp',
+    type: 'looking',
+    category: 'Furniture',
+    userId: NEIGHBORS.riley.uid,
+    userDisplayName: NEIGHBORS.riley.name,
+    userPhotoURL: NEIGHBORS.riley.photo,
+    neighborhood: NEIGHBORS.riley.neighborhood,
+    details: 'Just moved to Land Park and need a simple floor lamp. Happy to pick up this weekend.',
+    createdHoursAgo: 6,
+  }),
+  listing({
+    id: 'demo-item-porch-box',
+    title: 'Porch box: towels and a small lamp',
+    type: 'giveaway',
+    category: 'Free Pile / Box',
+    userId: PLAY_STORE_DEMO_PROFILE.uid,
+    userDisplayName: PLAY_STORE_DEMO_PROFILE.displayName,
+    userPhotoURL: PLAY_STORE_DEMO_PROFILE.photoURL,
+    neighborhood: PLAY_STORE_DEMO_PROFILE.neighborhood,
+    imageUrl: '/play-store-demo/porch-box.jpg',
+    details: 'Open box on the porch — folded towels and a working table lamp. First come.',
+    createdHoursAgo: 2,
+  }),
+];
+
+export const PLAY_STORE_DEMO_EVENTS: CommunityEvent[] = [
+  {
+    id: 'demo-event-picnic',
+    title: 'Curtis Park porch-swap picnic',
+    description: 'Bring one thing you no longer need and leave with something new. Always free — no selling at the table.',
+    location: 'Curtis Park lawn, near the picnic tables',
+    neighborhood: 'Curtis Park',
+    eventStartAt: daysFromNow(5, 11),
+    eventEndAt: daysFromNow(5, 14),
+    userId: NEIGHBORS.morgan.uid,
+    userDisplayName: NEIGHBORS.morgan.name,
+    userPhotoURL: NEIGHBORS.morgan.photo,
+    hostedBy: NEIGHBORS.morgan.name,
+    locationLat: 38.5596,
+    locationLng: -121.4714,
+    isFree: true,
+    status: 'upcoming',
+    imageUrl: '/play-store-demo/event-picnic.jpg',
+    createdAt: hoursAgo(30),
+    updatedAt: hoursAgo(30),
+  },
+  {
+    id: 'demo-event-books',
+    title: 'Midtown book swap on the steps',
+    description: 'Leave a book, take a book. Kids’ picture books especially welcome.',
+    location: 'Midtown stoop library',
+    neighborhood: 'Midtown',
+    eventStartAt: daysFromNow(9, 16),
+    eventEndAt: daysFromNow(9, 18),
+    userId: NEIGHBORS.jordan.uid,
+    userDisplayName: NEIGHBORS.jordan.name,
+    userPhotoURL: NEIGHBORS.jordan.photo,
+    hostedBy: NEIGHBORS.jordan.name,
+    locationLat: 38.575,
+    locationLng: -121.483,
+    isFree: true,
+    status: 'upcoming',
+    createdAt: hoursAgo(50),
+    updatedAt: hoursAgo(50),
+  },
+];
+
+export const PLAY_STORE_DEMO_FEED_POSTS: FeedPost[] = [
+  {
+    id: 'demo-feed-hey',
+    userId: NEIGHBORS.sam.uid,
+    userDisplayName: NEIGHBORS.sam.name,
+    userPhotoURL: NEIGHBORS.sam.photo,
+    neighborhood: NEIGHBORS.sam.neighborhood,
+    text: 'Hey guys — happy Saturday. Anyone else feeling grateful for this little corner of Sacramento lately?',
+    imageUrls: [],
+    status: 'active',
+    createdAt: hoursAgo(1.5),
+    updatedAt: hoursAgo(1.5),
+  },
+  {
+    id: 'demo-feed-job-ask',
+    userId: NEIGHBORS.casey.uid,
+    userDisplayName: NEIGHBORS.casey.name,
+    userPhotoURL: NEIGHBORS.casey.photo,
+    neighborhood: NEIGHBORS.casey.neighborhood,
+    text: 'Lost my retail job last week. If anyone hears of part-time front desk or admin work around Midtown, please message me. Trying to stay hopeful.',
+    imageUrls: [],
+    status: 'active',
+    createdAt: hoursAgo(5),
+    updatedAt: hoursAgo(5),
+  },
+  {
+    id: 'demo-feed-resume-offer',
+    userId: NEIGHBORS.jordan.uid,
+    userDisplayName: NEIGHBORS.jordan.name,
+    userPhotoURL: NEIGHBORS.jordan.photo,
+    neighborhood: NEIGHBORS.jordan.neighborhood,
+    text: 'Offering free resume reviews this week for neighbors who are job hunting. I have hired for nonprofits for years — happy to look at yours over coffee, no charge.',
+    imageUrls: [],
+    status: 'active',
+    createdAt: hoursAgo(9),
+    updatedAt: hoursAgo(9),
+  },
+  {
+    id: 'demo-feed-support',
+    userId: NEIGHBORS.avery.uid,
+    userDisplayName: NEIGHBORS.avery.name,
+    userPhotoURL: NEIGHBORS.avery.photo,
+    neighborhood: NEIGHBORS.avery.neighborhood,
+    text: 'Rough week — my mom is in the hospital and I am running on fumes. If you are free for a walk or coffee, I would love company. No advice needed, just people.',
+    imageUrls: [],
+    status: 'active',
+    createdAt: hoursAgo(14),
+    updatedAt: hoursAgo(14),
+  },
+  {
+    id: 'demo-feed-checkin',
+    userId: NEIGHBORS.riley.uid,
+    userDisplayName: NEIGHBORS.riley.name,
+    userPhotoURL: NEIGHBORS.riley.photo,
+    neighborhood: NEIGHBORS.riley.neighborhood,
+    text: 'New in Land Park and still learning the city. What do you wish someone had told you when you first moved to Sacramento?',
+    imageUrls: [],
+    status: 'active',
+    createdAt: hoursAgo(22),
+    updatedAt: hoursAgo(22),
+  },
+];
+
+export const PLAY_STORE_DEMO_FEED_COMMENTS: Record<string, FeedPostComment[]> = {
+  'demo-feed-hey': [
+    {
+      id: 'demo-feed-comment-hey-1',
+      postId: 'demo-feed-hey',
+      userId: NEIGHBORS.morgan.uid,
+      userName: NEIGHBORS.morgan.name,
+      userPhoto: NEIGHBORS.morgan.photo,
+      userNeighborhood: NEIGHBORS.morgan.neighborhood,
+      text: 'Same here, Sam. This group has been a bright spot.',
+      createdAt: hoursAgo(1.2),
+    },
+  ],
+  'demo-feed-job-ask': [
+    {
+      id: 'demo-feed-comment-job-1',
+      postId: 'demo-feed-job-ask',
+      userId: NEIGHBORS.jordan.uid,
+      userName: NEIGHBORS.jordan.name,
+      userPhoto: NEIGHBORS.jordan.photo,
+      userNeighborhood: NEIGHBORS.jordan.neighborhood,
+      text: 'Sending you good energy, Casey. I will ask around at work too.',
+      createdAt: hoursAgo(4.5),
+    },
+    {
+      id: 'demo-feed-comment-job-2',
+      postId: 'demo-feed-job-ask',
+      userId: NEIGHBORS.morgan.uid,
+      userName: NEIGHBORS.morgan.name,
+      userPhoto: NEIGHBORS.morgan.photo,
+      userNeighborhood: NEIGHBORS.morgan.neighborhood,
+      text: "My cousin's cafe on J Street might be hiring — I will check tomorrow.",
+      createdAt: hoursAgo(4.2),
+    },
+  ],
+  'demo-feed-support': [
+    {
+      id: 'demo-feed-comment-support-1',
+      postId: 'demo-feed-support',
+      userId: NEIGHBORS.sam.uid,
+      userName: NEIGHBORS.sam.name,
+      userPhoto: NEIGHBORS.sam.photo,
+      userNeighborhood: NEIGHBORS.sam.neighborhood,
+      text: 'Thinking of you, Avery. I can meet for a walk Sunday morning if that helps.',
+      createdAt: hoursAgo(12),
+    },
+  ],
+};
+
+export const PLAY_STORE_DEMO_FEED_REACTIONS: FeedPostReaction[] = [
+  { postId: 'demo-feed-hey', userId: NEIGHBORS.avery.uid, emoji: '🥹', createdAt: hoursAgo(1.4) },
+  { postId: 'demo-feed-hey', userId: NEIGHBORS.jordan.uid, emoji: '🥹', createdAt: hoursAgo(1.3) },
+  { postId: 'demo-feed-job-ask', userId: NEIGHBORS.sam.uid, emoji: '🥺', createdAt: hoursAgo(4.8) },
+  { postId: 'demo-feed-job-ask', userId: NEIGHBORS.riley.uid, emoji: '🥺', createdAt: hoursAgo(4.6) },
+  { postId: 'demo-feed-resume-offer', userId: NEIGHBORS.casey.uid, emoji: '🥹', createdAt: hoursAgo(8.5) },
+  { postId: 'demo-feed-support', userId: NEIGHBORS.casey.uid, emoji: '🥺', createdAt: hoursAgo(13) },
+  { postId: 'demo-feed-support', userId: NEIGHBORS.morgan.uid, emoji: '🥺', createdAt: hoursAgo(12.5) },
+];
+
+export const PLAY_STORE_DEMO_ITEM_VOTES: Record<
+  string,
+  { userVote: 'up' | 'down' | null; upvotes: number; downvotes: number }
+> = {
+  'demo-item-chair': { userVote: null, upvotes: 6, downvotes: 0 },
+  'demo-item-plants': { userVote: 'up', upvotes: 9, downvotes: 0 },
+  'demo-item-books': { userVote: null, upvotes: 4, downvotes: 0 },
+  'demo-item-kitchen': { userVote: null, upvotes: 3, downvotes: 0 },
+  'demo-item-lamp': { userVote: null, upvotes: 2, downvotes: 0 },
+  'demo-item-porch-box': { userVote: null, upvotes: 5, downvotes: 0 },
+};
+
+export const PLAY_STORE_DEMO_ITEM_COMMENTS: Record<string, ItemComment[]> = {
+  'demo-item-chair': [
+    {
+      id: 'demo-item-comment-chair',
+      itemId: 'demo-item-chair',
+      userId: NEIGHBORS.jordan.uid,
+      userName: NEIGHBORS.jordan.name,
+      userPhoto: NEIGHBORS.jordan.photo,
+      userNeighborhood: NEIGHBORS.jordan.neighborhood,
+      text: 'Is this still on the porch tonight?',
+      createdAt: hoursAgo(1.5),
+    },
+  ],
+};
+
+export const PLAY_STORE_DEMO_EVENT_RSVPS: Record<
+  string,
+  {
+    userRsvp: EventRsvpStatus | null;
+    going: number;
+    maybe: number;
+    notGoing: number;
+    gone: number;
+    missed: number;
+  }
+> = {
+  'demo-event-picnic': {
+    userRsvp: 'going',
+    going: 12,
+    maybe: 4,
+    notGoing: 1,
+    gone: 0,
+    missed: 0,
+  },
+  'demo-event-books': {
+    userRsvp: null,
+    going: 7,
+    maybe: 3,
+    notGoing: 0,
+    gone: 0,
+    missed: 0,
+  },
+};
+
+export const PLAY_STORE_DEMO_EVENT_COMMENTS: Record<string, EventComment[]> = {
+  'demo-event-picnic': [
+    {
+      id: 'demo-event-comment-1',
+      eventId: 'demo-event-picnic',
+      userId: NEIGHBORS.avery.uid,
+      userName: NEIGHBORS.avery.name,
+      userPhoto: NEIGHBORS.avery.photo,
+      userNeighborhood: NEIGHBORS.avery.neighborhood,
+      text: 'Bringing a folding chair and a box of kitchen odds and ends.',
+      createdAt: hoursAgo(12),
+    },
+  ],
+};
+
+export const PLAY_STORE_DEMO_CHATS: Chat[] = [
+  {
+    ...buildGlobalCommunityChatRow(hoursAgo(1)),
+    lastMessageText: 'Anyone have a spare folding table this weekend?',
+    lastMessageSenderId: NEIGHBORS.sam.uid,
+  },
+  {
+    id: 'demo-chat-chair',
+    participantIds: [PLAY_STORE_DEMO_PROFILE.uid, NEIGHBORS.avery.uid],
+    participantNames: {
+      [PLAY_STORE_DEMO_PROFILE.uid]: PLAY_STORE_DEMO_PROFILE.displayName,
+      [NEIGHBORS.avery.uid]: NEIGHBORS.avery.name,
+    },
+    participantPhotos: {
+      [PLAY_STORE_DEMO_PROFILE.uid]: PLAY_STORE_DEMO_PROFILE.photoURL || '',
+      [NEIGHBORS.avery.uid]: NEIGHBORS.avery.photo,
+    },
+    lastMessageText: 'Yes — I’ll leave the chair on the porch after 5.',
+    lastMessageAt: hoursAgo(0.8),
+    lastMessageSenderId: NEIGHBORS.avery.uid,
+    itemId: 'demo-item-chair',
+    itemTitle: 'Solid oak dining chair',
+  },
+  {
+    id: 'demo-chat-plants',
+    participantIds: [PLAY_STORE_DEMO_PROFILE.uid, NEIGHBORS.jordan.uid],
+    participantNames: {
+      [PLAY_STORE_DEMO_PROFILE.uid]: PLAY_STORE_DEMO_PROFILE.displayName,
+      [NEIGHBORS.jordan.uid]: NEIGHBORS.jordan.name,
+    },
+    participantPhotos: {
+      [PLAY_STORE_DEMO_PROFILE.uid]: PLAY_STORE_DEMO_PROFILE.photoURL || '',
+      [NEIGHBORS.jordan.uid]: NEIGHBORS.jordan.photo,
+    },
+    lastMessageText: 'I can save you one cutting — porch pickup tomorrow.',
+    lastMessageAt: hoursAgo(5),
+    lastMessageSenderId: NEIGHBORS.jordan.uid,
+    itemId: 'demo-item-plants',
+    itemTitle: 'Spider plant cuttings',
+  },
+  {
+    id: 'demo-chat-lamp',
+    participantIds: [PLAY_STORE_DEMO_PROFILE.uid, NEIGHBORS.riley.uid],
+    participantNames: {
+      [PLAY_STORE_DEMO_PROFILE.uid]: PLAY_STORE_DEMO_PROFILE.displayName,
+      [NEIGHBORS.riley.uid]: NEIGHBORS.riley.name,
+    },
+    participantPhotos: {
+      [PLAY_STORE_DEMO_PROFILE.uid]: PLAY_STORE_DEMO_PROFILE.photoURL || '',
+      [NEIGHBORS.riley.uid]: NEIGHBORS.riley.photo,
+    },
+    lastMessageText: 'I have a floor lamp in Land Park if you can pick it up this weekend.',
+    lastMessageAt: hoursAgo(2),
+    lastMessageSenderId: NEIGHBORS.riley.uid,
+    itemId: 'demo-item-lamp',
+    itemTitle: 'Looking for a spare floor lamp',
+  },
+];
+
+export const PLAY_STORE_DEMO_STATS = {
+  memberCount: 128,
+  activeListings: PLAY_STORE_DEMO_ITEMS.filter((item) => item.status === 'active').length,
+  itemsGiven: 2,
+  requestsFulfilled: 1,
+};
+
+export const PLAY_STORE_DEMO_EVENTS_UNLOCK: AwardsUnlockStatus = {
+  unlocked: true,
+  memberCount: PLAY_STORE_DEMO_STATS.memberCount,
+  target: 500,
+  remaining: 0,
+};

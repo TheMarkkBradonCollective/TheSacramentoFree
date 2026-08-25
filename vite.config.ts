@@ -10,7 +10,7 @@ import {readAppVersion} from './scripts/read-app-version.mjs';
 /** MBC App Market slug — must match main repo My-Projects.json / apk-catalog. */
 const APK_SLUG = 'buynothing';
 const APK_PACKAGE_ID = 'org.sacramentobuynothing.app';
-const APK_DISPLAY_NAME = 'SacramentoBuyNothing';
+const APK_DISPLAY_NAME = 'TheSacramentoFree';
 
 /** Map common Vercel env names into Vite client build variables. */
 function clientEnvDefines(mode: string): Record<string, string> {
@@ -109,6 +109,7 @@ function buildApkManifest(distDir: string, appVersion: ReturnType<typeof readApp
  */
 function swVersionPlugin(): Plugin {
   let appVersion = readAppVersion();
+  let outDir = path.resolve(__dirname, 'dist');
 
   return {
     name: 'sw-version',
@@ -121,20 +122,23 @@ function swVersionPlugin(): Plugin {
         },
       };
     },
+    configResolved(config) {
+      outDir = path.resolve(config.root, config.build.outDir);
+    },
     closeBundle() {
       const timestamp = String(Date.now());
-      const distDir = path.resolve(__dirname, 'dist');
+      fs.mkdirSync(outDir, { recursive: true });
       appVersion = readAppVersion();
 
       for (const swFile of ['service-worker.js', 'sw.js']) {
-        const swPath = path.join(distDir, swFile);
+        const swPath = path.join(outDir, swFile);
         if (fs.existsSync(swPath)) {
           const src = fs.readFileSync(swPath, 'utf-8');
           fs.writeFileSync(swPath, src.replaceAll('__BUILD_TIMESTAMP__', timestamp));
         }
       }
 
-      const apk = buildApkManifest(distDir, appVersion);
+      const apk = buildApkManifest(outDir, appVersion);
       const payload: Record<string, unknown> = {
         v: timestamp,
         t: new Date().toISOString(),
@@ -148,7 +152,7 @@ function swVersionPlugin(): Plugin {
       };
       if (apk) payload.apk = apk;
 
-      fs.writeFileSync(path.join(distDir, 'version.json'), JSON.stringify(payload));
+      fs.writeFileSync(path.join(outDir, 'version.json'), JSON.stringify(payload));
     },
   };
 }

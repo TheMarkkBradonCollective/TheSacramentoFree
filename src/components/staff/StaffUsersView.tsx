@@ -37,9 +37,9 @@ type SortDir = 'asc' | 'desc';
 
 const STATUS_BADGE: Record<string, string> = {
   active: 'bg-emerald-500/15 text-emerald-400',
-  suspended: 'bg-amber-500/15 text-amber-400',
+  suspended: 'bg-accent/15 text-accent',
   banned: 'bg-red-500/15 text-red-400',
-  locked: 'bg-orange-500/15 text-orange-400',
+  locked: 'bg-accent/15 text-accent',
 };
 
 interface StaffUsersViewProps {

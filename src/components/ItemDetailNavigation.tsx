@@ -965,8 +965,8 @@ export default function ItemDetailNavigation({
 
     if (session.status === 'disputed') {
       return (
-        <div className="sbn-card p-4 space-y-2 border border-amber-500/30 bg-amber-500/5">
-          <p className="text-sm font-semibold text-amber-500 flex items-center gap-2">
+        <div className="sbn-card p-4 space-y-2 border border-accent/30 bg-accent/5">
+          <p className="text-sm font-semibold text-accent flex items-center gap-2">
             <AlertTriangle className="w-4 h-4" />
             This pickup was reported and is under review
           </p>

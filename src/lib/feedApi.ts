@@ -1,5 +1,5 @@
 import { supabase, handleSupabaseError, setSupabaseConfigurationState } from '../supabase';
-import type { FeedPost, FeedPostComment, FeedPostCommentNode, FeedPostReaction, UserProfile } from '../types';
+import type { FeedPost, FeedPostComment, FeedPostCommentNode, FeedPostReaction, FeedPollOption, FeedPollVote, FeedPollState, UserProfile } from '../types';
 import { resolveProfileIdentity } from '../lib/profilePersistence';
 import { compressImageIfNeeded, guessImageContentType } from './imageUrl';
 import { commentPostedAsNeighbor } from './staffInteractionMode';
@@ -22,6 +22,28 @@ async function requireAuthUserId(): Promise<string | null> {
   return sessionData.session?.user?.id ?? null;
 }
 
+function normalizePollOptions(raw: unknown): FeedPollOption[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((entry): FeedPollOption | null => {
+      if (!entry || typeof entry !== 'object') return null;
+      const row = entry as Record<string, unknown>;
+      const id = typeof row.id === 'string' ? row.id.trim() : '';
+      const label = typeof row.label === 'string' ? row.label.trim() : '';
+      const shortLabel =
+        typeof row.shortLabel === 'string'
+          ? row.shortLabel.trim()
+          : typeof row.short_label === 'string'
+            ? row.short_label.trim()
+            : '';
+      if (!id || !label) return null;
+      const option: FeedPollOption = { id, label };
+      if (shortLabel) option.shortLabel = shortLabel;
+      return option;
+    })
+    .filter((option): option is FeedPollOption => option != null);
+}
+
 function normalizeFeedPost(row: Record<string, unknown>): FeedPost {
   const rawImages = row.imageUrls ?? row.image_urls;
   let imageUrls: string[] = [];
@@ -42,6 +64,13 @@ function normalizeFeedPost(row: Record<string, unknown>): FeedPost {
     imageUrls,
     status: (row.status === 'hidden' || row.status === 'removed' ? row.status : 'active') as FeedPost['status'],
     postedAsNeighbor: row.postedAsNeighbor === true || row.posted_as_neighbor === true,
+    postKind:
+      row.postKind === 'poll' || row.post_kind === 'poll'
+        ? 'poll'
+        : normalizePollOptions(row.pollOptions ?? row.poll_options).length >= 2
+          ? 'poll'
+          : 'standard',
+    pollOptions: normalizePollOptions(row.pollOptions ?? row.poll_options),
     clientInstallKind: normalizeClientInstallKind(row.clientInstallKind ?? row.client_install_kind),
     clientVersion:
       typeof (row.clientVersion ?? row.client_version) === 'string'
@@ -211,6 +240,129 @@ export async function createFeedPost(
     return { ok: true, post };
   } catch (err) {
     return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not create post.' };
+  }
+}
+
+export async function createFeedPollPost(
+  profile: UserProfile,
+  input: { text: string; options: string[] },
+): Promise<{ ok: boolean; post?: FeedPost; errorMessage?: string }> {
+  const text = input.text.trim();
+  const labels = input.options.map((label) => label.trim()).filter(Boolean);
+  if (!text) return { ok: false, errorMessage: 'Add a question for your poll.' };
+  if (labels.length < 2) return { ok: false, errorMessage: 'Add at least two poll choices.' };
+  if (labels.length > 6) return { ok: false, errorMessage: 'Polls can have at most six choices.' };
+
+  const pollOptions: FeedPollOption[] = labels.map((label, index) => ({
+    id: `opt_${index + 1}`,
+    label,
+  }));
+
+  const postId = `feed_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+  const now = new Date().toISOString();
+  const { clientInstallKind, clientVersion } = await getPostClientMetadata();
+  const identity = resolveProfileIdentity(profile);
+  const payload = {
+    id: postId,
+    userId: profile.uid,
+    userDisplayName: identity.displayName.trim(),
+    userPhotoURL: identity.photoURL ?? null,
+    neighborhood: profile.neighborhood,
+    text,
+    imageUrls: [],
+    status: 'active',
+    postedAsNeighbor: commentPostedAsNeighbor(profile),
+    postKind: 'poll',
+    pollOptions,
+    clientInstallKind,
+    clientVersion,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  try {
+    const { data, error } = await supabase.from('feed_posts').insert(payload).select('*').single();
+    if (error) {
+      handleSupabaseError(error, 'feed_posts');
+      return { ok: false, errorMessage: error.message };
+    }
+    setSupabaseConfigurationState(true);
+    const post = normalizeFeedPost(data as Record<string, unknown>);
+    try {
+      const push = await import('./pushFeedIntegration');
+      await push.pushAfterFeedPost({
+        id: post.id,
+        userId: post.userId,
+        userDisplayName: post.userDisplayName,
+        text: post.text,
+        neighborhood: post.neighborhood,
+      });
+    } catch (err) {
+      console.warn('[push] feed poll notify failed:', err);
+    }
+    return { ok: true, post };
+  } catch (err) {
+    return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not create poll.' };
+  }
+}
+
+export function aggregateFeedPollVotes(
+  votes: FeedPollVote[],
+  postId: string,
+  userId: string,
+): FeedPollState {
+  const counts: Record<string, number> = {};
+  let userOptionId: string | null = null;
+  for (const vote of votes) {
+    if (vote.postId !== postId) continue;
+    counts[vote.optionId] = (counts[vote.optionId] ?? 0) + 1;
+    if (vote.userId === userId) userOptionId = vote.optionId;
+  }
+  const total = Object.values(counts).reduce((sum, count) => sum + count, 0);
+  return { counts, total, userOptionId };
+}
+
+export async function getFeedPollVotes(postIds: string[]): Promise<FeedPollVote[]> {
+  if (postIds.length === 0) return [];
+  try {
+    const { data, error } = await supabase.from('feed_poll_votes').select('*').in('postId', postIds);
+    if (error) {
+      handleSupabaseError(error, 'feed_poll_votes');
+      return [];
+    }
+    setSupabaseConfigurationState(true);
+    return (data ?? []).map((row) => ({
+      postId: String((row as Record<string, unknown>).postId ?? (row as Record<string, unknown>).post_id),
+      userId: String((row as Record<string, unknown>).userId ?? (row as Record<string, unknown>).user_id),
+      optionId: String((row as Record<string, unknown>).optionId ?? (row as Record<string, unknown>).option_id),
+      createdAt: String((row as Record<string, unknown>).createdAt ?? (row as Record<string, unknown>).created_at ?? ''),
+    }));
+  } catch (err) {
+    handleSupabaseError(err, 'feed_poll_votes');
+    return [];
+  }
+}
+
+export async function setFeedPollVote(
+  postId: string,
+  userId: string,
+  optionId: string,
+): Promise<{ ok: boolean; errorMessage?: string }> {
+  try {
+    const { error } = await supabase.from('feed_poll_votes').upsert(
+      {
+        postId,
+        userId,
+        optionId,
+        createdAt: new Date().toISOString(),
+      },
+      { onConflict: 'postId,userId' },
+    );
+    if (error) return { ok: false, errorMessage: error.message };
+    setSupabaseConfigurationState(true);
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not save vote.' };
   }
 }
 

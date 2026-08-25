@@ -32,7 +32,7 @@ export default function AuthPage({
 }: AuthPageProps) {
   const { navigate } = usePublicRoute();
   const { enabled: newspaper } = useNewspaperSkin();
-  const brandName = newspaper ? NEWSPAPER.name : SITE.name;
+  const brandName = NEWSPAPER.name;
   const [authMode, setAuthMode] = useState<AuthMode>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -142,17 +142,19 @@ export default function AuthPage({
     <div className="lg:flex lg:min-h-full" id="auth_page_root">
       {/* Brand story panel — desktop/tablet-landscape only */}
       <div className="hidden lg:flex lg:w-[42%] xl:w-[38%] sbn-auth-brand-panel flex-col justify-between p-10 lg:p-12">
-        <div className="relative z-10 flex items-center gap-3">
-          <BrandLogo imgClassName="h-24 w-auto max-w-[220px] object-contain" showTitle={false} />
-          {newspaper ? null : (
-            <span className="font-display font-bold text-lg text-white">
-              Sacramento <span className="text-white/80">Buy Nothing</span>
-            </span>
-          )}
-        </div>
+        {!newspaper ? (
+          <div className="relative z-10 flex items-center gap-3">
+            <BrandLogo imgClassName="h-24 w-auto max-w-[220px] object-contain" showTitle={false} />
+            <span className="font-display font-bold text-lg">{brandName}</span>
+          </div>
+        ) : (
+          <div className="relative z-10">
+            <p className="tsf-auth-panel-wordmark">{NEWSPAPER.the} {NEWSPAPER.title}</p>
+          </div>
+        )}
 
         <div className="relative z-10">
-          <h2 className="font-display text-3xl font-bold leading-tight text-white">
+          <h2 className="font-display text-3xl font-bold leading-tight">
             {SITE.joinCta.title}
           </h2>
           <div className="mt-5 space-y-3">
@@ -168,7 +170,7 @@ export default function AuthPage({
           </blockquote>
         </div>
 
-        <p className="relative z-10 text-xs font-semibold text-white/70">
+        <p className="relative z-10 text-xs font-semibold sbn-auth-brand-footnote">
           Free forever · No ads · Sacramento-owned and operated
         </p>
       </div>
@@ -182,8 +184,8 @@ export default function AuthPage({
               <div className="sbn-native-hero flex items-center gap-3">
                 <BrandLogo imgClassName="h-16 w-auto max-w-[160px] object-contain shrink-0" showTitle={false} />
                 <div className="min-w-0">
-                  <p className="font-display font-bold text-white leading-tight">{brandName}</p>
-                  <p className="text-[11px] text-white/85 mt-0.5 flex items-center gap-1">
+                  <p className="font-display font-bold leading-tight">{brandName}</p>
+                  <p className="text-[11px] mt-0.5 flex items-center gap-1 sbn-auth-brand-footnote">
                     <Sparkles className="w-3 h-3 shrink-0" />
                     {SITE.freeRule}
                   </p>

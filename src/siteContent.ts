@@ -1,22 +1,24 @@
-/** App icon (hands on newsprint) — launcher, PWA, native chrome. */
-export const APP_LOGO_SRC = '/Logo.png';
-/** Website lockup — masthead, tagline, and hands. */
-export const SITE_LOGO_SRC = '/TheSacramentoFree.png';
-/** Community slogan — matches the lockup artwork. */
+/** In-app logo and site lockup — Sacramento green rounded-square icon (`download (6).png`). */
+export const APP_LOGO_SRC = '/app-icon.png';
+/** Homescreen / PWA / favicon — same green rounded-square app icon. */
+export const APP_ICON_SRC = '/app-icon.png';
+/** Same artwork as APP_LOGO_SRC for download pages and legacy references. */
+export const SITE_LOGO_SRC = '/app-icon.png';
+/** Community slogan — newspaper masthead only. Original site uses SITE.tagline. */
 export const COMMUNITY_SLOGAN = 'Give freely. Ask kindly.';
 
 export const SITE = {
-  name: 'SacramentoBuyNothing',
-  shortName: 'SacramentoBuyNothing',
+  name: 'TheSacramentoFree',
+  shortName: 'TheSacramentoFree',
   url: 'https://www.sacramentobuynothing.com',
-  tagline: 'Sharing is better than throwing away.',
+  tagline: COMMUNITY_SLOGAN,
   description:
     'A community-powered platform where people in Sacramento can give away items they no longer need — completely free.',
   metaDescription:
-    'Sacramento Buy Nothing — free local gifting. No selling, no bidding, no flipping. Neighbors helping neighbors across Sacramento.',
+    'TheSacramentoFree — free local gifting in Sacramento. No selling, no bidding, no flipping. Neighbors helping neighbors.',
   principles: ['No selling.', 'No bidding.', 'No flipping.', 'Just neighbors helping neighbors.'],
   freeRule: 'Everything posted must be 100% free.',
-  downloadHelper: 'Google Play on Android (if invited) or add SacramentoBuyNothing to your home screen — free for everyone.',
+  downloadHelper: 'Google Play on Android (if invited) or add TheSacramentoFree to your home screen — free for everyone.',
   /** Google Play closed testing — opt in on the web, then install from the store listing. */
   playStoreBetaUrl: 'https://play.google.com/apps/testing/org.sacramentobuynothing.app',
   playStoreListingUrl:
@@ -186,7 +188,7 @@ export const SUPPORT = {
 export const DIRECTOR_MESSAGE = {
   /** Fallback until the director profile loads from the database. */
   name: 'Markeith White',
-  title: 'Sacramento Buy Nothing Director',
+  title: 'TheSacramentoFree Director',
   headline: 'A note from your director',
   goal:
     'Sacramento Buy Nothing exists so neighbors can give freely, ask kindly, and keep good things out of the landfill — with no money involved. That is the goal, plain and simple.',
@@ -424,7 +426,7 @@ export const CHILD_SAFETY = {
   shortTitle: 'Child safety',
   lastUpdated: 'August 2026',
   summary:
-    'Sacramento Buy Nothing (The Sacramento Free) has zero tolerance for child sexual abuse and exploitation (CSAE). These standards apply to the app, website, and every neighbor account.',
+    'TheSacramentoFree has zero tolerance for child sexual abuse and exploitation (CSAE). These standards apply to the app, website, and every neighbor account.',
   contactEmail: 'support@sacbuynothing.org',
   sections: [
     {

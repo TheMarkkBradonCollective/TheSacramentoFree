@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "SacramentoBuyNothing",
-  "short_name": "SacramentoBuyNothing",
+  "name": "TheSacramentoFree",
+  "short_name": "TheSacramentoFree",
   "description": "A community-powered platform where Sacramento neighbors give away items and request what they need — completely free. No selling. No bidding. No flipping.",
   "start_url": "/",
   "scope": "/",
@@ -12,14 +12,14 @@
   "categories": ["social", "lifestyle", "shopping"],
   "icons": [
     {
-      "src": "/Logo.png",
-      "sizes": "1254x1254",
+      "src": "/app-icon.png",
+      "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/Logo.png",
-      "sizes": "1254x1254",
+      "src": "/app-icon.png",
+      "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
     }

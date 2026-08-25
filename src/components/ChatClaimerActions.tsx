@@ -243,7 +243,7 @@ export default function ChatClaimerActions({
           type="button"
           disabled={disabled || busy}
           onClick={() => void handleReportToStaff()}
-          className="w-full sbn-btn sbn-btn-secondary sbn-btn-sm justify-center text-amber-400 border-amber-500/30"
+          className="w-full sbn-btn sbn-btn-secondary sbn-btn-sm justify-center text-accent border-accent/30"
         >
           <Flag className="w-4 h-4" />
           Report wrong claim to staff

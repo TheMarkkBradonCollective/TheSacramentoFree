@@ -8,7 +8,7 @@ import { pauseAppUpdateWatcher } from '../pwa/appUpdateWatcher';
 import { SITE } from '../siteContent';
 import { useNewspaperSkin } from '../preview/NewspaperSkinContext';
 
-const CONFETTI_COLORS = ['#FF4500', '#FFB347', '#FFD166', '#FF8C42', '#FFFFFF', '#FFECE6'];
+const CONFETTI_COLORS = ['#00845A', '#00A36C', '#5DBF95', '#E6F4EE', '#FFFFFF', '#006B46'];
 /** Under the newspaper skin the confetti becomes torn newsprint and ink flecks. */
 const NEWSPRINT_CONFETTI = ['#0a0a0a', '#2b2b27', '#6b6b64', '#c9c9c2', '#f4f3ee', '#faf9f5'];
 
@@ -173,7 +173,7 @@ export default function PushNotificationCelebration({
               exit={{ opacity: 0, y: 20, scale: 0.96 }}
               transition={{ type: 'spring', stiffness: 380, damping: 28 }}
             >
-              <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-accent via-[#FFB347] to-accent" />
+              <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-accent via-[#5DBF95] to-accent" />
 
               <button
                 type="button"
@@ -185,7 +185,7 @@ export default function PushNotificationCelebration({
               </button>
 
               <div className="px-6 pt-8 pb-6 text-center">
-                <div className="mx-auto mb-4 w-16 h-16 rounded-2xl bg-accent-soft border border-accent/25 flex items-center justify-center shadow-[0_0_32px_rgba(255,69,0,0.25)]">
+                <div className="mx-auto mb-4 w-16 h-16 rounded-2xl bg-accent-soft border border-accent/25 flex items-center justify-center shadow-[0_0_32px_color-mix(in_srgb,var(--color-accent)_35%,transparent)]">
                   <Bell className="w-8 h-8 text-accent" aria-hidden />
                 </div>
 

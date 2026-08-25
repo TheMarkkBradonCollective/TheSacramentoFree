@@ -57,7 +57,7 @@ interface StaffContentRow {
 const STATUS_BADGE: Record<string, string> = {
   active: 'bg-emerald-500/15 text-emerald-400',
   pending_pickup: 'bg-blue-500/15 text-blue-400',
-  on_hold: 'bg-amber-500/15 text-amber-400',
+  on_hold: 'bg-accent/15 text-accent',
   completed: 'bg-zinc-500/15 text-zinc-400',
   withdrawn: 'bg-red-500/15 text-red-400',
   upcoming: 'bg-sky-500/15 text-sky-400',
@@ -472,7 +472,7 @@ export default function StaffPostsView({ actor, onViewItem, onViewEvent }: Staff
                                   <button
                                     type="button"
                                     onClick={() => handleWithdraw(row)}
-                                    className="sbn-btn sbn-btn-sm bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20"
+                                    className="sbn-btn sbn-btn-sm bg-accent/10 text-accent hover:bg-accent/20 border border-accent/20"
                                   >
                                     <X className="w-3.5 h-3.5" /> Withdraw
                                   </button>
@@ -499,7 +499,7 @@ export default function StaffPostsView({ actor, onViewItem, onViewEvent }: Staff
                                   <button
                                     type="button"
                                     onClick={() => handleCancelEvent(row)}
-                                    className="sbn-btn sbn-btn-sm bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20"
+                                    className="sbn-btn sbn-btn-sm bg-accent/10 text-accent hover:bg-accent/20 border border-accent/20"
                                   >
                                     <X className="w-3.5 h-3.5" /> Cancel
                                   </button>

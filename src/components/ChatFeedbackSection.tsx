@@ -57,7 +57,7 @@ export default function ChatFeedbackSection({
         <ChatSidebarRow
           id="chat_row_reviews"
           icon={Star}
-          iconClassName="bg-amber-500/10 text-amber-500"
+          iconClassName="bg-accent/10 text-accent"
           title="Community reviews"
           subtitle="Read neighbor feedback — post or edit yours"
           preview="Share your experience and see what neighbors think about the app."
@@ -90,7 +90,7 @@ export default function ChatFeedbackSection({
             onClick={() => setPanel('staffReports')}
             trailing={
               newReportCount > 0 ? (
-                <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-500 shrink-0">
+                <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-accent/15 text-accent shrink-0">
                   {newReportCount} new
                 </span>
               ) : undefined

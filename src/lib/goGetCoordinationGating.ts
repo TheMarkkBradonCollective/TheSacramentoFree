@@ -1,4 +1,5 @@
 import type { ItemPost, UserProfile } from '../types';
+import { isPlayStoreDemo } from '../preview/playStoreDemo';
 import { isNativeApp } from './nativePlatform';
 import { isGoGetCoordinationEnabled } from './goGetEligibility';
 import { isProfileWithinPickupAvailability } from './pickupAvailability';
@@ -13,7 +14,7 @@ export type GoGetCoordinationGate = { ok: true } | { ok: false; reason: GoGetCoo
 
 /** In-app turn-by-turn navigation and Go Get coordination — Android APK/AAB only. */
 export function supportsInAppNavigation(): boolean {
-  return isNativeApp();
+  return isNativeApp() || isPlayStoreDemo();
 }
 
 /** Whether app-coordinated pickup actions (Go Get, claim-at-pin, etc.) should show for this listing. */

@@ -32,7 +32,7 @@ const DECISIONS: {
   {
     value: 'maybe',
     label: 'Maybe',
-    className: 'bg-amber-500/15 text-amber-400 border-amber-500/30 hover:bg-amber-500/25',
+    className: 'bg-accent/15 text-accent border-accent/30 hover:bg-accent/25',
   },
   {
     value: 'no',
@@ -78,7 +78,7 @@ export default function StaffApplicationQueue({
           </p>
           <p className="text-sm font-semibold text-app mt-0.5">One request at a time</p>
         </div>
-        <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-amber-400">
+        <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-accent">
           <Clock className="w-3 h-3" />
           {current ? (waiting > 0 ? `${waiting} more waiting` : 'Up now') : 'None'}
         </span>

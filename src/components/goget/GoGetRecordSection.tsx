@@ -18,7 +18,7 @@ const CATEGORY_LABEL: Record<UserViolation['category'], string> = {
 function statusPill(status: UserViolation['status']): { label: string; className: string } {
   switch (status) {
     case 'pending_review':
-      return { label: 'Under review', className: 'bg-amber-500/15 text-amber-500' };
+      return { label: 'Under review', className: 'bg-accent/15 text-accent' };
     case 'confirmed':
       return { label: 'Confirmed — counts as a strike', className: 'bg-red-500/15 text-red-400' };
     case 'dismissed':

@@ -9,6 +9,7 @@ import { isStaffRole } from '../../lib/roles';
 import { PresenceUserAvatar } from '../UserAvatar';
 import FeedPostComments from './FeedPostComments';
 import FeedPostClientBadge from './FeedPostClientBadge';
+import FeedPollBlock from './FeedPollBlock';
 import ReportNeighborModal from '../ReportNeighborModal';
 import { formatDistanceToNow } from '../../lib/timeAgo';
 
@@ -55,6 +56,8 @@ export default function FeedPostDetailView({
   const votes = engagement.getVoteState(post.id);
   const reactions = engagement.getReactionState(post.id);
   const comments = engagement.getComments(post.id);
+  const pollState = engagement.getPollState(post.id);
+  const isPoll = post.postKind === 'poll';
 
   useDismissOnEscape(onClose);
 
@@ -174,6 +177,16 @@ export default function FeedPostDetailView({
               <p className="text-sm sm:text-base text-app leading-relaxed whitespace-pre-wrap">{post.text}</p>
             ) : null}
 
+            {isPoll ? (
+              <FeedPollBlock
+                post={post}
+                pollState={pollState}
+                canVote={canEngage}
+                isOwnPost={isOwn}
+                onVote={(optionId) => void engagement.handlePollVote(post.id, optionId, post.userId)}
+              />
+            ) : null}
+
             {canEngage ? (
               <>
                 <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-app">
@@ -230,11 +243,7 @@ export default function FeedPostDetailView({
                   </div>
                 </div>
               </>
-            ) : (
-              <p className="text-xs text-muted border-t border-app pt-3">
-                Your post — neighbors vote and react here. You can read and reply in comments below.
-              </p>
-            )}
+            ) : null}
 
             <FeedPostComments
               post={post}

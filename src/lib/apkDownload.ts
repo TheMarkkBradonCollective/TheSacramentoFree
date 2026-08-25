@@ -1,7 +1,20 @@
 import type { AndroidVersionManifest } from '../hooks/useInstallVersions';
+import { isNativeApp } from './nativePlatform';
 
 /** Canonical production origin (www — apex redirects here). */
 export const APP_ORIGIN = 'https://www.sacramentobuynothing.com';
+
+/** Zip of Play listing graphics (icon, feature graphic, phone screenshots). */
+export const PLAY_STORE_SCREENSHOTS_ZIP_PATH = '/downloads/play-store-screenshots.zip';
+export const PLAY_STORE_SCREENSHOTS_ZIP_NAME = 'play-store-screenshots.zip';
+
+/** Website URL so the native app downloads from the live site, not the APK bundle. */
+export function playStoreScreenshotsZipUrl(): string {
+  if (typeof window === 'undefined' || isNativeApp()) {
+    return `${APP_ORIGIN}${PLAY_STORE_SCREENSHOTS_ZIP_PATH}`;
+  }
+  return PLAY_STORE_SCREENSHOTS_ZIP_PATH;
+}
 
 /** Build a cache-busted APK download URL so browsers never serve a stale file. */
 export function apkDownloadUrl(manifest: Pick<AndroidVersionManifest, 'downloadUrl' | 'versionCode' | 'fileName'> | null): string | null {

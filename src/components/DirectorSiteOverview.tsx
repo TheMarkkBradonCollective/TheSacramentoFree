@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Activity,
   Ban,
@@ -15,6 +15,7 @@ import {
 import type { DirectorActivityItem, DirectorSiteOverview } from '../types';
 import { getDirectorSiteOverview, supabase } from '../supabase';
 import { apiUrl } from '../lib/appOrigin';
+import { downloadPlayStoreAsset, downloadPlayStoreZip, playStoreAssetLinks } from '../lib/playStoreAssets';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 import UserAvatar from './UserAvatar';
 import { formatLastActive } from '../lib/presence';
@@ -22,6 +23,43 @@ import { formatLastActive } from '../lib/presence';
 interface DirectorSiteOverviewProps {
   scrollIntoView?: boolean;
   onScrolled?: () => void;
+}
+
+function PlayStoreAssetDownload({
+  file,
+  label,
+  id,
+}: {
+  file: string;
+  label: string;
+  id?: string;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  return (
+    <div className="space-y-1">
+      <button
+        type="button"
+        id={id}
+        disabled={busy}
+        onClick={() => {
+          setBusy(true);
+          setError(null);
+          void downloadPlayStoreAsset(file)
+            .catch((err) => {
+              setError(err instanceof Error ? err.message : 'Download failed');
+            })
+            .finally(() => setBusy(false));
+        }}
+        className="inline-flex items-center justify-between gap-2 w-full px-3 py-2 rounded-lg border border-app/60 bg-surface text-app text-xs font-semibold hover:bg-surface-hover transition-colors disabled:opacity-60 cursor-pointer touch-manipulation"
+      >
+        <span className="truncate text-left">{busy ? 'Downloading…' : label}</span>
+        <Download className="w-3.5 h-3.5 shrink-0 text-muted" strokeWidth={2.5} aria-hidden />
+      </button>
+      {error ? <p className="text-[10px] text-red-400 leading-snug">{error}</p> : null}
+    </div>
+  );
 }
 
 function formatWhen(iso: string): string {
@@ -62,7 +100,7 @@ function activityColor(kind: DirectorActivityItem['kind']): string {
     case 'leave':
       return 'bg-slate-500/15 text-slate-400';
     case 'moderation':
-      return 'bg-amber-500/15 text-amber-400';
+      return 'bg-accent/15 text-accent';
     case 'report':
       return 'bg-red-500/15 text-red-400';
     case 'ticket':
@@ -103,6 +141,9 @@ export default function DirectorSiteOverview({ scrollIntoView, onScrolled }: Dir
   const [exportingTesters, setExportingTesters] = useState(false);
   const [exportTestersError, setExportTestersError] = useState<string | null>(null);
   const [exportTestersNotice, setExportTestersNotice] = useState<string | null>(null);
+  const [zipBusy, setZipBusy] = useState(false);
+  const [zipError, setZipError] = useState<string | null>(null);
+  const playStoreAssets = useMemo(() => playStoreAssetLinks(), []);
 
   const reload = useCallback(async () => {
     const data = await getDirectorSiteOverview();
@@ -330,7 +371,7 @@ export default function DirectorSiteOverview({ scrollIntoView, onScrolled }: Dir
         <StatTile
           label="Suspended"
           value={data.suspendedCount}
-          accent={data.suspendedCount > 0 ? 'text-amber-400' : undefined}
+          accent={data.suspendedCount > 0 ? 'text-accent' : undefined}
         />
       </div>
 
@@ -339,18 +380,49 @@ export default function DirectorSiteOverview({ scrollIntoView, onScrolled }: Dir
         <StatTile label="Installs" value={data.installDevicesCount} sub={installSub} accent="text-indigo-400" />
       </div>
 
-      <div className="rounded-xl border border-app/60 bg-inset/40 p-3 space-y-2">
+      <div className="rounded-xl border border-app/60 bg-inset/40 p-3 space-y-3">
         <div>
-          <h4 className="text-[10px] font-black uppercase tracking-widest text-muted">Play Console testers</h4>
+          <h4 className="text-[10px] font-black uppercase tracking-widest text-muted">Play Console</h4>
           <p className="text-[11px] text-muted mt-1 leading-snug">
-            On a phone this copies or shares every neighbor email. On a computer it also downloads a CSV.
+            Download each listing graphic individually, or grab the full zip. Fictional demo data only.
           </p>
+        </div>
+        <div className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
+          {playStoreAssets.map((asset) => (
+            <PlayStoreAssetDownload
+              key={asset.file}
+              id={`director_download_play_asset_${asset.file.replace(/[^a-z0-9]+/gi, '_')}`}
+              file={asset.file}
+              label={asset.label}
+            />
+          ))}
+        </div>
+        <div className="space-y-1">
+          <button
+            type="button"
+            id="director_download_play_screenshots"
+            disabled={zipBusy}
+            onClick={() => {
+              setZipBusy(true);
+              setZipError(null);
+              void downloadPlayStoreZip()
+                .catch((err) => {
+                  setZipError(err instanceof Error ? err.message : 'Download failed');
+                })
+                .finally(() => setZipBusy(false));
+            }}
+            className="inline-flex items-center justify-center gap-2 w-full px-3 py-2.5 rounded-xl border border-dashed border-app bg-surface/60 text-app text-xs font-bold hover:bg-surface-hover transition-colors disabled:opacity-60 cursor-pointer touch-manipulation"
+          >
+            <Download className="w-3.5 h-3.5" strokeWidth={2.5} aria-hidden />
+            {zipBusy ? 'Downloading zip…' : 'Download all as zip'}
+          </button>
+          {zipError ? <p className="text-[10px] text-red-400 leading-snug">{zipError}</p> : null}
         </div>
         <button
           type="button"
           onClick={() => void downloadPlayTesters()}
           disabled={exportingTesters}
-          className="inline-flex items-center justify-center gap-2 w-full px-3 py-2.5 rounded-xl bg-accent text-accent-fg text-sm font-bold disabled:opacity-60"
+          className="inline-flex items-center justify-center gap-2 w-full px-3 py-2.5 rounded-xl border border-app bg-surface text-app text-sm font-bold hover:bg-surface-hover transition-colors disabled:opacity-60"
         >
           {exportingTesters ? (
             <Download className="w-4 h-4" strokeWidth={2.5} aria-hidden />
@@ -370,7 +442,7 @@ export default function DirectorSiteOverview({ scrollIntoView, onScrolled }: Dir
           </p>
         )}
         <p className="text-[10px] text-muted/80 leading-snug">
-          Upload the file in Play Console → Testing → Closed testing → Testers.
+          Upload screenshots in Play Console → Store presence. Upload tester CSV in Testing → Closed testing → Testers.
         </p>
       </div>
 

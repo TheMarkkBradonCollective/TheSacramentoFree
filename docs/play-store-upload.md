@@ -8,12 +8,14 @@ Everything below is pre-filled for **SacramentoBuyNothing** (`org.sacramentobuyn
 - `versionCode` **30**, `versionName` **0.1.0**
 - Build command: `npm run android:aab` → `public/downloads/sac-buy-nothing-beta-v0.1.0.0030.aab` (and legacy `sac-buy-nothing.aab`)
 - Store graphics: `play-store-assets/icon-512.png`, `play-store-assets/feature-graphic-1024x500.png`
+- Phone screenshots: `play-store-assets/screenshots/` (fictional demo neighbors — not live member data)
 - Regenerate graphics: `npm run android:play-assets`
+- Regenerate screenshots: `npm run android:play-screenshots`
 - Firebase push configured (client + server)
 
 ## What only you can do
 
-1. **Phone screenshots** — already captured at `play-store-assets/screenshots/` (feed, map, events, messages, account, home). Play Console → Store presence → Main store listing.
+1. **Phone screenshots** — download the zip from Staff / Account overview (**Download Play screenshots**), or use `play-store-assets/screenshots/` and `public/downloads/play-store-screenshots.zip`. Play Console → Store presence → Main store listing.
 2. **Set app price** — Play Console → Monetize → Products → set your paid download price.
 3. **Upload the AAB** — Play Console → Testing → **Closed testing** → Create release → upload `dist/android/sac-buy-nothing-release.aab`.
 4. **Contact email** — use your support address (e.g. `support@sacbuynothing.org` from `.env.example`).
@@ -140,9 +142,9 @@ Terms of use: https://www.sacramentobuynothing.com/terms
 
 | Asset | File |
 |-------|------|
-| App icon (512×512) | `play-store-assets/icon-512.png` |
+| Store icon (512×512, site lockup) | `play-store-assets/icon-512.png` (from `public/TheSacramentoFree.png`, not `Logo.png`) |
 | Feature graphic (1024×500) | `play-store-assets/feature-graphic-1024x500.png` |
-| Phone screenshots | `play-store-assets/screenshots/01-home.png` through `08-event.png` (1080×1920) |
+| Phone screenshots | `public/downloads/play-store-screenshots.zip` or `play-store-assets/screenshots/01-home.png` through `08-messages.png` (1080×1920). Director overview: Download Play screenshots. |
 
 ### Category
 - **Primary:** Social (or Lifestyle)
