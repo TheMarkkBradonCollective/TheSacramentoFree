@@ -233,15 +233,25 @@ export default function EventCard({
             <span className="hidden sm:inline ml-1">View</span>
           </button>
           {isStaffViewer && onStaffChat ? (
-            <button type="button" onClick={onStaffChat} className="sbn-btn sbn-btn-primary sbn-btn-sm">
+            <button
+              type="button"
+              onClick={onStaffChat}
+              className="sbn-btn sbn-btn-primary sbn-btn-sm"
+              aria-label="Staff chat"
+            >
               <LifeBuoy className="w-3.5 h-3.5" />
-              <span className="ml-1">Staff chat</span>
+              <span className="hidden sm:inline ml-1">Staff chat</span>
             </button>
           ) : null}
           {onNavigate && !isCancelled && !isPast ? (
-            <button type="button" onClick={onNavigate} className="sbn-btn sbn-btn-primary sbn-btn-sm">
+            <button
+              type="button"
+              onClick={onNavigate}
+              className="sbn-btn sbn-btn-primary sbn-btn-sm"
+              aria-label="Navigate"
+            >
               <Navigation className="w-3.5 h-3.5" />
-              <span className="ml-1">Navigate</span>
+              <span className="hidden sm:inline ml-1">Navigate</span>
             </button>
           ) : null}
         </div>

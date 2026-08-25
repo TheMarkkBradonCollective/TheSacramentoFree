@@ -321,7 +321,7 @@ function NavigationDetailsSheet({
       </div>
 
       <div className="sbn-nav-sheet-body">
-        <div className="flex items-center gap-2.5 min-w-0">
+        <div className="sbn-nav-sheet-summary">
           <button
             type="button"
             onClick={() => onSnapChange(expanded ? 'collapsed' : 'expanded')}
@@ -331,7 +331,7 @@ function NavigationDetailsSheet({
             <ChevronUp className={`w-5 h-5 transition-transform ${expanded ? 'rotate-180' : ''}`} />
           </button>
 
-          <div className="flex-1 min-w-0">
+          <div className="sbn-nav-sheet-summary__copy">
             <p className="flex items-baseline gap-2 min-w-0">
               <span className="sbn-nav-sheet-eta shrink-0">
                 {arrived ? 'Arrived' : formatNavDuration(remainingSeconds)}
@@ -355,14 +355,16 @@ function NavigationDetailsSheet({
             )}
           </div>
 
-          {onOpenChat ? (
-            <button type="button" onClick={onOpenChat} className="sbn-nav-exit-btn shrink-0" title={chatLabel}>
-              Message
+          <div className="sbn-nav-sheet-summary__actions">
+            {onOpenChat ? (
+              <button type="button" onClick={onOpenChat} className="sbn-nav-exit-btn" title={chatLabel}>
+                Message
+              </button>
+            ) : null}
+            <button type="button" onClick={onExit} className="sbn-nav-exit-btn">
+              {exitLabel ?? (arrived ? 'Done' : 'Exit')}
             </button>
-          ) : null}
-          <button type="button" onClick={onExit} className="sbn-nav-exit-btn shrink-0">
-            {exitLabel ?? (arrived ? 'Done' : 'Exit')}
-          </button>
+          </div>
         </div>
       </div>
 

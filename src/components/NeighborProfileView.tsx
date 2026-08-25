@@ -373,20 +373,25 @@ export default function NeighborProfileView({
       aria-modal="true"
       id="neighbor_profile_overlay"
     >
-      <header className="shrink-0 sbn-glass-nav sbn-safe-top border-b border-app px-4 min-h-14 flex items-center gap-3">
+      <header className="shrink-0 sbn-glass-nav sbn-safe-top border-b border-app px-4 min-h-14 flex items-center gap-3 min-w-0">
         <button
           type="button"
           onClick={onClose}
-          className="p-2 rounded-full hover:bg-inset text-app"
+          className="p-2 rounded-full hover:bg-inset text-app shrink-0"
           aria-label="Back"
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <h1 className="font-display font-bold text-base text-app flex-1">Neighbor profile</h1>
+        <h1 className="font-display font-bold text-base text-app flex-1 min-w-0 truncate">Neighbor profile</h1>
         {!isSelf && showMessageButton && onOpenChat && (
-          <button type="button" onClick={handleOpenExistingChat} className="sbn-btn sbn-btn-primary sbn-btn-sm shrink-0">
+          <button
+            type="button"
+            onClick={handleOpenExistingChat}
+            className="sbn-btn sbn-btn-primary sbn-btn-sm shrink-0"
+            aria-label="Message"
+          >
             <MessageSquare className="w-4 h-4" />
-            Message
+            <span className="hidden sm:inline">Message</span>
           </button>
         )}
       </header>

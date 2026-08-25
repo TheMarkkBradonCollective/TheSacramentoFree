@@ -213,15 +213,25 @@ export default function ItemCard({
         <span className="hidden sm:inline ml-1">View</span>
       </button>
       {isStaffOfficialMode && onStaffChat ? (
-        <button type="button" onClick={onStaffChat} className="sbn-btn sbn-btn-primary sbn-btn-sm shrink-0">
+        <button
+          type="button"
+          onClick={onStaffChat}
+          className="sbn-btn sbn-btn-primary sbn-btn-sm shrink-0"
+          aria-label="Staff chat"
+        >
           <LifeBuoy className="w-3.5 h-3.5" />
-          <span className="ml-1">Staff chat</span>
+          <span className="hidden sm:inline ml-1">Staff chat</span>
         </button>
       ) : null}
       {showPickupCoordination && onNavigate && item.status === 'active' ? (
-        <button type="button" onClick={onNavigate} className="sbn-btn sbn-btn-primary sbn-btn-sm shrink-0">
+        <button
+          type="button"
+          onClick={onNavigate}
+          className="sbn-btn sbn-btn-primary sbn-btn-sm shrink-0"
+          aria-label={isStaffOfficialMode ? 'Navigate' : getListingNavigateLabel(item)}
+        >
           <Navigation className="w-3.5 h-3.5" />
-          <span className="ml-1">
+          <span className="hidden sm:inline ml-1">
             {isStaffOfficialMode ? 'Navigate' : getListingNavigateLabel(item)}
           </span>
         </button>

@@ -1486,7 +1486,7 @@ export default function ChatSystem({
             return (
               <>
                 <header
-                  className="shrink-0 px-3 sm:px-4 py-3 chat-thread-header flex items-center gap-3"
+                  className="shrink-0 px-3 sm:px-4 py-3 chat-thread-header flex items-center gap-2 sm:gap-3 min-w-0"
                   id="chat_panel_header"
                 >
                   <button

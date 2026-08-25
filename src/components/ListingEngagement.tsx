@@ -87,7 +87,7 @@ export default function ListingEngagement({
         <h3 className="text-xs font-semibold text-muted uppercase tracking-wide">Community</h3>
       )}
 
-      <div className={`flex items-center gap-1.5 sm:gap-2 ${variant === 'card' ? 'mt-2 sm:mt-4' : ''}`}>
+      <div className={`flex flex-wrap items-center gap-1.5 sm:gap-2 ${variant === 'card' ? 'mt-2 sm:mt-4' : ''}`}>
         <button
           type="button"
           disabled={isOwner}

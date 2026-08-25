@@ -927,6 +927,30 @@ html.sbn-session-restore #root:empty {
   min-width: 0;
 }
 
+#map_navigation_view .sbn-nav-sheet-summary {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+#map_navigation_view .sbn-nav-sheet-summary__copy {
+  flex: 1 1 8rem;
+  min-width: 0;
+}
+
+#map_navigation_view .sbn-nav-sheet-summary__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.35rem;
+  flex: 0 1 auto;
+  min-width: 0;
+  margin-left: auto;
+}
+
 #map_navigation_view .sbn-nav-sheet-eta {
   font-family: var(--font-display);
   font-size: 1.35rem;
@@ -1004,9 +1028,10 @@ html.sbn-session-restore #root:empty {
   background: var(--sbn-nav-surface);
   color: var(--sbn-nav-text);
   border-radius: 9999px;
-  padding: 0.7rem 1.35rem;
+  padding: 0.55rem 0.95rem;
   font-weight: 700;
-  font-size: 0.875rem;
+  font-size: 0.8rem;
+  white-space: nowrap;
   border: 1px solid var(--sbn-nav-glass-border);
   transition: transform 0.15s ease, background 0.15s ease;
 }
@@ -1675,15 +1700,9 @@ html.capacitor-android .sbn-sidebar-overlay {
 
 .chat-action-chips {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
-  overflow-x: auto;
-  padding-bottom: 0.15rem;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-}
-
-.chat-action-chips::-webkit-scrollbar {
-  display: none;
+  min-width: 0;
 }
 
 .chat-action-chip {
@@ -1781,6 +1800,8 @@ html.capacitor-android .sbn-sidebar-overlay {
   letter-spacing: 0.01em;
   border-radius: var(--radius-lg);
   padding: 0.5rem 1rem;
+  min-width: 0;
+  max-width: 100%;
   transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease, transform 0.12s ease;
   cursor: pointer;
 }
@@ -2434,8 +2455,9 @@ html.capacitor-android .sbn-sidebar-overlay {
 
 .item-feed-card__footer {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.4rem 0.5rem;
   width: 100%;
   min-width: 0;
   padding: 0.5rem 0.7rem;
@@ -2443,7 +2465,7 @@ html.capacitor-android .sbn-sidebar-overlay {
 }
 
 .item-feed-card__poster {
-  flex: 1 1 0;
+  flex: 1 1 8.5rem;
   min-width: 0;
   display: flex;
   align-items: center;
@@ -2473,10 +2495,23 @@ html.capacitor-android .sbn-sidebar-overlay {
 
 .item-feed-card__actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
   gap: 0.25rem;
-  flex: 0 0 auto;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.item-feed-card__actions .sbn-btn {
+  flex: 0 1 auto;
+}
+
+@media (max-width: 639px) {
+  .item-feed-card__actions .sbn-btn-sm {
+    padding: 0.35rem 0.5rem;
+    gap: 0.2rem;
+  }
 }
 
 @media (min-width: 640px) {
@@ -2908,11 +2943,15 @@ html.sbn-keyboard-open .sbn-mobile-nav {
   bottom: 0.5rem;
   left: 0.5rem;
   right: 0.5rem;
+  max-height: min(56dvh, calc(100% - 3.75rem));
   padding-bottom: var(--sbn-safe-area-bottom, var(--sbn-inset-bottom, env(safe-area-inset-bottom, 0px)));
 }
 
 .sbn-map-selection-card {
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  max-height: min(56dvh, calc(100% - 3.75rem));
+  -webkit-overflow-scrolling: touch;
   border-radius: var(--radius-card);
   box-shadow: 0 14px 36px rgba(15, 23, 42, 0.16);
 }
@@ -2937,6 +2976,7 @@ html.sbn-keyboard-open .sbn-mobile-nav {
 
 .sbn-map-mode-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.3rem;
 }
@@ -2970,9 +3010,21 @@ html.sbn-keyboard-open .sbn-mobile-nav {
 
 .sbn-map-trip-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.35rem 0.4rem;
   min-width: 0;
+}
+
+.sbn-map-trip-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.3rem;
+  flex: 0 1 auto;
+  min-width: 0;
+  margin-left: auto;
 }
 
 .sbn-map-trip-copy {
@@ -2997,6 +3049,7 @@ html.sbn-keyboard-open .sbn-mobile-nav {
 
 .sbn-gps-action-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
   justify-content: space-evenly;
   gap: 0.35rem;
@@ -3040,9 +3093,10 @@ html.sbn-keyboard-open .sbn-mobile-nav {
   font-size: 0.62rem;
   font-weight: 700;
   letter-spacing: 0.01em;
-  line-height: 1.1;
+  line-height: 1.15;
   text-align: center;
-  max-width: 4.4rem;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .sbn-gps-start-btn {
@@ -3065,9 +3119,10 @@ html.sbn-keyboard-open .sbn-mobile-nav {
 
 .sbn-gps-start-btn.is-inline {
   width: auto;
-  min-width: 6.4rem;
+  min-width: 0;
   min-height: 2.45rem;
-  flex-shrink: 0;
+  flex: 0 1 auto;
+  padding: 0 0.85rem;
 }
 
 .sbn-gps-start-btn:disabled {
@@ -3093,6 +3148,7 @@ html.sbn-keyboard-open .sbn-mobile-nav {
 
 .sbn-gps-trip-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.55rem;
 }
@@ -3192,13 +3248,28 @@ html.sbn-keyboard-open .sbn-mobile-nav {
 
 .sbn-map-selection-card__actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  justify-content: flex-end;
   gap: 0.25rem;
-  flex-shrink: 0;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .sbn-map-selection-card__actions .sbn-btn {
-  flex: 0 0 auto;
+  flex: 0 1 auto;
+}
+
+@media (max-width: 479px) {
+  .sbn-map-selection-card .item-feed-card__media {
+    flex-basis: 4.65rem;
+    width: 4.65rem;
+  }
+
+  .sbn-map-selection-card .item-feed-card__actions .sbn-btn > span,
+  .sbn-map-selection-card .sbn-map-trip-actions .sbn-btn > span {
+    display: none;
+  }
 }
 
 .sbn-map-float-btn {
@@ -3580,4 +3651,12 @@ summary:focus-visible,
 .sbn-nav-tab:focus-visible {
   outline-offset: 1px;
   border-radius: inherit;
+}
+
+.sbn-detail-actions .sbn-btn {
+  white-space: normal;
+  text-align: center;
+  line-height: 1.2;
+  height: auto;
+  min-height: 2.5rem;
 }

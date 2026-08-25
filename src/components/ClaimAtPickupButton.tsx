@@ -164,9 +164,10 @@ export default function ClaimAtPickupButton({
         onClick={() => void handleOpen()}
         title="Optional — let the poster know you picked this up"
         className={`sbn-btn sbn-btn-primary ${compact ? 'sbn-btn-sm' : ''} ${className}`}
+        aria-label="Notify poster I picked up"
       >
         <CheckCircle className="w-4 h-4" />
-        {compact ? 'Notify picked up' : 'Notify poster I picked up'}
+        <span>{compact ? 'Claim' : 'Notify poster I picked up'}</span>
       </button>
     );
 
