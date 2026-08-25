@@ -1,7 +1,7 @@
-/** App icon (hands on newsprint) — launcher, PWA, native chrome. */
-export const APP_LOGO_SRC = '/Logo.jpeg';
-/** Website lockup — masthead, tagline, and hands (newspaper skin only). */
-export const SITE_LOGO_SRC = '/TheSacramentoFree.png';
+/** App icon — Sacramento green hands / no-money mark (512×512). */
+export const APP_LOGO_SRC = '/logo.png';
+/** Same lockup as APP_LOGO_SRC for download pages and legacy references. */
+export const SITE_LOGO_SRC = '/logo.png';
 /** Community slogan — newspaper masthead only. Original site uses SITE.tagline. */
 export const COMMUNITY_SLOGAN = 'Give freely. Ask kindly.';
 
