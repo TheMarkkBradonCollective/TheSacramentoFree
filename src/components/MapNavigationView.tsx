@@ -108,6 +108,13 @@ interface MapNavigationViewProps {
   navigationStartMessage?: string;
   /** Extra phrases spoken after the start message (e.g. pickup instructions). */
   navigationFollowUpMessages?: string[];
+  /** Go Get live trip: stay on this screen until pickup is cancelled or completed. */
+  tripLock?: boolean;
+  /** When set, the details sheet shows an in-trip message action. */
+  onOpenChat?: () => void;
+  chatLabel?: string;
+  /** Fill a parent overlay instead of covering the viewport as a root portal. */
+  embedded?: boolean;
 }
 
 type NavLoadingStage = 'locating' | 'routing' | 'ready';
@@ -232,6 +239,9 @@ interface NavigationDetailsSheetProps {
   onSettings: () => void;
   onExit: () => void;
   currentRoad?: string | null;
+  exitLabel?: string;
+  onOpenChat?: () => void;
+  chatLabel?: string;
 }
 
 function NavigationDetailsSheet({
@@ -253,6 +263,9 @@ function NavigationDetailsSheet({
   onSettings,
   onExit,
   currentRoad,
+  exitLabel,
+  onOpenChat,
+  chatLabel = 'Message',
 }: NavigationDetailsSheetProps) {
   const dragStartYRef = useRef(0);
   const expanded = snap === 'expanded';
@@ -340,8 +353,13 @@ function NavigationDetailsSheet({
             )}
           </div>
 
+          {onOpenChat ? (
+            <button type="button" onClick={onOpenChat} className="sbn-nav-exit-btn shrink-0" title={chatLabel}>
+              Message
+            </button>
+          ) : null}
           <button type="button" onClick={onExit} className="sbn-nav-exit-btn shrink-0">
-            {arrived ? 'Done' : 'Exit'}
+            {exitLabel ?? (arrived ? 'Done' : 'Exit')}
           </button>
         </div>
       </div>
@@ -631,6 +649,10 @@ export default function MapNavigationView({
   otherPartyLabel = 'Other party',
   navigationStartMessage,
   navigationFollowUpMessages,
+  tripLock = false,
+  onOpenChat,
+  chatLabel = 'Message',
+  embedded = false,
 }: MapNavigationViewProps) {
   const { theme } = useTheme();
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
@@ -1647,6 +1669,10 @@ export default function MapNavigationView({
   };
 
   const handleExit = () => {
+    if (tripLock) {
+      onExit();
+      return;
+    }
     voiceRef.current.cancel();
     void wakeLockRef.current?.release();
     onExit();
@@ -1725,7 +1751,7 @@ export default function MapNavigationView({
 
   return (
     <div
-      className={`fixed inset-0 z-[200] flex flex-col sbn-nav--${theme}${isCompact ? ' sbn-nav-compact' : ''}${isNarrow ? ' sbn-nav-narrow' : ''}`}
+      className={`${embedded ? 'absolute inset-0 z-10' : 'fixed inset-0 z-[200]'} flex flex-col sbn-nav--${theme}${isCompact ? ' sbn-nav-compact' : ''}${isNarrow ? ' sbn-nav-narrow' : ''}`}
       id="map_navigation_view"
       style={{ background: 'var(--sbn-nav-bg)' }}
       onPointerDown={() => voiceRef.current.unlock()}
@@ -1755,7 +1781,7 @@ export default function MapNavigationView({
                   Open in Apple / Google Maps
                 </button>
                 <button type="button" onClick={handleExit} className="sbn-nav-tertiary-btn">
-                  Back to map
+                  {tripLock ? 'Cancel pickup' : 'Back to map'}
                 </button>
               </div>
             </div>
@@ -1892,6 +1918,9 @@ export default function MapNavigationView({
                 onRecenter={handleRecenter}
                 onSettings={() => setSettingsOpen(true)}
                 onExit={handleExit}
+                exitLabel={tripLock ? 'Cancel' : undefined}
+                onOpenChat={onOpenChat}
+                chatLabel={chatLabel}
               />
             </div>
           )}

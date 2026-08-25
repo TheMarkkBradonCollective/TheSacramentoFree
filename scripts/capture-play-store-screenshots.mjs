@@ -295,12 +295,12 @@ async function main() {
     const goGetScenes = [
       ['goget-listing', '09-goget-listing', '#item_detail_fullscreen', 2500],
       ['goget-chat', '10-goget-chat', '#chat_start_go_get_btn', 2000],
-      ['goget-ring', '11-goget-ring', '#go_get_incoming_ring_overlay', 2000],
-      ['goget-waiting', '12-goget-waiting', '#go_get_ring_waiting', 1500],
+      ['goget-ring', '11-goget-ring', '#go_get_incoming_ring_overlay', 2500],
+      ['goget-waiting', '12-goget-waiting', '#go_get_trip_lock_screen, #go_get_ring_waiting', 2000],
       ['goget-navigation', '13-goget-navigation', '#map_navigation_view', 8000],
-      ['goget-tracking', '14-goget-tracking', '#go_get_live_tracking_card', 1500],
-      ['goget-meeting', '15-goget-meeting', '.go-get-meeting-pickup-pin, .leaflet-container', 3000],
-      ['goget-arrived', '16-goget-arrived', '#go_get_arrived_handoff', 1500],
+      ['goget-tracking', '14-goget-tracking', '#go_get_trip_lock_screen, #go_get_live_tracking_card', 3000],
+      ['goget-meeting', '15-goget-meeting', '#go_get_trip_lock_screen, .go-get-meeting-pickup-pin, .leaflet-container', 3000],
+      ['goget-arrived', '16-goget-arrived', '#go_get_trip_lock_screen, #go_get_arrived_handoff', 2000],
     ];
 
     for (const [scene, filename, selector, settleMs] of goGetScenes) {

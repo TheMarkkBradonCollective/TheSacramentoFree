@@ -1,4 +1,4 @@
-import { supabase, buildDmChatId, getOrCreateSupabaseChat, createSupabaseMessage, staffGetListingById, getSupabaseProfile } from '../supabase';
+import { supabase, buildDmChatId, getOrCreateSupabaseChat, createSupabaseMessage, staffGetListingById, getSupabaseProfile, markItemFulfilledFromChat, markTradeCompletedFromChat, recordGiveawayPickupFromGoGet } from '../supabase';
 import type { GoGetFulfillerLiveLocation, GoGetHandshakeMode, GoGetLiveLocation, GoGetSession, GoGetSessionStatus, ItemPost, UserProfile } from '../types';
 import { isPlayStoreDemo } from '../preview/playStoreDemo';
 import {
@@ -6,7 +6,10 @@ import {
   getPlayStoreDemoFulfillerLiveLocation,
   getPlayStoreDemoGoGetSession,
   getPlayStoreDemoLiveLocation,
+  getPlayStoreDemoLockedGoGetSession,
 } from '../preview/playStoreDemoGoGet';
+import { formatItemClaimedChatMessage, formatItemFulfilledChatMessage, formatTradeCompletedChatMessage } from './claims';
+import { pickPreferredLockedGoGetSession } from './goGetTripLock';
 import { CLIENT_PUSH_DISPATCH_ENABLED } from './pushConfig';
 import { subscribePostgresChanges } from './supabaseRealtime';
 import { isStaffRole } from './roles';
@@ -161,6 +164,73 @@ export async function getGoGetSessionById(sessionId: string): Promise<GoGetSessi
   } catch {
     return null;
   }
+}
+
+const LOCK_QUERY_STATUSES: GoGetSessionStatus[] = [
+  'awaiting_availability',
+  'scheduled',
+  'active',
+  'arrived',
+];
+
+/** Any live Go Get that should lock this user into the full-screen trip UI. */
+export async function getLockedGoGetSessionForUser(userId: string): Promise<GoGetSession | null> {
+  if (isPlayStoreDemo()) {
+    return getPlayStoreDemoLockedGoGetSession(userId);
+  }
+  try {
+    const [asRequester, asFulfiller] = await Promise.all([
+      supabase
+        .from('go_get_sessions')
+        .select('*')
+        .eq('requesterUserId', userId)
+        .in('status', LOCK_QUERY_STATUSES)
+        .order('updatedAt', { ascending: false })
+        .limit(8),
+      supabase
+        .from('go_get_sessions')
+        .select('*')
+        .eq('fulfillerUserId', userId)
+        .in('status', LOCK_QUERY_STATUSES)
+        .order('updatedAt', { ascending: false })
+        .limit(8),
+    ]);
+    const rows = [...(asRequester.data ?? []), ...(asFulfiller.data ?? [])].map((row) =>
+      normalizeGoGetSession(row as Record<string, unknown>),
+    );
+    const unique = new Map<string, GoGetSession>();
+    for (const row of rows) unique.set(row.id, row);
+    return pickPreferredLockedGoGetSession([...unique.values()], userId);
+  } catch {
+    return null;
+  }
+}
+
+/** Live-updates whenever this user is fulfiller or requester on any session row. */
+export function subscribeToUserGoGetSessions(userId: string, onChange: () => void): () => void {
+  if (isPlayStoreDemo()) return () => undefined;
+  const unsubFulfiller = subscribePostgresChanges(
+    {
+      channelName: `go-get-user-fulfiller-${userId}`,
+      table: 'go_get_sessions',
+      event: '*',
+      filter: `fulfillerUserId=eq.${userId}`,
+    },
+    () => onChange(),
+  );
+  const unsubRequester = subscribePostgresChanges(
+    {
+      channelName: `go-get-user-requester-${userId}`,
+      table: 'go_get_sessions',
+      event: '*',
+      filter: `requesterUserId=eq.${userId}`,
+    },
+    () => onChange(),
+  );
+  return () => {
+    unsubFulfiller();
+    unsubRequester();
+  };
 }
 
 export interface CreateGoGetSessionParams {
@@ -657,6 +727,39 @@ export async function markGoGetArrived(
   );
   await clearLiveLocation(session.id);
   return { ok: true, session: result.session };
+}
+
+/** Marks the listing claimed/fulfilled/traded to match this Go Get handoff. */
+export async function completeGoGetItemForSession(
+  item: ItemPost,
+  session: GoGetSession,
+): Promise<Result> {
+  if (item.type === 'giveaway') {
+    return recordGiveawayPickupFromGoGet({
+      itemId: item.id,
+      itemTitle: item.title,
+      giverUserId: session.fulfillerUserId,
+      claimerUserId: session.requesterUserId,
+      chatId: session.chatId,
+      claimMessage: formatItemClaimedChatMessage(item.title),
+    });
+  }
+  if (item.type === 'looking') {
+    return markItemFulfilledFromChat({
+      itemId: item.id,
+      ownerUserId: session.fulfillerUserId,
+      helperUserId: session.requesterUserId,
+      chatId: session.chatId,
+      message: formatItemFulfilledChatMessage(item.title, session.requesterName),
+    });
+  }
+  return markTradeCompletedFromChat({
+    itemId: item.id,
+    posterUserId: session.fulfillerUserId,
+    partnerUserId: session.requesterUserId,
+    chatId: session.chatId,
+    message: formatTradeCompletedChatMessage(item.title, session.requesterName),
+  });
 }
 
 /** Fulfiller confirms the handoff actually happened — separate item-type completion is handled by the caller. */

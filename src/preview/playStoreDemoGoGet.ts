@@ -3,6 +3,7 @@
  * Sacramento landmarks only — never live member locations.
  */
 import type { GoGetFulfillerLiveLocation, GoGetLiveLocation, GoGetSession, UserProfile } from '../types';
+import { isGoGetTripLocked } from '../lib/goGetTripLock';
 import { PLAY_STORE_DEMO_ITEMS, PLAY_STORE_DEMO_PROFILE, isPlayStoreDemo } from './playStoreDemo';
 
 export const DEMO_GOGET_SESSION_ID = 'demo-goget-chair';
@@ -176,6 +177,24 @@ export function getPlayStoreDemoActiveGoGetSession(itemId: string, userId: strin
   if (session.fulfillerUserId !== userId && session.requesterUserId !== userId) return null;
   if (scene === 'goget-listing' || scene === 'goget-chat') return null;
   return session;
+}
+
+/** Viewer profile for a Play Store Go Get screenshot scene (picker vs poster). */
+export function getPlayStoreDemoGoGetViewer(scene: string): UserProfile {
+  if (scene === 'goget-ring' || scene === 'goget-tracking' || scene === 'goget-arrived') {
+    return DEMO_GOGET_AVERY_PROFILE;
+  }
+  return PLAY_STORE_DEMO_PROFILE;
+}
+
+export function getPlayStoreDemoLockedGoGetSession(userId: string): GoGetSession | null {
+  const scene = parsePlayStoreGoGetScene();
+  if (!scene?.startsWith('goget-')) return null;
+  if (scene === 'goget-listing' || scene === 'goget-chat' || scene === 'goget-ring') return null;
+  const session = getPlayStoreDemoGoGetSession(DEMO_GOGET_SESSION_ID);
+  if (!session) return null;
+  if (session.fulfillerUserId !== userId && session.requesterUserId !== userId) return null;
+  return isGoGetTripLocked(session, userId) ? session : null;
 }
 
 export function getPlayStoreDemoLiveLocation(sessionId: string): GoGetLiveLocation | null {
