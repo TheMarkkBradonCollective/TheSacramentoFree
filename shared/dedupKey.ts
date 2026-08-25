@@ -26,6 +26,7 @@ const ENTITY_DATA_KEYS = [
   'sessionId',
   'listingId',
   'itemId',
+  'viewerUserId',
   'conversationId',
   'eventId',
   'ticketId',

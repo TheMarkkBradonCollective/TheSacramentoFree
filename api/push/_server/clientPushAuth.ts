@@ -352,7 +352,8 @@ export async function validateClientPush(
     case 'listing_approved':
     case 'listing_denied':
     case 'listing_upvote':
-    case 'listing_downvote': {
+    case 'listing_downvote':
+    case 'listing_viewed': {
       const listingId = String(body.listingId || '').trim();
       if (!listingId) return { ok: false, error: 'listingId is required' };
       const supabaseAdmin = await getSupabaseAdmin();
@@ -363,7 +364,7 @@ export async function validateClientPush(
         .maybeSingle();
       const ownerId = String((item as { userId?: string } | null)?.userId || '');
       if (!ownerId) return { ok: false, error: 'Listing not found' };
-      if (eventType === 'item_claimed' || eventType === 'listing_upvote' || eventType === 'listing_downvote') {
+      if (eventType === 'item_claimed' || eventType === 'listing_upvote' || eventType === 'listing_downvote' || eventType === 'listing_viewed') {
         if (ownerId === callerId) return { ok: false, error: 'Invalid notification target' };
       }
       if (eventType === 'listing_status') {

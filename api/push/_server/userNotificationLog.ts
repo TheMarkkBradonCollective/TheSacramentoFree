@@ -10,6 +10,8 @@ function inboxKind(eventType: PushEventType): string {
       return 'upvote';
     case 'listing_downvote':
       return 'downvote';
+    case 'listing_viewed':
+      return 'listing_view';
     case 'item_claimed':
       return 'claim';
     case 'item_gifted':

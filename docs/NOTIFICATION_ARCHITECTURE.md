@@ -55,6 +55,7 @@ Every event type maps to metadata in `shared/notificationTypes.ts`:
 | Event | Priority | Delivery |
 |-------|----------|----------|
 | Listing upvote | Silent | In-app only |
+| Listing view | Normal | Push + inbox |
 | New comment | Normal | Push + inbox |
 | Item claimed | Important | Push + inbox |
 | Pickup reminder | Important | Push + inbox |
@@ -89,7 +90,7 @@ Schema columns on `notification_preferences`:
 - `quietHoursStart` / `quietHoursEnd` (default 22:00 – 07:00)
 - `quietHoursAllowUrgent` (default on)
 
-During quiet hours, normal notifications are suppressed for push (inbox still written). Urgent/important events with `bypassQuietHours` still push. UI for quiet hours is planned.
+During quiet hours, normal notifications are suppressed for push (inbox still written). Urgent/important events with `bypassQuietHours` still push. Quiet hours can be configured under **Alerts → Quiet hours** in notification settings.
 
 ## Platforms
 
@@ -176,6 +177,20 @@ awaiting_availability → scheduled → active → arrived → completed
 | `src/lib/pushEvents.ts` | Client notify helpers |
 | `api/push/_server/pickupPushEvents.ts` | FCM-only filter |
 
+## Listing views
+
+When a neighbor opens a listing for the first time, `record_listing_view()` inserts into `listing_views`. A Supabase webhook on `listing_views` INSERT dispatches `listing_viewed` to the listing owner (not the viewer).
+
+| Field | Value |
+|-------|-------|
+| Event | `listing_viewed` |
+| Recipient | Listing owner |
+| Dedup | `listing_viewed:{itemId}:{viewerUserId}:{ownerId}` |
+| Preference | `listingViews` (defaults on) |
+| Delivery | Push + inbox |
+
+One notification per neighbor per listing (unique `(itemId, userId)` on `listing_views`).
+
 ## Key files (general)
 
 | File | Role |
@@ -191,6 +206,20 @@ awaiting_availability → scheduled → active → arrived → completed
 
 ## Roadmap
 
-1. **Done:** Central engine, priority/delivery modes, deterministic dedup, quiet hours backend, vote/reaction → in-app only, Android channels, Go Get state machine + cron reminders + webhook backup
-2. **Next:** Quiet hours UI, notification batching, per-device registry, delivery tracking, dead-token cleanup
-3. **Later:** Per-channel prefs (in-app / push / email), mute controls, deep-link validation, notification expiration, admin analytics
+1. **Done:** Central engine, priority/delivery modes, deterministic dedup, quiet hours (backend + UI), vote/reaction → in-app only, Android channels, Go Get state machine + cron reminders + webhook backup, **listing view notifications**
+2. **Next:** Notification batching (`notification_groups`), per-device registry (`user_devices`), delivery tracking (`notification_deliveries`), dead-token cleanup
+3. **Later:** Per-channel prefs (in-app / push / email), mute controls (`notification_mutes`), notification expiration cron, admin analytics, Android notification actions, mark notification read on Go Get session open, stale session auto-expiry, `sacfree://` custom URL scheme
+
+### Supabase webhooks (operator checklist)
+
+Configure Database Webhooks → `https://<your-domain>/api/webhooks/supabase-push` for:
+
+- `items` (INSERT, UPDATE)
+- `listing_views` (INSERT) — **new: listing view alerts**
+- `item_votes`, `item_comments`, `item_claims`, `item_claim_requests`
+- `messages`, `message_requests`
+- `go_get_sessions` (INSERT, UPDATE)
+- `feed_posts`, `feed_post_comments`, `feed_post_reactions`, `community_content_votes`
+- `friend_requests`, `user_awards`, `event_rsvps`, `event_comments`
+- `help_announcements`, `help_announcement_comments`, `app_updates`, `app_update_comments`
+- `moderation_audit_log`, `user_reports`, `support_ticket_messages`, `users` (INSERT, DELETE)

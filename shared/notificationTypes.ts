@@ -33,6 +33,7 @@ export type NotificationEventType =
   | 'new_comment'
   | 'listing_upvote'
   | 'listing_downvote'
+  | 'listing_viewed'
   | 'listing_approved'
   | 'listing_denied'
   | 'listing_expiring'
@@ -127,6 +128,7 @@ export const EVENT_METADATA: Record<NotificationEventType, EventMetadata> = {
   // Votes & reactions — in-app only (no push spam)
   listing_upvote: { priority: 'silent', deliveryMode: 'in_app', androidChannel: 'listings' },
   listing_downvote: { priority: 'silent', deliveryMode: 'in_app', androidChannel: 'listings' },
+  listing_viewed: { priority: 'normal', deliveryMode: 'push_and_in_app', androidChannel: 'listings' },
   feed_upvote: { priority: 'silent', deliveryMode: 'in_app', androidChannel: 'community' },
   feed_downvote: { priority: 'silent', deliveryMode: 'in_app', androidChannel: 'community' },
   feed_reaction: { priority: 'silent', deliveryMode: 'in_app', androidChannel: 'community' },

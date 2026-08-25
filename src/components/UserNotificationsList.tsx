@@ -233,6 +233,7 @@ function targetForNotification(item: UserNotificationItem): PushDeepLinkTarget |
     (item.kind === 'comment' ||
       item.kind === 'upvote' ||
       item.kind === 'downvote' ||
+      item.kind === 'listing_view' ||
       item.kind === 'new_listing' ||
       item.kind === 'nearby_listing' ||
       item.kind === 'new_request' ||

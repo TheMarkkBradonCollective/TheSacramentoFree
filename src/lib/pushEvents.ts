@@ -261,6 +261,22 @@ export async function notifyListingDownvote(params: {
   });
 }
 
+export async function notifyListingViewed(params: {
+  item: ItemPost;
+  viewerUserId: string;
+}) {
+  await sendPushNotification({
+    eventType: 'listing_viewed',
+    title: 'Someone viewed your listing',
+    body: `A neighbor viewed "${params.item.title}"`,
+    url: pushUrlForListing(params.item.id),
+    listingId: params.item.id,
+    recipientUserIds: [params.item.userId],
+    tag: `view-${params.item.id}-${params.viewerUserId}`,
+    data: { viewerUserId: params.viewerUserId },
+  });
+}
+
 export async function notifyFeedComment(params: {
   postId: string;
   authorUserId: string;

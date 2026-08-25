@@ -14,6 +14,7 @@ import {
   runNeighborMessageRequestAcceptedNotify,
   runNeighborMessageRequestNotify,
   runNeighborItemVoteNotify,
+  runNeighborListingViewNotify,
   runNeighborNewCommentNotify,
   runNeighborNewListingNotify,
   runNeighborNewMessageNotify,
@@ -324,6 +325,13 @@ export async function runSupabasePushWebhook(
       itemId: String(record.itemId || ''),
       userId: String(record.userId || ''),
       voteType: voteType as 'up' | 'down',
+    });
+  }
+
+  if (table === 'listing_views') {
+    return runNeighborListingViewNotify(String(record.userId || 'system'), {
+      itemId: String(record.itemId || ''),
+      userId: String(record.userId || ''),
     });
   }
 

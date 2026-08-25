@@ -76,6 +76,7 @@ export interface NotificationPreferences {
   comments: boolean;
   listingUpvotes: boolean;
   listingDownvotes: boolean;
+  listingViews: boolean;
   listingStatus: boolean;
   nearbyListings: boolean;
   requests: boolean;
@@ -119,6 +120,10 @@ export interface NotificationPreferences {
   directorClaimRequests: boolean;
   nearbyRadiusMiles: NearbyRadiusMiles;
   followedCategories: string[];
+  quietHoursEnabled?: boolean;
+  quietHoursStart?: string;
+  quietHoursEnd?: string;
+  quietHoursAllowUrgent?: boolean;
 }
 
 export interface NavigationSettingsPreference {
