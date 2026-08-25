@@ -1275,8 +1275,8 @@ export default function ItemDetailNavigation({
       )}
       {!session && destination && !coordinationGate.ok && !isOwner && (
         <p className="text-sm text-muted sbn-card p-3">
-          App pickup coordination isn&apos;t available for this listing right now (neighbor opted out or outside
-          pickup hours). Message the poster to arrange pickup manually.
+          Meet isn&apos;t available yet — you or the poster need Meet & pickup coordination turned on in Account
+          settings (and within pickup hours). Message the poster to arrange pickup manually.
         </p>
       )}
 

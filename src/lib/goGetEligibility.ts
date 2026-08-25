@@ -107,15 +107,15 @@ export function goGetBlockAlert(eligibility: Extract<GoGetEligibility, { ok: fal
       };
     case 'opted_out':
       return {
-        title: 'Pickup coordination is off',
+        title: 'Meet is off',
         message:
-          'You turned off Go Get & pickup coordination in Account settings. You can still list items and message neighbors independently. Turn the setting back on anytime to use app-supported pickups.',
+          'Turn on Meet & pickup coordination in Account settings before starting a Meet. You can still list items and message neighbors independently.',
         okLabel: 'Got it',
       };
     case 'other_opted_out':
       return {
-        title: 'Neighbor opted out',
-        message: `${eligibility.otherName || 'This neighbor'} isn’t using app pickup coordination. Message them to arrange pickup on your own — listing and chat still work as usual.`,
+        title: 'Neighbor hasn’t turned on Meet',
+        message: `${eligibility.otherName || 'This neighbor'} hasn’t turned on Meet & pickup coordination in Account settings. Both neighbors need it on to start a Meet — message them to arrange pickup on your own.`,
         okLabel: 'Got it',
       };
     case 'outside_availability':

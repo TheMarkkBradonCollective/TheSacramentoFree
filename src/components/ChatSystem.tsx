@@ -20,6 +20,7 @@ import {
   getSupportTicketLastMessages,
   getSupabaseItemById,
   getSupabaseEventById,
+  getSupabaseProfile,
 } from '../supabase';
 import {
   isCommunityChat,
@@ -39,7 +40,12 @@ import {
   confirmRemoveCommunityMessage,
   confirmUnsendMessage,
 } from '../lib/destructiveConfirm';
-import { supportsGoGetCoordination } from '../lib/goGetEligibility';
+import { isGoGetCoordinationEnabled, supportsGoGetCoordination } from '../lib/goGetEligibility';
+import {
+  canShowAppPickupCoordination,
+  coordProfilesForListingDm,
+  type CoordinationProfileSlice,
+} from '../lib/goGetCoordinationGating';
 import ChatSupportSection, { type ChatSupportView } from './ChatSupportSection';
 import ChatFeedbackSection, { type ChatFeedbackPanel } from './ChatFeedbackSection';
 import ChatInboxHeader from './ChatInboxHeader';
@@ -181,6 +187,7 @@ export default function ChatSystem({
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
   const [chatGoGetSession, setChatGoGetSession] = useState<GoGetSession | null>(null);
   const [chatMeetLocation, setChatMeetLocation] = useState<ChatMeetLocation | null>(null);
+  const [otherParticipantCoord, setOtherParticipantCoord] = useState<CoordinationProfileSlice | null>(null);
   const [settingMeetLocation, setSettingMeetLocation] = useState(false);
   const [startingGoGet, setStartingGoGet] = useState(false);
   const [supportView, setSupportView] = useState<ChatSupportView>(null);
@@ -248,6 +255,29 @@ export default function ChatSystem({
   const messageInputRef = useRef<HTMLInputElement | null>(null);
   const selectedChatWasLiveRef = useRef<boolean | null>(null);
   const neighborModeChatIdsRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    setOtherParticipantCoord(null);
+    if (!selectedChat || isCommunityChat(selectedChat.id)) return;
+    const otherId = selectedChat.participantIds.find((id) => id !== userProfile.uid);
+    if (!otherId) return;
+    let cancelled = false;
+    void getSupabaseProfile(otherId).then((profile) => {
+      if (cancelled) return;
+      setOtherParticipantCoord(
+        profile
+          ? {
+              uid: profile.uid,
+              goGetEnabled: profile.goGetEnabled,
+              pickupAvailability: profile.pickupAvailability,
+            }
+          : { uid: otherId, goGetEnabled: false },
+      );
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedChat?.id, userProfile.uid]);
 
   useEffect(() => {
     setChatGoGetSession(null);
@@ -1585,6 +1615,24 @@ export default function ChatSystem({
             const hasCoordinationPin =
               !!linkedItem &&
               hasCoordinationDestination(linkedItem, userProfile.uid, chatMeetLocation);
+            const listingCoordinationGate =
+              linkedItem &&
+              otherParticipantCoord &&
+              canShowAppPickupCoordination({
+                item: linkedItem,
+                ...coordProfilesForListingDm(linkedItem, userProfile, otherParticipantCoord),
+              });
+            const listingCoordinationOk =
+              staffActingOfficial || (listingCoordinationGate?.ok ?? false);
+            const showMeetCoordinationHint =
+              !!linkedItem &&
+              !isChatDisabled &&
+              !instantCoordination &&
+              hasCoordinationPin &&
+              !chatGoGetSession &&
+              otherParticipantCoord &&
+              !listingCoordinationOk &&
+              supportsGoGetCoordination();
             const showMarkPendingPickupBtn =
               !!linkedItem &&
               !isChatDisabled &&
@@ -1633,6 +1681,8 @@ export default function ChatSystem({
               !chatGoGetSession &&
               !instantCoordination &&
               hasCoordinationPin &&
+              listingCoordinationOk &&
+              otherParticipantCoord &&
               ((linkedItem.type === 'looking' && !isListingOwner) ||
                 linkedItem.type === 'trade' ||
                 linkedItem.type === 'giveaway');
@@ -1963,7 +2013,8 @@ export default function ChatSystem({
                 >
                   {!isCommunity &&
                   actingAsNeighborInSelectedChat &&
-                  (showSendLocationBtn ||
+                  (showMeetCoordinationHint ||
+                    showSendLocationBtn ||
                     showSetMeetLocationBtn ||
                     showMarkPendingPickupBtn ||
                     showRequestHoldBtn ||
@@ -1971,6 +2022,13 @@ export default function ChatSystem({
                     showMarkFulfilledBtn ||
                     showStartGoGetBtn) ? (
                     <div className="chat-action-chips">
+                      {showMeetCoordinationHint ? (
+                        <p className="text-xs text-muted leading-snug px-1">
+                          {!isGoGetCoordinationEnabled(userProfile)
+                            ? 'Turn on Meet & pickup coordination in Account settings before you can start a Meet.'
+                            : `${otherName} hasn’t turned on Meet & pickup coordination — both neighbors need it on to start a Meet.`}
+                        </p>
+                      ) : null}
                       {showSendLocationBtn ? (
                         <button
                           type="button"

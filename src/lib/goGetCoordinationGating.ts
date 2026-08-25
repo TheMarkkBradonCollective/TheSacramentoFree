@@ -12,22 +12,32 @@ export type GoGetCoordinationGateReason =
 
 export type GoGetCoordinationGate = { ok: true } | { ok: false; reason: GoGetCoordinationGateReason };
 
+export type CoordinationProfileSlice = Pick<UserProfile, 'uid' | 'goGetEnabled' | 'pickupAvailability'>;
+
+/** Poster vs neighbor profiles for a listing DM (poster = listing owner). */
+export function coordProfilesForListingDm(
+  item: ItemPost,
+  viewer: CoordinationProfileSlice,
+  otherParticipant: CoordinationProfileSlice,
+): { posterProfile: CoordinationProfileSlice; pickerProfile: CoordinationProfileSlice } {
+  const posterProfile = item.userId === viewer.uid ? viewer : otherParticipant;
+  const pickerProfile = item.userId === viewer.uid ? otherParticipant : viewer;
+  return { posterProfile, pickerProfile };
+}
+
 /** In-app turn-by-turn navigation and Go Get coordination — Android APK/AAB only. */
 export function supportsInAppNavigation(): boolean {
   return isNativeApp() || isPlayStoreDemo();
 }
 
-/** Whether app-coordinated pickup actions (Go Get, claim-at-pin, etc.) should show for this listing. */
-export function canShowAppPickupCoordination(params: {
-  item: ItemPost;
-  posterProfile: Pick<UserProfile, 'uid' | 'goGetEnabled' | 'pickupAvailability'> | null | undefined;
-  pickerProfile: Pick<UserProfile, 'uid' | 'goGetEnabled' | 'pickupAvailability'> | null | undefined;
+/** Both listing parties have Meet / pickup coordination on and are within pickup hours. */
+export function bothNeighborsCoordinationEnabled(params: {
+  posterProfile: CoordinationProfileSlice | null | undefined;
+  pickerProfile: CoordinationProfileSlice | null | undefined;
   at?: Date;
 }): GoGetCoordinationGate {
-  if (!supportsInAppNavigation()) return { ok: false, reason: 'coordination_off' };
-  const { item, posterProfile, pickerProfile } = params;
+  const { posterProfile, pickerProfile } = params;
   if (!posterProfile || !pickerProfile) return { ok: false, reason: 'coordination_off' };
-  if (item.userId === pickerProfile.uid) return { ok: true };
 
   if (!isGoGetCoordinationEnabled(posterProfile)) {
     return { ok: false, reason: 'coordination_off' };
@@ -45,6 +55,21 @@ export function canShowAppPickupCoordination(params: {
   }
 
   return { ok: true };
+}
+
+/** Whether app-coordinated pickup actions (Go Get, claim-at-pin, etc.) should show for this listing. */
+export function canShowAppPickupCoordination(params: {
+  item: ItemPost;
+  posterProfile: Pick<UserProfile, 'uid' | 'goGetEnabled' | 'pickupAvailability'> | null | undefined;
+  pickerProfile: Pick<UserProfile, 'uid' | 'goGetEnabled' | 'pickupAvailability'> | null | undefined;
+  at?: Date;
+}): GoGetCoordinationGate {
+  if (!supportsInAppNavigation()) return { ok: false, reason: 'coordination_off' };
+  const { item, posterProfile, pickerProfile } = params;
+  if (!posterProfile || !pickerProfile) return { ok: false, reason: 'coordination_off' };
+  if (item.userId === pickerProfile.uid) return { ok: true };
+
+  return bothNeighborsCoordinationEnabled({ posterProfile, pickerProfile, at: params.at });
 }
 
 /** Navigate / Go Get primary action on a listing card or detail (staff always on native app). */
