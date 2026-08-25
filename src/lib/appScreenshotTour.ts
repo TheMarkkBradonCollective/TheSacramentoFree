@@ -1,7 +1,10 @@
 import { PLAY_STORE_ASSETS_BASE_PATH } from './playStoreAssets';
 
+/** Bump when Play tour PNGs change so browsers skip stale cached shots. */
+export const APP_SCREENSHOT_TOUR_CACHE_KEY = '2026-08-25-screenshots-v2';
+
 export function appScreenshotSrc(fileName: string): string {
-  return `${PLAY_STORE_ASSETS_BASE_PATH}/${fileName}`;
+  return `${PLAY_STORE_ASSETS_BASE_PATH}/${fileName}?v=${APP_SCREENSHOT_TOUR_CACHE_KEY}`;
 }
 
 export type AppTourShot = {
@@ -25,12 +28,12 @@ export const WEBSITE_TOUR_SHOTS: AppTourShot[] = [
   {
     file: '03-stuff.png',
     title: 'Stuff',
-    body: 'Giveaways, looking-for, trades, curb alerts. Post or claim from here.',
+    body: 'Furniture, electronics, baby gear, clothes, car stuff, and more — giveaways and ISO requests from neighbors.',
   },
   {
     file: '04-listing.png',
     title: 'A listing',
-    body: 'Photos, pickup notes, then message the poster to arrange a porch pickup.',
+    body: 'Photos, pickup notes, and messages — like this sectional couch giveaway with porch pickup details.',
   },
   {
     file: '05-map.png',
@@ -97,6 +100,6 @@ export const GOGET_TOUR_STEPS: AppTourShot[] = [
   {
     file: '16-goget-arrived.png',
     title: '8. Confirm the handoff',
-    body: 'When you arrive, they confirm the chair (or whatever it is) actually changed hands — or tap “Something’s wrong.” The trip stays locked until that happens. Then you are both free again.',
+    body: 'When you arrive, they confirm the item actually changed hands — or tap “Something’s wrong.” The trip stays locked until that happens. Then you are both free again.',
   },
 ];
