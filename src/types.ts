@@ -125,6 +125,7 @@ export interface NavigationSettingsPreference {
   travelMode: 'driving' | 'walking' | 'cycling';
   voiceEnabled: boolean;
   headingUp: boolean;
+  usePhoneCompass?: boolean;
   followAppTheme: boolean;
   showLaneGuidance: boolean;
   speakOnRecenter: boolean;

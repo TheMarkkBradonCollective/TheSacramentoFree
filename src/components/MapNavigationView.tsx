@@ -55,6 +55,8 @@ import {
 } from '../lib/navLanes';
 import {
   resolveNavHeading,
+  requestCompassPermission,
+  subscribeDeviceCompass,
 } from '../lib/navHeading';
 import {
   readNavigationSettings,
@@ -728,6 +730,7 @@ export default function MapNavigationView({
   const routeRequestIdRef = useRef(0);
   const lastBearingApplyRef = useRef(0);
   const lastAppliedRotationRef = useRef(0);
+  const compassHeadingRef = useRef<number | null>(null);
   const settingsRef = useRef<NavigationSettings>(readNavigationSettings());
   const handleGpsUpdateRef = useRef<(position: GeolocationPosition) => void>(() => undefined);
   const onProgressUpdateRef = useRef(onProgressUpdate);
@@ -962,6 +965,17 @@ export default function MapNavigationView({
       isProgrammaticMapMoveRef.current = false;
     }, 360);
   }, []);
+
+  useEffect(() => {
+    if (!navSettings.usePhoneCompass) {
+      compassHeadingRef.current = null;
+      return undefined;
+    }
+    void requestCompassPermission();
+    return subscribeDeviceCompass((degrees) => {
+      compassHeadingRef.current = degrees;
+    });
+  }, [navSettings.usePhoneCompass]);
 
   useEffect(() => {
     voiceRef.current.prime();
@@ -1498,6 +1512,11 @@ export default function MapNavigationView({
         currentPosition: snapped,
         routeCoords: activeRoute?.coords,
         offRouteMeters: offRouteDistance,
+        gpsHeading: position.coords.heading,
+        compassHeading: compassHeadingRef.current,
+        speedMps: position.coords.speed,
+        travelMode: settingsRef.current.travelMode,
+        usePhoneCompass: settingsRef.current.usePhoneCompass,
       });
       lastGpsPosRef.current = snapped;
 
