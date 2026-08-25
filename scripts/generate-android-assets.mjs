@@ -16,6 +16,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const appIconSrc = join(root, 'public', 'app-icon.png');
+const maskableIconSrc = join(root, 'public', 'app-icon-maskable.png');
 const notificationIconSrc = join(root, 'public', 'notification-icon.png');
 const assetsDir = join(root, 'assets');
 const compositeDest = join(assetsDir, 'launcher-composite.png');
@@ -56,6 +57,11 @@ function requireCmd(cmd) {
 requireCmd('ffmpeg');
 requireCmd('ffprobe');
 
+execFileSync(process.execPath, [join(root, 'scripts', 'composite-app-icon.mjs')], {
+  cwd: root,
+  stdio: 'inherit',
+});
+
 if (!existsSync(appIconSrc)) {
   throw new Error(`Missing app icon at ${appIconSrc}`);
 }
@@ -65,9 +71,9 @@ if (!existsSync(notificationIconSrc)) {
 
 mkdirSync(assetsDir, { recursive: true });
 
-const { width, height } = readImageSize(appIconSrc);
-writeCompositeLauncher(appIconSrc, compositeDest, Math.max(width, height));
-console.log(`Composite launcher ${width}x${height} on ${launcherBg} → ${compositeDest}`);
+const { width, height } = readImageSize(maskableIconSrc);
+writeCompositeLauncher(maskableIconSrc, compositeDest, Math.max(width, height));
+console.log(`Legacy launcher composite ${width}x${height} from app-icon-maskable.png → ${compositeDest}`);
 
 if (prepareOnly) {
   process.exit(0);
@@ -173,21 +179,16 @@ function solidPng(hex, dest, size) {
 }
 
 function writeCompositeLauncher(srcPng, destPng, size) {
-  const color = `0x${launcherBg.replace('#', '')}`;
   execFileSync('ffmpeg', [
     '-y',
     '-loglevel',
     'error',
-    '-f',
-    'lavfi',
-    '-i',
-    `color=c=${color}:s=${size}x${size}`,
     '-i',
     srcPng,
     '-frames:v',
     '1',
-    '-filter_complex',
-    `[1:v]scale=${size}:${size}:flags=lanczos,format=rgba[icon];[0:v][icon]overlay=0:0:format=auto`,
+    '-vf',
+    `scale=${size}:${size}:flags=lanczos`,
     destPng,
   ]);
 }
