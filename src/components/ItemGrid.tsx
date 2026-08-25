@@ -33,7 +33,9 @@ import { LISTING_TYPE_FILTERS, getOwnerCompletedActionLabel, getPostTypeCardColu
 import {
   compareFeedItems,
   compareFeedItemsByDistance,
+  COORDINATION_FEED_SORTS,
   feedEngagementSlice,
+  itemMatchesCoordinationFeedSort,
   MORE_FEED_SORTS,
   PRIMARY_FEED_SORTS,
   type FeedSortMode,
@@ -115,6 +117,7 @@ function needsPickupListing(item: ItemPost): boolean {
 const ALL_FEED_SORT_OPTIONS: { value: FeedSortMode; label: string }[] = [
   ...PRIMARY_FEED_SORTS.map(({ value, label }) => ({ value, label })),
   ...MORE_FEED_SORTS,
+  ...COORDINATION_FEED_SORTS.map(({ value, label }) => ({ value, label })),
 ];
 
 function filterToggleOptionId(prefix: string, value: string): string {
@@ -475,6 +478,7 @@ export default function ItemGrid({
       }
       if (activeQuickPicks.has('with_photos') && extractListingImageUrls(item).length === 0) return false;
       if (activeQuickPicks.has('needs_pickup') && !needsPickupListing(item)) return false;
+      if (sortBy && !itemMatchesCoordinationFeedSort(item, sortBy)) return false;
 
       return true;
     });
@@ -655,6 +659,21 @@ export default function ItemGrid({
           >
             <div className="flex flex-wrap gap-2">
               {PRIMARY_FEED_SORTS.map(({ value, label }) => (
+                <span key={value} className="contents">
+                  <FilterLabeledSwitch
+                    id={`feed_sort_${value}`}
+                    label={label}
+                    checked={sortBy === value}
+                    onChange={handleSortSwitch(value)}
+                  />
+                </span>
+              ))}
+            </div>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted pt-1">
+              Pickup &amp; coordination
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {COORDINATION_FEED_SORTS.map(({ value, label }) => (
                 <span key={value} className="contents">
                   <FilterLabeledSwitch
                     id={`feed_sort_${value}`}
