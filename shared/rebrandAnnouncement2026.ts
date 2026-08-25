@@ -37,9 +37,9 @@ Buy Nothing Director, Sacramento`;
 /** Professional home-page notice — upcoming link change (rebrand is live). */
 export const TRADEMARK_HOME_NOTICE = {
   title: 'Notice: upcoming website and app link changes',
-  body: `TheSacramentoFree is now the community's published name and visual identity.
+  body: `Sacramento Buy Nothing remains the community name on the website and in the app.
 
-We will move to a new website address and a new Android download link in a future update. That transition is not in effect today. Please continue using the current site and installed app until further notice.
+We may move to a new website address and a new Android download link in a future update. That transition is not in effect today. Please continue using the current site and installed app until further notice.
 
 Your neighbor account, listings, messages, and notifications will remain the same. Advance notice and step-by-step instructions will be published in News before any change takes effect.
 

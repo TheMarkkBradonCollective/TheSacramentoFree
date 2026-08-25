@@ -3,7 +3,7 @@ import { isNativeApp } from '../lib/nativePlatform';
 import { NEWSPAPER, isNewspaperProductionHost } from './newspaperBrand';
 import { isPlayStoreDemo } from './playStoreDemo';
 
-const STORAGE_KEY = 'sbn_newspaper_look';
+const STORAGE_KEY = 'sbn_newspaper_look_v2';
 export const NEWSPAPER_CLASS = 'newspaper-preview';
 const ORIGINAL_DOCUMENT_TITLE = 'SacramentoBuyNothing — Local Gifting';
 
