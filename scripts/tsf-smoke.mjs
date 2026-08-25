@@ -60,7 +60,7 @@ try {
   const consoleErrors = [];
   page.on('pageerror', (err) => consoleErrors.push(String(err)));
 
-  // ── Default look is original (black & white), no query required ──
+  // ── Default look is original layout with Sacramento green accent ──
   await page.goto(BASE, { waitUntil: 'networkidle2', timeout: 60000 });
   await new Promise((r) => setTimeout(r, 800));
   check(
@@ -71,7 +71,7 @@ try {
   const defaultAccent = await page.evaluate(() =>
     getComputedStyle(document.documentElement).getPropertyValue('--color-accent').trim(),
   );
-  check('default accent is black', defaultAccent.toLowerCase() === '#0f0f0f', defaultAccent);
+  check('default accent is Sacramento green', defaultAccent.toLowerCase() === '#00845a', defaultAccent);
 
   // ── Newspaper skin ──
   await page.goto(`${BASE}/?skin=newspaper`, { waitUntil: 'networkidle2', timeout: 60000 });
@@ -290,7 +290,7 @@ try {
   const accent = await original.evaluate(() =>
     getComputedStyle(document.documentElement).getPropertyValue('--color-accent').trim(),
   );
-  check('original accent is black', accent.toLowerCase() === '#0f0f0f', accent);
+  check('original accent is Sacramento green', accent.toLowerCase() === '#00845a', accent);
 
   const emerald = await original.evaluate(() =>
     getComputedStyle(document.documentElement).getPropertyValue('--color-emerald-500').trim(),
