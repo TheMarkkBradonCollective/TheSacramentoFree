@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp, MessageSquare } from 'lucide-react';
 import type { ContentVoteState } from '../../types';
 import type { FeedEngagementApi } from '../../hooks/useFeedEngagement';
 import { FEED_REACTION_EMOJI, type FeedReactionEmoji } from '../../lib/feedReactions';
@@ -21,6 +21,8 @@ interface FeedEngagementBarProps {
   votesLoading?: boolean;
   engagement: FeedEngagementApi;
   layout?: 'compact' | 'detail';
+  commentCount?: number;
+  onComment?: () => void;
 }
 
 export default function FeedEngagementBar({
@@ -32,6 +34,8 @@ export default function FeedEngagementBar({
   votesLoading = false,
   engagement,
   layout = 'compact',
+  commentCount = 0,
+  onComment,
 }: FeedEngagementBarProps) {
   const canVote = !isOwn;
   const netScore = votes.upvotes - votes.downvotes;
@@ -39,7 +43,7 @@ export default function FeedEngagementBar({
 
   return (
     <div className={layout === 'detail' ? 'space-y-3' : 'space-y-2'}>
-      <div className={`flex flex-wrap items-center gap-1.5 sm:gap-2 ${layout === 'detail' ? 'pt-2 border-t border-app' : ''}`}>
+      <div className={`flex items-center gap-1.5 sm:gap-2 ${layout === 'detail' ? 'pt-2 border-t border-app' : ''}`}>
         <button
           type="button"
           disabled={!canVote}
@@ -73,13 +77,25 @@ export default function FeedEngagementBar({
           <ChevronDown className="w-4 h-4" />
           <span className="tabular-nums">{countLabel(votes.downvotes)}</span>
         </button>
+        {layout === 'compact' && onComment ? (
+          <button
+            type="button"
+            onClick={onComment}
+            className="ml-auto flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-semibold border border-app text-muted hover:border-accent transition-colors"
+            aria-label={`Comment, ${commentCount} ${commentCount === 1 ? 'comment' : 'comments'}`}
+          >
+            <MessageSquare className="w-3.5 h-3.5" />
+            <span>Comment</span>
+            <span className="tabular-nums">{commentCount}</span>
+          </button>
+        ) : null}
       </div>
 
       <div>
         {layout === 'detail' && (
           <p className="text-[10px] font-bold uppercase tracking-wide text-muted mb-2">Reactions</p>
         )}
-        <div className="flex flex-wrap gap-1 sm:gap-1.5">
+        <div className="flex flex-wrap justify-center gap-1 sm:gap-1.5">
           {FEED_REACTION_EMOJI.map((emoji) => {
             const active = reactions.mine.has(emoji);
             const count = reactions.counts[emoji] ?? 0;

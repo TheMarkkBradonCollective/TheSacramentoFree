@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Flag, MapPin, MessageSquare, Trash2 } from 'lucide-react';
+import { Flag, MapPin, Trash2 } from 'lucide-react';
 import type { FeedPost, UserProfile } from '../../types';
 import type { FeedEngagementApi } from '../../hooks/useFeedEngagement';
 import { isStaffRole } from '../../lib/roles';
@@ -153,43 +153,36 @@ export default function FeedPostCard({
             votesLoading={engagement.votesLoading}
             engagement={engagement}
             layout="compact"
+            commentCount={comments.length}
+            onComment={openPost}
           />
 
-          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-            <button
-              type="button"
-              onClick={openPost}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-semibold border border-app text-muted hover:border-accent transition-colors"
-              aria-label={`Comment, ${comments.length} ${comments.length === 1 ? 'comment' : 'comments'}`}
-            >
-              <MessageSquare className="w-3.5 h-3.5" />
-              <span>Comment</span>
-              <span className="tabular-nums">{comments.length}</span>
-            </button>
-
-            {canReport && (
-              <button
-                type="button"
-                onClick={() => setReportOpen(true)}
-                className="p-2 rounded-full text-muted hover:text-red-400 hover:bg-red-500/10 ml-auto"
-                title="Report post"
-                aria-label="Report post"
-              >
-                <Flag className="w-4 h-4" />
-              </button>
-            )}
-            {canDelete && (
-              <button
-                type="button"
-                onClick={() => void onDeletePost(post)}
-                className={`p-2 rounded-full text-muted hover:text-red-400 hover:bg-red-500/10 ${canReport ? '' : 'ml-auto'}`}
-                title="Delete post"
-                aria-label="Delete post"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            )}
-          </div>
+          {(canReport || canDelete) && (
+            <div className="flex items-center justify-end gap-1">
+              {canReport && (
+                <button
+                  type="button"
+                  onClick={() => setReportOpen(true)}
+                  className="p-2 rounded-full text-muted hover:text-red-400 hover:bg-red-500/10"
+                  title="Report post"
+                  aria-label="Report post"
+                >
+                  <Flag className="w-4 h-4" />
+                </button>
+              )}
+              {canDelete && (
+                <button
+                  type="button"
+                  onClick={() => void onDeletePost(post)}
+                  className="p-2 rounded-full text-muted hover:text-red-400 hover:bg-red-500/10"
+                  title="Delete post"
+                  aria-label="Delete post"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
