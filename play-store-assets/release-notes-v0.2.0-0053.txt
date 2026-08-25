@@ -1,0 +1,6 @@
+Android beta 0.2.0 (53)
+
+• Home-screen icon now matches the Sacramento green squircle logo on the website
+• Transparent pop-out icon — no white box behind the hands artwork
+• Same community — give freely, ask kindly, neighbors helping neighbors
+• Closed testing opt-in: https://play.google.com/apps/testing/org.sacramentobuynothing.app
