@@ -2961,15 +2961,18 @@ export async function submitSelfHandoffRequest(params: {
 
   if (kind === 'pickup' && subitems.length > 0) {
     const available = subitems.filter((s) => s.status === 'available');
-    if (targetIds.length !== 1) {
-      return { ok: false, errorMessage: 'Pick exactly one item you picked up.' };
+    if (targetIds.length === 0) {
+      return { ok: false, errorMessage: 'Select at least one item you picked up.' };
     }
-    const subId = targetIds[0];
-    const sub = available.find((s) => s.id === subId);
-    if (!sub) {
-      return { ok: false, errorMessage: 'That item is no longer available to claim.' };
+    const normalized: string[] = [];
+    for (const subId of targetIds) {
+      const sub = available.find((s) => s.id === subId);
+      if (!sub) {
+        return { ok: false, errorMessage: 'One of those items is no longer available to claim.' };
+      }
+      normalized.push(subId);
     }
-    targetIds = [subId];
+    targetIds = normalized;
   } else if (kind === 'pickup') {
     targetIds = [];
   } else {
@@ -3021,15 +3024,17 @@ export async function submitSelfHandoffRequest(params: {
     return { ok: false, errorMessage: reqError.message };
   }
 
-  if (kind === 'pickup' && targetIds.length === 1) {
-    const { error: holdError } = await supabase
-      .from('listing_subitems')
-      .update({ status: 'pending_pickup' })
-      .eq('id', targetIds[0])
-      .eq('status', 'available');
-    if (holdError) {
-      await supabase.from('item_claim_requests').delete().eq('id', requestId);
-      return { ok: false, errorMessage: 'Could not reserve that item — someone else may have claimed it.' };
+  if (kind === 'pickup' && targetIds.length > 0) {
+    for (const subId of targetIds) {
+      const { error: holdError } = await supabase
+        .from('listing_subitems')
+        .update({ status: 'pending_pickup' })
+        .eq('id', subId)
+        .eq('status', 'available');
+      if (holdError) {
+        await supabase.from('item_claim_requests').delete().eq('id', requestId);
+        return { ok: false, errorMessage: 'Could not reserve those items — someone else may have claimed one.' };
+      }
     }
   }
 
@@ -3235,8 +3240,8 @@ export async function recordItemClaimInChat(params: {
 }): Promise<{ ok: boolean; errorMessage?: string }> {
   const subitems = await getListingSubitems(params.itemId);
 
-  if (subitems.length > 0 && (params.subItemIds?.length ?? 0) !== 1) {
-    return { ok: false, errorMessage: 'Select exactly one item they picked up.' };
+  if (subitems.length > 0 && (params.subItemIds?.length ?? 0) === 0) {
+    return { ok: false, errorMessage: 'Select at least one item they picked up.' };
   }
 
   const ids = subitems.length > 0 ? params.subItemIds ?? [] : null;

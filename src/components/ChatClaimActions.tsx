@@ -159,13 +159,13 @@ export default function ChatClaimActions({
   };
 
   const handleManualConfirm = async () => {
-    if (isMulti && manualSelected.length !== 1) {
-      setErr('Select exactly one item they picked up.');
+    if (isMulti && manualSelected.length === 0) {
+      setErr('Select at least one item they picked up.');
       return;
     }
 
     const labels =
-      isMulti && manualSelected.length === 1
+      isMulti && manualSelected.length > 0
         ? subitems.filter((s) => manualSelected.includes(s.id)).map((s) => s.label).join(', ')
         : linkedItem.title;
 
@@ -322,14 +322,14 @@ export default function ChatClaimActions({
             ) : (
               <div className="p-2.5 rounded-xl border border-app bg-inset/40 space-y-2">
                 <p className="text-[10px] font-bold uppercase text-muted tracking-wide">
-                  Which item did they take?
+                  What did they take?
                 </p>
                 <SubItemPicker
                   subitems={subitems}
                   selectedIds={manualSelected}
                   onChange={setManualSelected}
                   disabled={busy}
-                  selectionMode="single"
+                  selectionMode="multiple"
                 />
                 <div className="flex gap-2">
                   <button
@@ -341,7 +341,7 @@ export default function ChatClaimActions({
                   </button>
                   <button
                     type="button"
-                    disabled={busy || manualSelected.length !== 1}
+                    disabled={busy || manualSelected.length === 0}
                     onClick={() => void handleManualConfirm()}
                     className="sbn-btn sbn-btn-primary sbn-btn-sm flex-1"
                   >

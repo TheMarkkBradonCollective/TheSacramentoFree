@@ -42,7 +42,7 @@ export const PICKUP_MODE_CONFIG: Record<CoordinationMode, PickupModeConfig> = {
     availability: false,
     schedule: false,
     navigation: true,
-    liveLocation: false,
+    liveLocation: true,
     handoff: false,
     travelerRole: 'requester',
     bothTravel: false,
@@ -119,9 +119,19 @@ export function isInstantPickupMode(mode: CoordinationMode): boolean {
   return PICKUP_MODE_CONFIG[mode].handshakeMode === 'instant';
 }
 
+/** Instant curb / porch — auto trip after confirm; poster confirms pickup in chat later. */
+export function isInstantTripSharingMode(mode: CoordinationMode): boolean {
+  const config = PICKUP_MODE_CONFIG[mode];
+  return config.handshakeMode === 'instant' && config.liveLocation;
+}
+
+export function itemUsesInstantTripSharing(item: Pick<ItemPost, 'type' | 'category'>): boolean {
+  return isInstantTripSharingMode(coordinationModeFromItem(item));
+}
+
 /** Curb Alert: navigate to the pin with no session handshake. */
 export function isNavigationOnlyMode(mode: CoordinationMode): boolean {
-  return mode === 'curb_alert';
+  return false;
 }
 
 export function formatRingCountdown(totalSeconds: number): string {

@@ -53,8 +53,9 @@ import {
 import { isGoGetTripLocked } from '../lib/goGetTripLock';
 import { cancelRequiresReason, isWithinReadyWindow } from '../lib/pickupStateMachine';
 import { meetCopyForSession } from '../lib/meetCopy';
-import { normalizeCoordinationMode, PICKUP_MODE_CONFIG } from '../lib/pickupEngine';
+import { normalizeCoordinationMode, PICKUP_MODE_CONFIG, itemUsesInstantTripSharing } from '../lib/pickupEngine';
 import GoGetScheduledCard from './goget/GoGetScheduledCard';
+import InstantPickupHandoffPanel from './goget/InstantPickupHandoffPanel';
 import CancelPickupDialog from './goget/CancelPickupDialog';
 import { fileGoGetViolation } from '../lib/violations';
 import type { ChatMeetLocation, GoGetFulfillerLiveLocation, GoGetSession, ListingSubItem } from '../types';
@@ -121,6 +122,10 @@ export default function ItemDetailNavigation({
   const [sessionLoaded, setSessionLoaded] = useState(false);
 
   // Contactless pickup state (curb alerts) — no Go Get session, no GPS to poster.
+  const instantTripSharing = itemUsesInstantTripSharing(item);
+  const sessionSharesLiveLocation =
+    session != null &&
+    PICKUP_MODE_CONFIG[normalizeCoordinationMode(session.coordinationMode)].liveLocation;
   const isContactless = isContactlessClaimCategory(item.category) && item.type === 'giveaway';
   const [contactlessNavActive, setContactlessNavActive] = useState(false);
   const [contactlessArrived, setContactlessArrived] = useState(false);
@@ -512,7 +517,7 @@ export default function ItemDetailNavigation({
         }
         return;
       }
-      if (session.handshakeMode !== 'instant') {
+      if (sessionSharesLiveLocation && session.requesterUserId === currentUserId) {
         void upsertLiveLocation(session.id, {
           lat: update.lat,
           lng: update.lng,
@@ -523,7 +528,7 @@ export default function ItemDetailNavigation({
         });
       }
     },
-    [session, item, isContactless],
+    [session, sessionSharesLiveLocation, currentUserId, isContactless],
   );
 
   const handleExitNavigation = useCallback(() => {
@@ -585,6 +590,10 @@ export default function ItemDetailNavigation({
 
   const handleConfirmCompletion = async () => {
     if (!session) return;
+    if (instantTripSharing) {
+      setErr('Confirm pickup in chat when they tell you what they took.');
+      return;
+    }
     setBusy(true);
     setErr('');
     const sessionResult = await confirmGoGetCompletion(session);
@@ -1019,7 +1028,40 @@ export default function ItemDetailNavigation({
 
     if (session.status === 'active') {
       const bothTravel = PICKUP_MODE_CONFIG[normalizeCoordinationMode(session.coordinationMode)].bothTravel;
+      const modeConfig = PICKUP_MODE_CONFIG[normalizeCoordinationMode(session.coordinationMode)];
       if (isRequester || bothTravel) {
+        if (instantTripSharing && isRequester && userProfile) {
+          return (
+            <div className="sbn-card p-4 space-y-3">
+              {errorBanner}
+              <p className="text-sm text-app">
+                Live trip sharing is on — {item.userDisplayName} can follow your drive.
+              </p>
+              {renderPickerMeetingMap()}
+              {!pinActionsToFooter && (
+                <button
+                  type="button"
+                  onClick={openNavigation}
+                  className="sbn-btn sbn-btn-primary w-full justify-center"
+                >
+                  Resume navigation
+                </button>
+              )}
+              <InstantPickupHandoffPanel
+                item={item}
+                session={session}
+                picker={userProfile}
+                disabled={busy}
+                onSubmitted={() => {
+                  clearActiveNavSession();
+                  setNavigationOpen(false);
+                  void getActiveGoGetSession(item.id, currentUserId).then(setSession);
+                }}
+              />
+              {cancelLink}
+            </div>
+          );
+        }
         return (
           <div className="sbn-card p-4 space-y-3">
             {errorBanner}
@@ -1046,22 +1088,26 @@ export default function ItemDetailNavigation({
       }
       return (
         <div className="space-y-3">
-          {session.handshakeMode === 'instant' ? (
-            <div className="sbn-card p-4 space-y-2">
-              {errorBanner}
-              <p className="text-sm text-app">
-                {session.requesterName} is heading to your {item.category.toLowerCase()}.
-              </p>
-              <p className="text-xs text-muted">No notification was sent — curb and porch pickups are first-come.</p>
-            </div>
-          ) : (
+          {modeConfig.liveLocation ? (
             <GoGetLiveTrackingCard
               sessionId={session.id}
               requesterName={session.requesterName}
               destinationLabel={session.destinationLabel}
               onOpenChat={() => onOpenChat?.(session.chatId)}
             />
+          ) : (
+            <div className="sbn-card p-4 space-y-2">
+              {errorBanner}
+              <p className="text-sm text-app">
+                {session.requesterName} is heading to your {item.category.toLowerCase()}.
+              </p>
+            </div>
           )}
+          {instantTripSharing ? (
+            <p className="text-xs text-muted px-1">
+              They'll tell you what they picked up — confirm in chat when you're ready.
+            </p>
+          ) : null}
           {renderPosterShareToggle()}
         </div>
       );

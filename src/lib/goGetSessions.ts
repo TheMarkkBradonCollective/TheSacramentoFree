@@ -3,6 +3,7 @@ import type { CoordinationMode, GoGetFulfillerLiveLocation, GoGetHandshakeMode, 
 import {
   coordinationModeFromItem,
   handshakeModeForCoordination,
+  itemUsesInstantTripSharing,
   normalizeCoordinationMode,
   pickupStartActionForItem,
   PICKUP_MODE_CONFIG,
@@ -452,6 +453,24 @@ export async function createGoGetSession(
           item,
           requesterUserId,
           fulfillerName,
+          sessionId: id,
+        }),
+      ),
+    );
+  } else if (instant && itemUsesInstantTripSharing(item)) {
+    await createSupabaseMessage(
+      chatId,
+      `📍 ${requesterName} is heading to pick up "${item.title}" — live trip sharing is on until they finish.`,
+      requesterUserId,
+      messageId,
+      { skipPush: true },
+    );
+    await runGoGetPushTask(() =>
+      import('./pushEvents').then((m) =>
+        m.notifyGoGetStarted({
+          item,
+          recipientUserId: fulfillerUserId,
+          travelerName: requesterName,
           sessionId: id,
         }),
       ),
@@ -1115,6 +1134,35 @@ export async function cancelGoGetSession(
       m.notifyGoGetCancelled({ item, recipientUserId: otherUserId, cancelledByName, sessionId: session.id }),
     ),
   );
+  await clearLiveLocation(session.id);
+  await clearFulfillerLiveLocation(session.id);
+  return { ok: true, session: result.session };
+}
+
+/** Picker ends instant curb/porch trip after submitting a claim — poster confirms in chat. */
+export async function finishInstantPickupTrip(
+  session: GoGetSession,
+  item: ItemPost,
+): Promise<Result<{ session: GoGetSession }>> {
+  if (!itemUsesInstantTripSharing(item)) {
+    return { ok: false, errorMessage: 'This pickup does not use instant trip sharing.' };
+  }
+  if (isTerminalGoGetStatus(session.status)) {
+    return { ok: true, session };
+  }
+  const result = await applyPickupTransition({
+    session,
+    action: 'cancel',
+    payload: { cancelReason: 'Pickup submitted — awaiting poster confirmation' },
+    fallbackPatch: {
+      status: 'cancelled',
+      cancelledAt: new Date().toISOString(),
+      cancelledByUserId: session.requesterUserId,
+      cancelReason: 'Pickup submitted — awaiting poster confirmation',
+      fulfillerSharingLocation: false,
+    },
+  });
+  if (!result.ok || !result.session) return result;
   await clearLiveLocation(session.id);
   await clearFulfillerLiveLocation(session.id);
   return { ok: true, session: result.session };

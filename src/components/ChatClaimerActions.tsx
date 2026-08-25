@@ -115,8 +115,8 @@ export default function ChatClaimerActions({
   const canSubmitHandoff = !hasPendingFromViewer && (isLooking || availableCount > 0);
 
   const handleSubmitHandoff = async () => {
-    if (isMulti && selectedIds.length !== 1) {
-      setErr('Pick exactly one item you picked up.');
+    if (isMulti && selectedIds.length === 0) {
+      setErr('Select what you picked up.');
       return;
     }
 
@@ -209,14 +209,14 @@ export default function ChatClaimerActions({
       {showPicker && (
         <div className="p-2.5 rounded-xl border border-app bg-inset/40 space-y-2">
           <p className="text-[10px] font-bold uppercase text-muted tracking-wide">
-            Which item did you pick up?
+            What did you pick up?
           </p>
           <SubItemPicker
             subitems={subitems}
             selectedIds={selectedIds}
             onChange={setSelectedIds}
             disabled={busy}
-            selectionMode="single"
+            selectionMode="multiple"
           />
           <div className="flex gap-2">
             <button
@@ -228,7 +228,7 @@ export default function ChatClaimerActions({
             </button>
             <button
               type="button"
-              disabled={busy || selectedIds.length !== 1}
+              disabled={busy || selectedIds.length === 0}
               onClick={() => void handleSubmitHandoff()}
               className="sbn-btn sbn-btn-primary sbn-btn-sm flex-1"
             >

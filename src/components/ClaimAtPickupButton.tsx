@@ -8,6 +8,7 @@ import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealt
 import { CheckCircle, Loader2 } from 'lucide-react';
 import { useConfirm } from '../contexts/ConfirmContext';
 import { supportsGoGetCoordination } from '../lib/goGetEligibility';
+import { isInstantClaimCategory } from '../lib/goGetSessions';
 
 interface ClaimAtPickupButtonProps {
   item: ItemPost;
@@ -39,8 +40,8 @@ export default function ClaimAtPickupButton({
   const [err, setErr] = useState('');
 
   const isOwner = item.userId === user.uid;
-  const isCurbAlert =
-    item.type === 'giveaway' && item.status === 'active' && isContactlessClaimCategory(item.category);
+  const isInstantPickup =
+    item.type === 'giveaway' && item.status === 'active' && isInstantClaimCategory(item.category);
   const hasGps = pickupHasGpsPin(item);
   const atLocation =
     hasGps &&
@@ -49,14 +50,14 @@ export default function ClaimAtPickupButton({
     isUserAtPickupLocation(userLat, userLng, item);
 
   useEffect(() => {
-    if (!isCurbAlert) return;
+    if (!isInstantPickup) return;
     void getListingSubitems(item.id).then((rows) => {
       setSubitems(rows);
     });
-  }, [item.id, isCurbAlert]);
+  }, [item.id, isInstantPickup]);
 
   useEffect(() => {
-    if (!showPicker || !isCurbAlert) return;
+    if (!showPicker || !isInstantPickup) return;
     setLoadingSubitems(true);
     void getListingSubitems(item.id).then((rows) => {
       setSubitems(rows);
@@ -64,7 +65,7 @@ export default function ClaimAtPickupButton({
       setSelectedIds(available.length === 1 ? [available[0].id] : []);
       setLoadingSubitems(false);
     });
-  }, [showPicker, item.id, isCurbAlert]);
+  }, [showPicker, item.id, isInstantPickup]);
 
   useEffect(() => {
     if (!showPicker) return;
@@ -89,7 +90,7 @@ export default function ClaimAtPickupButton({
 
   if (!supportsGoGetCoordination()) return null;
 
-  if (!isCurbAlert || isOwner || !hasGps) return null;
+  if (!isInstantPickup || isOwner || !hasGps) return null;
 
   if (!canOfferContactlessClaim(item, user.uid, userLat, userLng)) return null;
 
@@ -116,8 +117,8 @@ export default function ClaimAtPickupButton({
   };
 
   const handleSubmit = async () => {
-    if (subitems.length > 0 && selectedIds.length !== 1) {
-      setErr('Pick exactly one item you took.');
+    if (subitems.length > 0 && selectedIds.length === 0) {
+      setErr('Select what you picked up.');
       return;
     }
     const { ensureGoGetAllowed } = await import('../lib/goGetEligibility');
@@ -181,8 +182,8 @@ export default function ClaimAtPickupButton({
             <h4 className="font-display font-bold text-app">Which item did you take?</h4>
             <p className="text-xs text-muted leading-snug">
               {subitems.length > 1
-                ? 'Pick one item per trip. The poster can confirm or say it wasn\'t you — that item goes back up for others.'
-                : `${item.userDisplayName} will get a message that you picked this up. You can skip notifying them.`}
+                ? 'Pick what you took — the poster confirms in chat. You do not have to take everything.'
+                : `${item.userDisplayName} will confirm in chat that you picked this up. You can skip notifying them.`}
             </p>
 
             {err && <p className="text-xs font-semibold text-red-400">{err}</p>}
@@ -197,7 +198,7 @@ export default function ClaimAtPickupButton({
                 subitems={subitems}
                 selectedIds={selectedIds}
                 onChange={setSelectedIds}
-                selectionMode="single"
+                selectionMode="multiple"
               />
             ) : null}
 
@@ -211,7 +212,7 @@ export default function ClaimAtPickupButton({
               </button>
               <button
                 type="button"
-                disabled={submitting || (subitems.length > 0 && selectedIds.length !== 1)}
+                disabled={submitting || (subitems.length > 0 && selectedIds.length === 0)}
                 onClick={() => void handleSubmit()}
                 className="sbn-btn sbn-btn-primary flex-1"
               >
