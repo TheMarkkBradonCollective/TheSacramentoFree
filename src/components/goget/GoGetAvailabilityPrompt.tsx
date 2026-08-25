@@ -7,6 +7,8 @@ interface GoGetAvailabilityPromptProps {
   submitting: boolean;
   onAvailableNow: () => void;
   onProposeWindow: (window: { from: string; until: string }) => void;
+  onDecline?: () => void;
+  onIgnore?: () => void;
   embedded?: boolean;
 }
 
@@ -27,6 +29,8 @@ export default function GoGetAvailabilityPrompt({
   submitting,
   onAvailableNow,
   onProposeWindow,
+  onDecline,
+  onIgnore,
   embedded = false,
 }: GoGetAvailabilityPromptProps) {
   const [showWindowPicker, setShowWindowPicker] = useState(false);
@@ -53,32 +57,53 @@ export default function GoGetAvailabilityPrompt({
       <div className="flex items-start gap-2">
         <Clock className="w-4 h-4 text-accent shrink-0 mt-0.5" />
         <p className="text-sm font-semibold text-app leading-snug">
-          {requesterName} wants to Go Get "{itemTitle}". Are you available for pickup right now?
+          {requesterName} wants to pick up "{itemTitle}".
         </p>
       </div>
 
       {err && <p className="text-xs font-semibold text-red-400">{err}</p>}
 
       {!showWindowPicker ? (
-        <div className="grid grid-cols-2 gap-2">
+        <div className="space-y-2">
           <button
             type="button"
             disabled={submitting}
             onClick={onAvailableNow}
-            className="sbn-btn sbn-btn-primary justify-center disabled:opacity-60"
+            className="sbn-btn sbn-btn-primary w-full justify-center disabled:opacity-60"
           >
             <Check className="w-4 h-4" />
-            Yes, available now
+            Available now
           </button>
           <button
             type="button"
             disabled={submitting}
             onClick={() => setShowWindowPicker(true)}
-            className="sbn-btn sbn-btn-secondary justify-center disabled:opacity-60"
+            className="sbn-btn sbn-btn-secondary w-full justify-center disabled:opacity-60"
           >
-            <X className="w-4 h-4" />
-            Not right now
+            <Clock className="w-4 h-4" />
+            Choose a time
           </button>
+          {onDecline ? (
+            <button
+              type="button"
+              disabled={submitting}
+              onClick={onDecline}
+              className="sbn-btn sbn-btn-secondary w-full justify-center disabled:opacity-60"
+            >
+              <X className="w-4 h-4" />
+              Not available
+            </button>
+          ) : null}
+          {onIgnore ? (
+            <button
+              type="button"
+              disabled={submitting}
+              onClick={onIgnore}
+              className="text-xs text-muted hover:text-app underline underline-offset-2 w-full"
+            >
+              Ignore
+            </button>
+          ) : null}
         </div>
       ) : (
         <div className="space-y-3 pt-1 border-t border-app">

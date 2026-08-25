@@ -305,11 +305,11 @@ Questions? Chat → Support.
 
 export function mergeByIdNewestFirst<T extends { id: string; date: string; updatedAt?: string }>(
   seeded: T[],
-  live: T[],
+  live: Array<{ id: string; date: string; updatedAt?: string }>,
 ): T[] {
   const byId = new Map<string, T>();
   // Live-only rows first; seeded ids overwrite so shared/changelogSeed.ts stays canonical.
-  for (const row of live) byId.set(row.id, row);
+  for (const row of live) byId.set(row.id, row as T);
   for (const row of seeded) byId.set(row.id, row);
   return [...byId.values()].sort((a, b) => {
     const dateCmp = b.date.localeCompare(a.date);

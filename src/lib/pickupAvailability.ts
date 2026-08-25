@@ -126,3 +126,30 @@ export function isTimeInSharedAvailability(
     isWithinPickupAvailability(requesterSchedule, at)
   );
 }
+
+export interface GroupedScheduleSlots {
+  label: string;
+  slots: Date[];
+}
+
+/** Group half-hour slots into Today / Tomorrow / weekday buckets for the scheduler UI. */
+export function groupSchedulingSlots(slots: Date[], now = new Date()): GroupedScheduleSlots[] {
+  const groups = new Map<string, Date[]>();
+  for (const slot of slots) {
+    const label = scheduleDayLabel(slot, now);
+    const list = groups.get(label) ?? [];
+    list.push(slot);
+    groups.set(label, list);
+  }
+  return [...groups.entries()].map(([label, daySlots]) => ({ label, slots: daySlots }));
+}
+
+function scheduleDayLabel(slot: Date, now: Date): string {
+  const startOf = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const slotDay = startOf(slot);
+  const today = startOf(now);
+  const tomorrow = today + 24 * 60 * 60 * 1000;
+  if (slotDay === today) return 'Today';
+  if (slotDay === tomorrow) return 'Tomorrow';
+  return slot.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
+}

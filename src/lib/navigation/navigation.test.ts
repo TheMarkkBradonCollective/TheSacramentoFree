@@ -102,7 +102,7 @@ test('navigation engine detects arrival near destination', () => {
         usePhoneCompass: false,
         showLaneGuidance: true,
         speakOnRecenter: false,
-        theme: 'auto',
+        followAppTheme: true,
       },
       movement: 'stationary',
       accuracyTier: 'good',

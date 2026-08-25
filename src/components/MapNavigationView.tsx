@@ -5,6 +5,7 @@ import {
   ArrowLeft,
   ArrowRight,
   ArrowUp,
+  CheckCircle,
   ChevronUp,
   CornerUpLeft,
   CornerUpRight,
@@ -38,6 +39,7 @@ import {
   formatSpeedMph,
   getDisplayedNavGuidance,
   headingDeltaDegrees,
+  remainingRouteMeters,
   shouldFireVoiceCue,
   maneuverIconKind,
   type ManeuverIconKind,
@@ -84,6 +86,7 @@ import {
 } from '../lib/navigationVoice';
 import { fitRoutePreviewToViewport, measureMapFitPadding } from '../lib/mapRouteFitPadding';
 import { SBN_MAP_TILE_OPTIONS, SBN_MAP_TILE_URL } from '../lib/mapTiles';
+import { requestCompassPermission, subscribeDeviceCompass } from '../lib/navHeading';
 import { isPlayStoreDemo } from '../preview/playStoreDemo';
 import {
   ROUTE_LINE_TRAVELED,
@@ -122,6 +125,9 @@ interface MapNavigationViewProps {
   /** When set, the details sheet shows an in-trip message action. */
   onOpenChat?: () => void;
   chatLabel?: string;
+  /** Pickup engine: GPS only assists; the traveler confirms arrival. */
+  onConfirmArrival?: () => void;
+  onSafety?: () => void;
   /** Fill a parent overlay instead of covering the viewport as a root portal. */
   embedded?: boolean;
 }
@@ -251,6 +257,8 @@ interface NavigationDetailsSheetProps {
   exitLabel?: string;
   onOpenChat?: () => void;
   chatLabel?: string;
+  onConfirmArrival?: () => void;
+  onSafety?: () => void;
 }
 
 function NavigationDetailsSheet({
@@ -275,6 +283,8 @@ function NavigationDetailsSheet({
   exitLabel,
   onOpenChat,
   chatLabel = 'Message',
+  onConfirmArrival,
+  onSafety,
 }: NavigationDetailsSheetProps) {
   const dragStartYRef = useRef(0);
   const expanded = snap === 'expanded';
@@ -360,12 +370,31 @@ function NavigationDetailsSheet({
                 GPS signal is weak — ±{Math.round(gpsAccuracy)}m
               </p>
             )}
+            {arrived ? (
+              <p className="text-[11px] font-semibold text-accent mt-1">You're at the pickup location.</p>
+            ) : null}
+            {onConfirmArrival ? (
+              <button
+                type="button"
+                onClick={onConfirmArrival}
+                className={`sbn-btn w-full justify-center mt-3 ${arrived ? 'sbn-btn-primary' : 'sbn-btn-secondary'}`}
+                id="nav_confirm_arrival_btn"
+              >
+                <CheckCircle className="w-4 h-4" />
+                I've arrived
+              </button>
+            ) : null}
           </div>
 
           <div className="sbn-nav-sheet-summary__actions">
             {onOpenChat ? (
               <button type="button" onClick={onOpenChat} className="sbn-nav-exit-btn" title={chatLabel}>
                 Message
+              </button>
+            ) : null}
+            {onSafety ? (
+              <button type="button" onClick={onSafety} className="sbn-nav-exit-btn" title="Safety">
+                Safety
               </button>
             ) : null}
             <button type="button" onClick={onExit} className="sbn-nav-exit-btn">
@@ -707,6 +736,8 @@ export default function MapNavigationView({
   tripLock = false,
   onOpenChat,
   chatLabel = 'Message',
+  onConfirmArrival,
+  onSafety,
   embedded = false,
 }: MapNavigationViewProps) {
   const { theme } = useTheme();
@@ -2037,6 +2068,8 @@ export default function MapNavigationView({
                 exitLabel={tripLock ? 'Cancel' : undefined}
                 onOpenChat={onOpenChat}
                 chatLabel={chatLabel}
+                onConfirmArrival={onConfirmArrival}
+                onSafety={onSafety}
               />
             </div>
           )}

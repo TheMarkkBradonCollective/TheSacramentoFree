@@ -44,9 +44,13 @@ export type PushEventType =
   | 'go_get_ready_reminder'
   | 'go_get_fulfiller_ready'
   | 'go_get_started'
+  | 'go_get_approaching'
   | 'go_get_arrived'
   | 'go_get_completed'
   | 'go_get_cancelled'
+  | 'go_get_expired'
+  | 'go_get_declined'
+  | 'go_get_disputed'
   | 'contactless_pickup_arrived'
   | 'contactless_pickup_left'
   | 'feed_comment'
@@ -193,9 +197,13 @@ const EVENT_PREF_MAP: Record<PushEventType, keyof NotificationPreferencesRow | '
   go_get_ready_reminder: 'goGetAlerts',
   go_get_fulfiller_ready: 'goGetAlerts',
   go_get_started: 'goGetAlerts',
+  go_get_approaching: 'goGetAlerts',
   go_get_arrived: 'goGetAlerts',
   go_get_completed: 'goGetAlerts',
   go_get_cancelled: 'goGetAlerts',
+  go_get_expired: 'goGetAlerts',
+  go_get_declined: 'goGetAlerts',
+  go_get_disputed: 'goGetAlerts',
   contactless_pickup_arrived: 'pickupCoordination',
   contactless_pickup_left: 'pickupCoordination',
   feed_comment: 'feedComments',

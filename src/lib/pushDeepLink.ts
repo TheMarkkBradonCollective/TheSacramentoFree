@@ -3,6 +3,7 @@ import type { AppTab } from './appTabs';
 export interface PushDeepLinkTarget {
   tab?: AppTab;
   listingId?: string;
+  pickupSessionId?: string;
   eventId?: string;
   conversationId?: string;
   requestId?: string;
@@ -48,73 +49,78 @@ export function parsePushDeepLink(raw: string): PushDeepLinkTarget | null {
   }
 
   path = path.replace(/^\/+/, '');
+  const qIndex = path.indexOf('?');
+  const pathOnly = qIndex >= 0 ? path.slice(0, qIndex) : path;
+  const query = qIndex >= 0 ? path.slice(qIndex + 1) : '';
+  const params = new URLSearchParams(query);
+  const pickupSessionId = params.get('pickup') || undefined;
 
-  if (path === '' || path === '/') return { tab: 'map' };
+  if (pathOnly === '' || pathOnly === '/') return { tab: 'map' };
 
-  if (path === 'feed' || path === 'stuff' || path === 'events' || path === 'map' || path === 'chats' || path === 'profile') {
-    return { tab: path as AppTab };
+  if (pathOnly === 'feed' || pathOnly === 'stuff' || pathOnly === 'events' || pathOnly === 'map' || pathOnly === 'chats' || pathOnly === 'profile') {
+    return { tab: pathOnly as AppTab };
   }
 
-  const feedPostMatch = path.match(/^feed\/post\/([^/]+)/);
+  const feedPostMatch = pathOnly.match(/^feed\/post\/([^/]+)/);
   if (feedPostMatch) return { tab: 'feed', feedPostId: feedPostMatch[1] };
 
-  if (path === 'notifications' || path === 'notifications/listings') return { notificationsTab: 'notifications' };
-  if (path === 'notifications/alerts' || path === 'alerts') return { notificationsTab: 'alerts' };
-  if (path === 'updates' || path === 'notifications/updates') return { notificationsTab: 'updates' };
-  if (path === 'notifications/awards' || path === 'awards') return { awardsPanel: true };
+  if (pathOnly === 'notifications' || pathOnly === 'notifications/listings') return { notificationsTab: 'notifications' };
+  if (pathOnly === 'notifications/alerts' || pathOnly === 'alerts') return { notificationsTab: 'alerts' };
+  if (pathOnly === 'updates' || pathOnly === 'notifications/updates') return { notificationsTab: 'updates' };
+  if (pathOnly === 'notifications/awards' || pathOnly === 'awards') return { awardsPanel: true };
 
-  const updateIdMatch = path.match(/^updates\/([^/]+)/);
+  const updateIdMatch = pathOnly.match(/^updates\/([^/]+)/);
   if (updateIdMatch) return { notificationsTab: 'updates', updateId: updateIdMatch[1] };
 
-  const newsIdMatch = path.match(/^help\/announcements\/([^/]+)/);
+  const newsIdMatch = pathOnly.match(/^help\/announcements\/([^/]+)/);
   if (newsIdMatch) return { notificationsTab: 'announcements', announcementId: newsIdMatch[1] };
 
-  const neighborMatch = path.match(/^profile\/([^/]+)/);
+  const neighborMatch = pathOnly.match(/^profile\/([^/]+)/);
   if (neighborMatch && neighborMatch[1] !== 'apply') {
     return { tab: 'profile', viewProfileUid: neighborMatch[1] };
   }
   if (
-    path === 'help/announcements' ||
-    path === 'announcements' ||
-    path === 'news' ||
-    path === 'notifications/announcements'
+    pathOnly === 'help/announcements' ||
+    pathOnly === 'announcements' ||
+    pathOnly === 'news' ||
+    pathOnly === 'notifications/announcements'
   ) {
     return { notificationsTab: 'announcements' };
   }
-  if (path === 'staff/tickets') return { tab: 'chats', chatSupportView: 'list' };
-  if (path === 'staff/reports') return { tab: 'chats', chatFeedbackPanel: 'staffReports' };
-  if (path === 'staff/apply' || path === 'profile/apply') return { tab: 'profile', staffApply: true };
-  if (path === 'director/overview') return { tab: 'profile', directorOverview: true };
+  if (pathOnly === 'staff/tickets') return { tab: 'chats', chatSupportView: 'list' };
+  if (pathOnly === 'staff/reports') return { tab: 'chats', chatFeedbackPanel: 'staffReports' };
+  if (pathOnly === 'staff/apply' || pathOnly === 'profile/apply') return { tab: 'profile', staffApply: true };
+  if (pathOnly === 'director/overview') return { tab: 'profile', directorOverview: true };
 
-  const listingMatch = path.match(/^listing\/([^/]+)/);
-  if (listingMatch) return { tab: 'stuff', listingId: listingMatch[1] };
+  const listingMatch = pathOnly.match(/^listing\/([^/]+)/);
+  if (listingMatch) return { tab: 'stuff', listingId: listingMatch[1], pickupSessionId };
 
-  const eventMatch = path.match(/^events\/([^/]+)/);
+  const eventMatch = pathOnly.match(/^events\/([^/]+)/);
   if (eventMatch) return { tab: 'events', eventId: eventMatch[1] };
 
-  if (path === 'messages/requests') return { tab: 'chats', messageRequests: true };
-  if (path === 'messages') return { tab: 'chats' };
-  if (path === 'support' || path === 'support/tickets') return { tab: 'chats', chatSupportView: 'list' };
-  if (path === 'support/new') return { tab: 'chats', chatSupportView: 'new' };
+  if (pathOnly === 'messages/requests') return { tab: 'chats', messageRequests: true };
+  if (pathOnly === 'messages') return { tab: 'chats' };
+  if (pathOnly === 'support' || pathOnly === 'support/tickets') return { tab: 'chats', chatSupportView: 'list' };
+  if (pathOnly === 'support/new') return { tab: 'chats', chatSupportView: 'new' };
 
-  const supportTicketMatch = path.match(/^support\/([^/]+)/);
+  const supportTicketMatch = pathOnly.match(/^support\/([^/]+)/);
   if (supportTicketMatch && supportTicketMatch[1] !== 'new' && supportTicketMatch[1] !== 'tickets') {
     return { tab: 'chats', supportTicketId: supportTicketMatch[1] };
   }
 
-  if (path === 'messages/community-global') {
+  if (pathOnly === 'messages/community-global') {
     return { tab: 'chats', conversationId: 'community-global' };
   }
-  if (path === 'messages/community-staff') {
+  if (pathOnly === 'messages/community-staff') {
     return { tab: 'chats', conversationId: 'community-staff' };
   }
 
-  const messageMatch = path.match(/^messages\/([^/]+)/);
+  const messageMatch = pathOnly.match(/^messages\/([^/]+)/);
   if (messageMatch && messageMatch[1] !== 'requests') {
     return { tab: 'chats', conversationId: messageMatch[1] };
   }
 
-  const requestMatch = path.match(/^requests\/([^/]+)/);
+  const requestMatch = pathOnly.match(/^requests\/([^/]+)/);
   if (requestMatch) return { tab: 'chats', requestId: requestMatch[1] };
 
   return null;
@@ -127,6 +133,7 @@ export function shouldPreservePushDeepLink(target: PushDeepLinkTarget | null): b
     target.notificationsTab ||
       target.notifications ||
       target.listingId ||
+      target.pickupSessionId ||
       target.eventId ||
       target.conversationId ||
       target.requestId ||
@@ -147,6 +154,10 @@ export function shouldPreservePushDeepLink(target: PushDeepLinkTarget | null): b
 
 export function pushUrlForListing(listingId: string): string {
   return `/listing/${listingId}`;
+}
+
+export function pushUrlForPickup(listingId: string, sessionId: string): string {
+  return `/listing/${listingId}?pickup=${encodeURIComponent(sessionId)}`;
 }
 
 export function pushUrlForFeedPost(postId: string): string {

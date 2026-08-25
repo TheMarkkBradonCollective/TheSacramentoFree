@@ -1,5 +1,7 @@
 import type { GpsAccuracyTier } from './types';
 
+export type { GpsAccuracyTier };
+
 /** Maximum age of a GPS fix before it is discarded. */
 export const NAV_STALE_GPS_MS = 60_000;
 
