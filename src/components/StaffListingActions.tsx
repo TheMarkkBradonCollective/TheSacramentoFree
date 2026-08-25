@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Loader2, ShieldAlert, Trash2, X } from 'lucide-react';
+import { LifeBuoy, Loader2, ShieldAlert, Trash2, X } from 'lucide-react';
 import type { ItemPost, UserProfile } from '../types';
 import { staffDeleteListing, staffWithdrawListing } from '../supabase';
 import { canStaffDeleteAccount, isStaffRole } from '../lib/roles';
@@ -11,6 +11,7 @@ interface StaffListingActionsProps {
   actor: UserProfile;
   onChanged?: () => void;
   onDeleted?: () => void;
+  onStaffChat?: () => void;
   compact?: boolean;
 }
 
@@ -19,6 +20,7 @@ export default function StaffListingActions({
   actor,
   onChanged,
   onDeleted,
+  onStaffChat,
   compact = false,
 }: StaffListingActionsProps) {
   const { confirm, alert } = useConfirm();
@@ -63,6 +65,17 @@ export default function StaffListingActions({
         <ShieldAlert className="w-3.5 h-3.5" />
         Staff
       </span>
+      {onStaffChat ? (
+        <button
+          type="button"
+          disabled={busy !== null}
+          onClick={onStaffChat}
+          className={`${btnClass} bg-role-accent/10 text-role-accent border border-role-accent/20`}
+        >
+          <LifeBuoy className="w-3.5 h-3.5" />
+          Staff chat
+        </button>
+      ) : null}
       {item.status !== 'withdrawn' && (
         <button
           type="button"

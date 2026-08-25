@@ -1718,12 +1718,18 @@ export default function App() {
     [userProfile, blockedUserIds, confirm, alert, handleOpenSupportTicket],
   );
 
-  const handleInitiateChat = (posterUid: string, posterName: string, posterPhoto?: string, item?: ItemPost) => {
+  const handleInitiateChat = (
+    posterUid: string,
+    posterName: string,
+    posterPhoto?: string,
+    item?: ItemPost,
+    options?: { asNeighbor?: boolean },
+  ) => {
     if (!userProfile) return;
     if (blockedUserIds.has(posterUid)) return;
     if (item && !isListingOpenForCoordination(item.status)) return;
 
-    if (isStaffActingOfficial(userProfile) && item) {
+    if (isStaffActingOfficial(userProfile) && item && !options?.asNeighbor) {
       void handleStaffListingOutreach(item);
       return;
     }
@@ -1739,6 +1745,7 @@ export default function App() {
       otherUserPhoto: posterPhoto,
       itemId: item?.id,
       itemTitle: item?.title,
+      postedAsNeighbor: options?.asNeighbor ? true : undefined,
     });
     setActiveTab('chats');
   };
@@ -2630,7 +2637,7 @@ export default function App() {
                     void engagement.handleDeleteComment(detailItem.id, commentId)
                   }
                   onMessage={
-                    blockedUserIds.has(detailItem.userId) || isStaffActingOfficial(userProfile)
+                    blockedUserIds.has(detailItem.userId)
                       ? undefined
                       : () => {
                           handleInitiateChat(
@@ -2638,6 +2645,7 @@ export default function App() {
                             detailItem.userDisplayName,
                             detailItem.userPhotoURL,
                             detailItem,
+                            isStaffActingOfficial(userProfile) ? { asNeighbor: true } : undefined,
                           );
                           setDetailItem(null);
                         }

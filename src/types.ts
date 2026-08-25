@@ -375,6 +375,8 @@ export interface PendingChatCompose {
   itemTitle?: string;
   eventId?: string;
   eventTitle?: string;
+  /** Staff pickup coordination — send without staff badge even in staff mode. */
+  postedAsNeighbor?: boolean;
 }
 
 export interface Message {

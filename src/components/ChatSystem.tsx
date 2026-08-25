@@ -221,6 +221,7 @@ export default function ChatSystem({
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const messageInputRef = useRef<HTMLInputElement | null>(null);
   const selectedChatWasLiveRef = useRef<boolean | null>(null);
+  const neighborModeChatIdsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     setChatGoGetSession(null);
@@ -600,6 +601,9 @@ export default function ChatSystem({
   useEffect(() => {
     if (!pendingChatCompose || initialSelectedChatId) return;
     const c = pendingChatCompose;
+    if (c.postedAsNeighbor) {
+      neighborModeChatIdsRef.current.add(c.chatId);
+    }
     const draft: Chat = {
       id: c.chatId,
       participantIds: [userProfile.uid, c.otherUserId].sort(),
@@ -877,6 +881,10 @@ export default function ChatSystem({
     setErrorMsg('');
     const messageId = `msg_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
     const trimmed = text.trim();
+    const postedAsNeighbor =
+      neighborModeChatIdsRef.current.has(selectedChat.id) ||
+      pendingChatCompose?.postedAsNeighbor === true ||
+      commentPostedAsNeighbor(userProfile);
 
     const chatReady = await ensureChatExists(trimmed);
     if (!chatReady) {
@@ -888,7 +896,7 @@ export default function ChatSystem({
       id: messageId,
       senderId: userProfile.uid,
       text: trimmed,
-      postedAsNeighbor: commentPostedAsNeighbor(userProfile),
+      postedAsNeighbor,
       createdAt: new Date().toISOString(),
     };
 
@@ -903,7 +911,7 @@ export default function ChatSystem({
         trimmed,
         userProfile.uid,
         messageId,
-        { postedAsNeighbor: commentPostedAsNeighbor(userProfile) },
+        { postedAsNeighbor },
       );
       if (success) {
         return true;
