@@ -1,8 +1,8 @@
-import { isStaffModePushEvent, receivesStaffModeNotifications } from '../../../shared/staffInteractionMode';
+import { getEventMetadata, webPushUrgency } from '../../../shared/notificationTypes';
 import { getSupabaseAdmin } from './supabaseAdmin';
 import { isFcmConfigured, isFcmSubscription, sendFcmToSubscription } from './fcmDelivery';
-import { filterSubscriptionsForPickupPush } from './pickupPushEvents';
 import { configureVapidAsync, getWebPushModuleAsync } from './webPushLoader';
+import { dispatchNotification } from './notificationEngine';
 
 export type PushEventType =
   | 'new_item'
@@ -132,6 +132,10 @@ export interface NotificationPreferencesRow {
   directorClaimRequests: boolean;
   nearbyRadiusMiles: number;
   followedCategories: string[];
+  quietHoursEnabled?: boolean;
+  quietHoursStart?: string;
+  quietHoursEnd?: string;
+  quietHoursAllowUrgent?: boolean;
 }
 
 const DIRECTOR_CATEGORY_PREF_MAP: Record<string, keyof NotificationPreferencesRow> = {
@@ -314,6 +318,10 @@ function normalizePrefs(row: Record<string, unknown>): NotificationPreferencesRo
     directorClaimRequests: row.directorClaimRequests !== false,
     nearbyRadiusMiles: Number(row.nearbyRadiusMiles ?? 10),
     followedCategories: Array.isArray(row.followedCategories) ? (row.followedCategories as string[]) : [],
+    quietHoursEnabled: row.quietHoursEnabled === true,
+    quietHoursStart: typeof row.quietHoursStart === 'string' ? row.quietHoursStart : '22:00',
+    quietHoursEnd: typeof row.quietHoursEnd === 'string' ? row.quietHoursEnd : '07:00',
+    quietHoursAllowUrgent: row.quietHoursAllowUrgent !== false,
   };
 }
 
@@ -446,26 +454,18 @@ async function removeInvalidSubscription(endpoint: string) {
   await supabaseAdmin.from('push_subscriptions').delete().eq('endpoint', endpoint);
 }
 
-const HIGH_URGENCY_EVENTS = new Set<PushEventType>([
-  'director_alert',
-  'staff_support',
-  'staff_report',
-  'support_reply',
-  'new_message',
-  'community_chat',
-  'staff_chat',
-  'message_request',
-  'message_request_accepted',
-  'item_claimed',
-  'claim_request',
-  'on_the_way',
-  'account_update',
-]);
-
-function webPushOptionsFor(eventType: PushEventType): { TTL: number; urgency: 'high' | 'normal' } {
+function webPushOptionsFor(eventType: PushEventType, payload?: PushPayload): { TTL: number; urgency: 'high' | 'normal' } {
+  const priorityFromPayload = payload?.data?.priority;
+  const priority =
+    priorityFromPayload === 'silent' ||
+    priorityFromPayload === 'normal' ||
+    priorityFromPayload === 'important' ||
+    priorityFromPayload === 'urgent'
+      ? priorityFromPayload
+      : getEventMetadata(eventType).priority;
   return {
     TTL: 60 * 60 * 24,
-    urgency: HIGH_URGENCY_EVENTS.has(eventType) ? 'high' : 'normal',
+    urgency: webPushUrgency(priority),
   };
 }
 
@@ -493,9 +493,6 @@ function shouldRemoveSubscription(err: unknown): boolean {
   return false;
 }
 
-async function canDeliverPush(): Promise<boolean> {
-  return (await configureVapidAsync()) || isFcmConfigured();
-}
 
 export async function sendToSubscription(subscription: PushSubscriptionRow, payload: PushPayload) {
   if (isFcmSubscription(subscription.endpoint)) {
@@ -515,7 +512,7 @@ export async function sendToSubscription(subscription: PushSubscriptionRow, payl
 
   try {
     const webpush = await getWebPushModuleAsync();
-    await webpush.sendNotification(pushSubscription, notification, webPushOptionsFor(payload.eventType));
+    await webpush.sendNotification(pushSubscription, notification, webPushOptionsFor(payload.eventType, payload));
     return { ok: true as const, removed: false };
   } catch (err: unknown) {
     if (shouldRemoveSubscription(err)) {
@@ -531,74 +528,41 @@ export async function sendToSubscription(subscription: PushSubscriptionRow, payl
 export async function sendPushToUsers(
   userIds: string[],
   payload: PushPayload,
-  options?: { excludeUserIds?: string[]; skipPreferenceCheck?: boolean; skipDedup?: boolean },
+  options?: {
+    excludeUserIds?: string[];
+    skipPreferenceCheck?: boolean;
+    skipDedup?: boolean;
+    source?: 'client' | 'webhook' | 'cron' | 'internal';
+    actorId?: string;
+    entityType?: string;
+    entityId?: string;
+  },
 ) {
-  const exclude = new Set(options?.excludeUserIds || []);
-  const targets = [...new Set(userIds)].filter((id) => id && !exclude.has(id));
-  if (!targets.length || !(await canDeliverPush())) {
-    return { sent: 0, failed: 0, removed: 0, skipped: targets.length, subscriptionCount: 0 };
-  }
-
-  const dedupTag = !options?.skipDedup ? payload.tag || payload.eventType : undefined;
-  if (dedupTag) {
-    const { claimPushDispatch } = await import('./pushDedup');
-    const allowed = await claimPushDispatch(dedupTag);
-    if (!allowed) {
-      return { sent: 0, failed: 0, removed: 0, skipped: targets.length, subscriptionCount: 0, deduped: true };
-    }
-  }
-
-  let allowed = targets;
-  if (!options?.skipPreferenceCheck) {
-    const prefsMap = await getPreferencesForUsers(targets);
-    allowed = targets.filter((uid) => {
-      const prefs = prefsMap.get(uid);
-      if (!prefs) return true;
-      if (payload.eventType === 'director_alert') {
-        return userAllowsDirectorAlert(prefs, payload.data?.directorCategory);
-      }
-      return userAllowsEvent(prefs, payload.eventType);
-    });
-  }
-
-  if (isStaffModePushEvent(payload.eventType)) {
-    const modeMap = await getStaffInteractionModesForUsers(allowed);
-    allowed = allowed.filter((uid) => receivesStaffModeNotifications(modeMap.get(uid)));
-  }
-
-  const { logUserNotifications } = await import('./userNotificationLog');
-  await logUserNotifications(allowed, payload);
-
-  const subscriptions = filterSubscriptionsForPickupPush(
-    await getSubscriptionsForUsers(allowed),
-    payload.eventType,
-  );
-  let sent = 0;
-  let failed = 0;
-  let removed = 0;
-
-  await Promise.all(
-    subscriptions.map(async (sub) => {
-      const result = await sendToSubscription(sub, payload);
-      if (result.ok) sent += 1;
-      else {
-        failed += 1;
-        if (result.removed) removed += 1;
-      }
-    }),
-  );
-
-  if (dedupTag && sent === 0) {
-    const { releasePushDispatch } = await import('./pushDedup');
-    await releasePushDispatch(dedupTag);
-  }
+  const result = await dispatchNotification({
+    eventType: payload.eventType,
+    title: payload.title,
+    body: payload.body,
+    url: payload.url,
+    tag: payload.tag,
+    data: payload.data,
+    recipientUserIds: userIds,
+    excludeUserIds: options?.excludeUserIds,
+    skipPreferenceCheck: options?.skipPreferenceCheck,
+    skipDedup: options?.skipDedup,
+    source: options?.source,
+    actorId: options?.actorId,
+    entityType: options?.entityType,
+    entityId: options?.entityId,
+  });
 
   return {
-    sent,
-    failed,
-    removed,
-    skipped: options?.skipPreferenceCheck ? 0 : targets.length - allowed.length,
-    subscriptionCount: subscriptions.length,
+    sent: result.sent,
+    failed: result.failed,
+    removed: result.removed,
+    skipped: result.skipped,
+    subscriptionCount: result.subscriptionCount,
+    deduped: result.deduped > 0,
+    inboxWritten: result.inboxWritten,
   };
 }
 

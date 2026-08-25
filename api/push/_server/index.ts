@@ -7,6 +7,7 @@ export { runPushTest } from './runPushTest';
 export { runDirectorBroadcastTest } from './runDirectorBroadcastTest';
 export { runExportPlayTesters } from './runExportPlayTesters';
 export { runPushSend, type PushSendBody } from './runPushSend';
+export { dispatchNotification, type NotificationIntent } from './notificationEngine';
 export {
   runDirectorCategoryAlert,
   runDirectorClaimRequestNotify,
