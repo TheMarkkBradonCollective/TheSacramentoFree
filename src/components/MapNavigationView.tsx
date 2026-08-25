@@ -1751,7 +1751,7 @@ export default function MapNavigationView({
 
   return (
     <div
-      className={`${embedded ? 'absolute inset-0 z-10' : 'fixed inset-0 z-[200]'} flex flex-col sbn-nav--${theme}${isCompact ? ' sbn-nav-compact' : ''}${isNarrow ? ' sbn-nav-narrow' : ''}`}
+      className={`${embedded ? 'absolute inset-0 z-10 h-full w-full' : 'fixed inset-0 z-[200]'} flex flex-col sbn-nav--${theme}${isCompact ? ' sbn-nav-compact' : ''}${isNarrow ? ' sbn-nav-narrow' : ''}`}
       id="map_navigation_view"
       style={{ background: 'var(--sbn-nav-bg)' }}
       onPointerDown={() => voiceRef.current.unlock()}

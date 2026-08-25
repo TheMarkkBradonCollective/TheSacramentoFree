@@ -426,6 +426,7 @@ export default function GoGetTripLockScreen({
             pickerName={session.requesterName}
             onSessionChange={applySession}
             onError={setErr}
+            compact
           />
         </div>
       );
@@ -457,6 +458,7 @@ export default function GoGetTripLockScreen({
             pickerName={session.requesterName}
             onSessionChange={applySession}
             onError={setErr}
+            compact
           />
         </div>
       );
@@ -474,6 +476,7 @@ export default function GoGetTripLockScreen({
             pickerName={session.requesterName}
             onSessionChange={applySession}
             onError={setErr}
+            compact
           />
           <div className="grid grid-cols-2 gap-2">
             <button
@@ -535,7 +538,7 @@ export default function GoGetTripLockScreen({
 
   const overlay = (
     <div
-      className="fixed inset-0 z-[200] relative flex flex-col bg-[var(--sbn-nav-bg,#0b0b0c)] text-app"
+      className="fixed inset-0 z-[200] flex flex-col bg-[var(--sbn-nav-bg,#0b0b0c)] text-app"
       id="go_get_trip_lock_screen"
       role="dialog"
       aria-modal="true"
@@ -579,8 +582,8 @@ export default function GoGetTripLockScreen({
                 <p className="text-sm font-bold text-app truncate">{statusTitle}</p>
                 <p className="text-[11px] text-muted truncate">
                   {item?.title || session.destinationLabel}
-                  {etaLabel ? ` · ${etaLabel}` : ''}
-                  {distanceLabel ? ` · ${distanceLabel}` : ''}
+                  {session.status !== 'arrived' && etaLabel ? ` · ${etaLabel}` : ''}
+                  {session.status !== 'arrived' && distanceLabel ? ` · ${distanceLabel}` : ''}
                 </p>
               </div>
             </div>
@@ -588,7 +591,7 @@ export default function GoGetTripLockScreen({
           <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 safe-area-pb">
             <div className="pointer-events-auto sbn-card rounded-b-none rounded-t-3xl p-4 space-y-3 shadow-2xl">
               {sheet}
-              <div className="grid grid-cols-2 gap-2">
+              <div className={`grid gap-2 ${session.status === 'awaiting_availability' ? 'grid-cols-1' : 'grid-cols-2'}`}>
                 <button
                   type="button"
                   onClick={() => setChatOpen(true)}
@@ -597,15 +600,17 @@ export default function GoGetTripLockScreen({
                   <MessageCircle className="w-4 h-4" />
                   Message
                 </button>
-                <button
-                  type="button"
-                  onClick={() => void handleCancel()}
-                  disabled={busy}
-                  className="sbn-btn sbn-btn-secondary justify-center text-red-400 disabled:opacity-60"
-                >
-                  <PhoneOff className="w-4 h-4" />
-                  Cancel
-                </button>
+                {session.status !== 'awaiting_availability' && (
+                  <button
+                    type="button"
+                    onClick={() => void handleCancel()}
+                    disabled={busy}
+                    className="sbn-btn sbn-btn-secondary justify-center text-red-400 disabled:opacity-60"
+                  >
+                    <PhoneOff className="w-4 h-4" />
+                    Cancel
+                  </button>
+                )}
               </div>
             </div>
           </div>

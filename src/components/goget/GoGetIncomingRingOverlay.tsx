@@ -150,10 +150,6 @@ export default function GoGetIncomingRingOverlay({
 
   return shell(
     <>
-      <p className="text-sm text-app leading-snug">
-        <strong>{session.requesterName}</strong> wants to Go Get &quot;{item.title}&quot;
-      </p>
-
       {active ? (
         <>
           <p className="text-xs text-muted flex items-center gap-2">
@@ -166,6 +162,7 @@ export default function GoGetIncomingRingOverlay({
             submitting={busy}
             onAvailableNow={() => void run(() => respondAvailableNow(session, item))}
             onProposeWindow={(w) => void run(() => proposeAvailabilityWindow(session, item, w))}
+            embedded
           />
         </>
       ) : (

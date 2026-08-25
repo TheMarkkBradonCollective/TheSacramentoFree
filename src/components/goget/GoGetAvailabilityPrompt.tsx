@@ -7,6 +7,7 @@ interface GoGetAvailabilityPromptProps {
   submitting: boolean;
   onAvailableNow: () => void;
   onProposeWindow: (window: { from: string; until: string }) => void;
+  embedded?: boolean;
 }
 
 function defaultWindow(): { from: string; until: string } {
@@ -26,6 +27,7 @@ export default function GoGetAvailabilityPrompt({
   submitting,
   onAvailableNow,
   onProposeWindow,
+  embedded = false,
 }: GoGetAvailabilityPromptProps) {
   const [showWindowPicker, setShowWindowPicker] = useState(false);
   const [window_, setWindow] = useState(defaultWindow);
@@ -47,7 +49,7 @@ export default function GoGetAvailabilityPrompt({
   };
 
   return (
-    <div className="sbn-card p-4 space-y-3" id="go_get_availability_prompt">
+    <div className={embedded ? 'space-y-3' : 'sbn-card p-4 space-y-3'} id="go_get_availability_prompt">
       <div className="flex items-start gap-2">
         <Clock className="w-4 h-4 text-accent shrink-0 mt-0.5" />
         <p className="text-sm font-semibold text-app leading-snug">
