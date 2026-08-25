@@ -1549,6 +1549,100 @@ BEGIN
 END $$;
 
 
+-- Clear all neighbor notification inboxes (bell → Notifications).
+-- One-time reset (Aug 2026): runs once, then skipped on re-run via table comment marker.
+-- Does not touch notification_preferences or push_subscriptions.
+DO $$
+BEGIN
+  IF to_regclass('public.user_notifications') IS NULL THEN
+    RETURN;
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM pg_description d
+    JOIN pg_class c ON c.oid = d.objoid
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public'
+      AND c.relname = 'user_notifications'
+      AND d.objsubid = 0
+      AND d.description LIKE '%inbox_cleared_2026_08%'
+  ) THEN
+    RETURN;
+  END IF;
+
+  DELETE FROM public.user_notifications;
+
+  COMMENT ON TABLE public.user_notifications IS
+    'Bell → Notifications inbox. Rows from server on dispatch. inbox_cleared_2026_08';
+END $$;
+
+-- Replace retired Google Play internal-testing URLs in Updates/News posts.
+-- One-time (Aug 2026): runs once, then skipped on re-run via table comment marker.
+DO $$
+DECLARE
+  closed_beta_url TEXT := 'https://play.google.com/apps/testing/org.sacramentobuynothing.app';
+BEGIN
+  IF to_regclass('public.app_updates') IS NULL
+     AND to_regclass('public.help_announcements') IS NULL THEN
+    RETURN;
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM pg_description d
+    JOIN pg_class c ON c.oid = d.objoid
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public'
+      AND c.relname = 'app_updates'
+      AND d.objsubid = 0
+      AND d.description LIKE '%play_internal_url_scrubbed_2026_08%'
+  ) THEN
+    RETURN;
+  END IF;
+
+  IF to_regclass('public.app_updates') IS NOT NULL THEN
+    UPDATE public.app_updates
+    SET
+      body = replace(
+        replace(body, 'https://play.google.com/apps/internaltest/4701336413298152827/join', closed_beta_url),
+        'https://play.google.com/apps/internaltest/4701336413298152827',
+        closed_beta_url
+      ),
+      detail = replace(
+        replace(detail, 'https://play.google.com/apps/internaltest/4701336413298152827/join', closed_beta_url),
+        'https://play.google.com/apps/internaltest/4701336413298152827',
+        closed_beta_url
+      ),
+      "updatedAt" = NOW()
+    WHERE body LIKE '%play.google.com/apps/internaltest/4701336413298152827%'
+       OR detail LIKE '%play.google.com/apps/internaltest/4701336413298152827%';
+  END IF;
+
+  IF to_regclass('public.help_announcements') IS NOT NULL THEN
+    UPDATE public.help_announcements
+    SET
+      body = replace(
+        replace(body, 'https://play.google.com/apps/internaltest/4701336413298152827/join', closed_beta_url),
+        'https://play.google.com/apps/internaltest/4701336413298152827',
+        closed_beta_url
+      ),
+      detail = replace(
+        replace(detail, 'https://play.google.com/apps/internaltest/4701336413298152827/join', closed_beta_url),
+        'https://play.google.com/apps/internaltest/4701336413298152827',
+        closed_beta_url
+      ),
+      "updatedAt" = NOW()
+    WHERE body LIKE '%play.google.com/apps/internaltest/4701336413298152827%'
+       OR detail LIKE '%play.google.com/apps/internaltest/4701336413298152827%';
+  END IF;
+
+  IF to_regclass('public.app_updates') IS NOT NULL THEN
+    COMMENT ON TABLE public.app_updates IS
+      'Director changelog / Updates feed. play_internal_url_scrubbed_2026_08';
+  END IF;
+END $$;
+
 -- =========================================================
 -- HELP, VOTES, COMMENTS
 -- =========================================================
