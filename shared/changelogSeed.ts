@@ -68,12 +68,12 @@ Thank you for your patience.
   {
     id: '2026-08-21_apk-0052',
     date: '2026-08-21',
-    title: 'TheSacramentoFree — beta v0.2.0.0052',
-    body: 'The app is now TheSacramentoFree on your home screen and in Google Play. Same community, new name.',
+    title: 'SacramentoBuyNothing — beta v0.2.0.0052',
+    body: 'Back on the classic app layout with a black-and-white look. Same community, same account.',
     detail: `WHAT NEIGHBORS SEE
-TheSacramentoFree, 0.2.0 (52): the rebrand lands on Android.
+SacramentoBuyNothing, 0.2.0 (52): original layout restored.
 
-• Home screen and app switcher say **TheSacramentoFree**
+• Home screen and app switcher say **SacramentoBuyNothing**
 • Same sign-in, listings, map, chat, and notifications
 • Package stays org.sacramentobuynothing.app — your account is unchanged
 • Opt in on closed testing if you have not yet: ${PLAY_CLOSED_TESTING_URL}
@@ -88,12 +88,12 @@ TheSacramentoFree, 0.2.0 (52): the rebrand lands on Android.
   {
     id: '2026-08-21_apk-0051',
     date: '2026-08-21',
-    title: 'TheSacramentoFree — beta v0.2.0.0051',
-    body: 'Smaller lockup on the home page. Map filters and listing cards no longer overlap or get cut off.',
+    title: 'SacramentoBuyNothing — beta v0.2.0.0051',
+    body: 'Smaller logo on the home page. Map filters and listing cards no longer overlap or get cut off.',
     detail: `WHAT NEIGHBORS SEE
-TheSacramentoFree, 0.2.0 (51): same paper, tighter fit.
+SacramentoBuyNothing, 0.2.0 (51): tighter layout polish.
 
-• TheSacramentoFree lockup is a small crest — not a full-screen poster
+• SacramentoBuyNothing logo is a compact crest — not a full-screen poster
 • Sign-in no longer stacks three logos
 • Map All / Giving / Looking / Trade / Events no longer collide with Index
 • Listing cards on the map keep ASK, category, and page numbers apart
@@ -117,10 +117,10 @@ export const SEEDED_HELP_ANNOUNCEMENTS: SeededHelpAnnouncement[] = [
     body: 'We are planning a new website address and a new Android download link. Not today — keep using the site and app as you do now. I will post the exact links and install steps in News before we switch.',
     detail: `Quick heads-up so this does not catch anyone off guard later.
 
-TheSacramentoFree name and look changed recently — that was immediate once the update shipped. The next change is different: we will move to a new website link and a new Android app download link. That is still coming, not live yet.
+Sacramento Buy Nothing name and look changed recently — that was immediate once the update shipped. The next change is different: we will move to a new website link and a new Android app download link. That is still coming, not live yet.
 
 What to expect:
-• A new web address for TheSacramentoFree (sacramentobuynothing.com may keep working for a while as a redirect)
+• A new web address for Sacramento Buy Nothing (sacramentobuynothing.com may keep working for a while as a redirect)
 • A new Google Play closed-testing or download link when we cut over — not the same instant flip as an in-app update
 • Same neighbor account, same sign-in email, same listings, chat, and map — this is about links, not starting over
 
@@ -145,13 +145,13 @@ If you have questions before then, Chat → Support.
     body: '411 neighbors are on the Google Play closed-testing list. If you use Android, opt in with the Gmail we have on file. If Play says you are not a tester, open Chat → Support and send me your Gmail.',
     detail: `If you use an Android phone, here is where we stand on the Play Store beta.
 
-411 neighbors from our community are already on the TheSacramentoFree closed-testing email list in Google Play Console (pulled from neighbors who joined through the site).
+411 neighbors from our community are already on the SacramentoBuyNothing closed-testing email list in Google Play Console (pulled from neighbors who joined through the site).
 
 If you are on the list:
 1. On your phone, open this link while signed into the Gmail we have on file:
    ${PLAY_CLOSED_TESTING_URL}
 2. Tap Become a tester
-3. Install TheSacramentoFree from the Play Store
+3. Install SacramentoBuyNothing from the Play Store
 
 If Play says you are not a tester, or you never got access:
 Open Chat → Support in the app and send the Gmail address you use on your phone. I will add you to the list manually. Same community account — this is only about which Google account can install from Play.
@@ -181,7 +181,7 @@ How to opt in:
 1. Open this link while signed into the Gmail we added to the tester list:
    ${PLAY_CLOSED_TESTING_URL}
 2. Tap Become a tester
-3. Install TheSacramentoFree from the Play Store
+3. Install SacramentoBuyNothing from the Play Store
 
 Why this matters:
 Google requires at least 12 opted-in testers on closed testing before we can graduate to open testing (a wider public beta link anyone can join). If you got the invite, please opt in — it takes about a minute and helps the whole community move forward.

@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">TheSacramentoFree</string>
-    <string name="title_activity_main">TheSacramentoFree</string>
+    <string name="app_name">SacramentoBuyNothing</string>
+    <string name="title_activity_main">SacramentoBuyNothing</string>
     <string name="package_name">org.sacramentobuynothing.app</string>
     <string name="custom_url_scheme">org.sacramentobuynothing.app</string>
 </resources>
