@@ -100,7 +100,7 @@ export default function EventDetailView({
   const [navFooterActions, setNavFooterActions] = useState<DetailFooterButton[]>([]);
   const eventStatus = resolveEventStatus(event);
   const isOwner = event.userId === currentUserId;
-  const isStaffViewer = isStaffActingOfficial(userProfile);
+  const isStaffOfficialMode = isStaffActingOfficial(userProfile);
   const isCancelled = eventStatus === 'cancelled';
   const isPast = isEventPast(event);
   const isOpenForCoordination = isEventUpcoming(event) && !isCancelled;
@@ -142,24 +142,14 @@ export default function EventDetailView({
 
     actions.push(...navFooterActions);
 
-    if (!isOwner && isOpenForCoordination) {
-      if (isStaffViewer && onStaffChat) {
-        actions.push({
-          id: 'staff_chat',
-          label: 'Staff chat',
-          onClick: onStaffChat,
-          icon: <LifeBuoy className="w-4 h-4" />,
-          variant: navFooterActions.length > 0 ? 'secondary' : undefined,
-        });
-      } else if (onMessage) {
-        actions.push({
-          id: 'message',
-          label: 'Message',
-          onClick: onMessage,
-          icon: <MessageSquare className="w-4 h-4" />,
-          variant: navFooterActions.length > 0 ? 'secondary' : undefined,
-        });
-      }
+    if (!isOwner && isOpenForCoordination && onMessage) {
+      actions.push({
+        id: 'message',
+        label: 'Message',
+        onClick: onMessage,
+        icon: <MessageSquare className="w-4 h-4" />,
+        variant: navFooterActions.length > 0 ? 'secondary' : undefined,
+      });
     }
 
     return actions;
@@ -171,8 +161,6 @@ export default function EventDetailView({
     onRsvp,
     navFooterActions,
     isOpenForCoordination,
-    isStaffViewer,
-    onStaffChat,
     onMessage,
   ]);
 
@@ -347,13 +335,14 @@ export default function EventDetailView({
             </div>
           )}
 
-          {isStaffViewer && !isOwner && userProfile && (
+          {isStaffOfficialMode && !isOwner && userProfile && (
             <section className="sbn-card p-4 border border-role-accent/20">
               <StaffEventActions
                 event={event}
                 actor={userProfile}
                 onChanged={() => onEventStaffAction?.()}
                 onDeleted={onClose}
+                onStaffChat={onStaffChat}
               />
             </section>
           )}

@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Loader2, ShieldAlert, Trash2, X } from 'lucide-react';
+import { LifeBuoy, Loader2, ShieldAlert, Trash2, X } from 'lucide-react';
 import type { CommunityEvent, UserProfile } from '../types';
 import { staffCancelEvent, staffDeleteEvent } from '../supabase';
 import { canStaffDeleteAccount, isStaffRole } from '../lib/roles';
+import { isStaffActingOfficial } from '../lib/staffInteractionMode';
 import { useConfirm } from '../contexts/ConfirmContext';
 import { confirmStaffCancelEvent, confirmStaffDeleteEvent } from '../lib/destructiveConfirm';
 
@@ -11,6 +12,7 @@ interface StaffEventActionsProps {
   actor: UserProfile;
   onChanged?: () => void;
   onDeleted?: () => void;
+  onStaffChat?: () => void;
   compact?: boolean;
 }
 
@@ -19,12 +21,13 @@ export default function StaffEventActions({
   actor,
   onChanged,
   onDeleted,
+  onStaffChat,
   compact = false,
 }: StaffEventActionsProps) {
   const { confirm, alert } = useConfirm();
   const [busy, setBusy] = useState<'cancel' | 'delete' | null>(null);
 
-  if (!isStaffRole(actor.role)) return null;
+  if (!isStaffRole(actor.role) || !isStaffActingOfficial(actor)) return null;
 
   const canDelete = canStaffDeleteAccount(actor.role);
   const isUpcoming = event.status === 'upcoming';
@@ -64,6 +67,17 @@ export default function StaffEventActions({
         <ShieldAlert className="w-3.5 h-3.5" />
         Staff
       </span>
+      {onStaffChat ? (
+        <button
+          type="button"
+          disabled={busy !== null}
+          onClick={onStaffChat}
+          className={`${btnClass} bg-role-accent/10 text-role-accent border border-role-accent/20`}
+        >
+          <LifeBuoy className="w-3.5 h-3.5" />
+          Staff chat
+        </button>
+      ) : null}
       {isUpcoming && (
         <button
           type="button"

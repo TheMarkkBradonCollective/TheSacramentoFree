@@ -100,7 +100,7 @@ import type { GoGetSession } from '../types';
 import { getLastLiveLatLng } from '../lib/liveGeolocation';
 import { Navigation2 } from 'lucide-react';
 import RoleBadge from './RoleBadge';
-import { commentPostedAsNeighbor, shouldShowStaffBadgeOnMessage } from '../lib/staffInteractionMode';
+import { commentPostedAsNeighbor, messagePostedAsNeighbor, shouldShowStaffBadgeOnMessage } from '../lib/staffInteractionMode';
 import { confirmStaffCoordinationChatView } from '../lib/staffChatSafety';
 import ChatListingPreview from './ChatListingPreview';
 import ChatEventPreview from './ChatEventPreview';
@@ -888,7 +888,7 @@ export default function ChatSystem({
       id: messageId,
       senderId: userProfile.uid,
       text: trimmed,
-      postedAsNeighbor: commentPostedAsNeighbor(userProfile),
+      postedAsNeighbor: messagePostedAsNeighbor(userProfile, pendingChatCompose),
       createdAt: new Date().toISOString(),
     };
 
@@ -903,7 +903,7 @@ export default function ChatSystem({
         trimmed,
         userProfile.uid,
         messageId,
-        { postedAsNeighbor: commentPostedAsNeighbor(userProfile) },
+        { postedAsNeighbor: messagePostedAsNeighbor(userProfile, pendingChatCompose) },
       );
       if (success) {
         return true;

@@ -6,7 +6,7 @@ import { useEventsEngagement } from './hooks/useEventsEngagement';
 import { useEventsRealtime } from './hooks/useEventsRealtime';
 import { useAuthorProfilesRealtime } from './hooks/useAuthorProfilesRealtime';
 import { useBlockedUsers } from './hooks/useBlockedUsers';
-import { UserProfile, ItemPost, PendingChatCompose, CommunityEvent, FeedPost } from './types';
+import { UserProfile, ItemPost, PendingChatCompose, CommunityEvent, FeedPost, InitiateChatOptions } from './types';
 import NewspaperPreviewBanner from './components/public/newspaper/NewspaperPreviewBanner';
 import NewspaperEditionBar from './components/public/newspaper/NewspaperEditionBar';
 import PublicSite from './components/public/PublicSite';
@@ -1718,18 +1718,27 @@ export default function App() {
     [userProfile, blockedUserIds, confirm, alert, handleOpenSupportTicket],
   );
 
-  const handleInitiateChat = (posterUid: string, posterName: string, posterPhoto?: string, item?: ItemPost) => {
+  const handleInitiateChat = (
+    posterUid: string,
+    posterName: string,
+    posterPhoto?: string,
+    item?: ItemPost,
+    options?: InitiateChatOptions,
+  ) => {
     if (!userProfile) return;
     if (blockedUserIds.has(posterUid)) return;
     if (item && !isListingOpenForCoordination(item.status)) return;
 
-    if (isStaffActingOfficial(userProfile) && item) {
+    if (isStaffActingOfficial(userProfile) && item && !options?.asNeighbor) {
       void handleStaffListingOutreach(item);
       return;
     }
 
     const participants = [userProfile.uid, posterUid].sort();
     const chatId = participants.join('_');
+    const postedAsNeighbor =
+      options?.asNeighbor === true ||
+      (isStaffRole(userProfile.role) && !isStaffActingOfficial(userProfile));
 
     setInitialSelectedChatId(null);
     setPendingChatCompose({
@@ -1739,6 +1748,7 @@ export default function App() {
       otherUserPhoto: posterPhoto,
       itemId: item?.id,
       itemTitle: item?.title,
+      postedAsNeighbor: postedAsNeighbor || undefined,
     });
     setActiveTab('chats');
   };
@@ -1748,18 +1758,22 @@ export default function App() {
     hostName: string,
     hostPhoto?: string,
     event?: CommunityEvent,
+    options?: InitiateChatOptions,
   ) => {
     if (!userProfile) return;
     if (blockedUserIds.has(hostUid)) return;
     if (event && (!isEventUpcoming(event) || event.status === 'cancelled')) return;
 
-    if (isStaffActingOfficial(userProfile) && event) {
+    if (isStaffActingOfficial(userProfile) && event && !options?.asNeighbor) {
       void handleStaffEventOutreach(event);
       return;
     }
 
     const participants = [userProfile.uid, hostUid].sort();
     const chatId = participants.join('_');
+    const postedAsNeighbor =
+      options?.asNeighbor === true ||
+      (isStaffRole(userProfile.role) && !isStaffActingOfficial(userProfile));
 
     setInitialSelectedChatId(null);
     setPendingChatCompose({
@@ -1769,6 +1783,7 @@ export default function App() {
       otherUserPhoto: hostPhoto,
       eventId: event?.id,
       eventTitle: event?.title,
+      postedAsNeighbor: postedAsNeighbor || undefined,
     });
     setActiveTab('chats');
   };
@@ -2630,7 +2645,7 @@ export default function App() {
                     void engagement.handleDeleteComment(detailItem.id, commentId)
                   }
                   onMessage={
-                    blockedUserIds.has(detailItem.userId) || isStaffActingOfficial(userProfile)
+                    blockedUserIds.has(detailItem.userId)
                       ? undefined
                       : () => {
                           handleInitiateChat(
@@ -2638,6 +2653,7 @@ export default function App() {
                             detailItem.userDisplayName,
                             detailItem.userPhotoURL,
                             detailItem,
+                            isStaffActingOfficial(userProfile) ? { asNeighbor: true } : undefined,
                           );
                           setDetailItem(null);
                         }
@@ -2757,7 +2773,7 @@ export default function App() {
                   }}
                   onViewProfile={handleViewProfile}
                   onMessage={
-                    blockedUserIds.has(detailEvent.userId) || isStaffActingOfficial(userProfile)
+                    blockedUserIds.has(detailEvent.userId)
                       ? undefined
                       : () => {
                           handleInitiateEventChat(
@@ -2765,6 +2781,7 @@ export default function App() {
                             detailEvent.userDisplayName,
                             detailEvent.userPhotoURL,
                             detailEvent,
+                            isStaffActingOfficial(userProfile) ? { asNeighbor: true } : undefined,
                           );
                           setDetailEvent(null);
                         }

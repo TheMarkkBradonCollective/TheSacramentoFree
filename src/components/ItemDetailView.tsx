@@ -102,7 +102,7 @@ export default function ItemDetailView({
   const [hasAppClaim, setHasAppClaim] = useState(false);
   const [navFooterActions, setNavFooterActions] = useState<DetailFooterButton[]>([]);
   const isOwner = item.userId === currentUserId;
-  const isStaffViewer = isStaffActingOfficial(userProfile);
+  const isStaffOfficialMode = isStaffActingOfficial(userProfile);
   const isOpenForCoordination = isListingOpenForCoordination(item.status);
 
   const { isSaved, toggleSaved } = useSavedItems(currentUserId);
@@ -291,16 +291,6 @@ export default function ItemDetailView({
 
     const actions: DetailFooterButton[] = [...navFooterActions];
 
-    if (isStaffViewer && onStaffChat) {
-      actions.push({
-        id: 'staff_chat',
-        label: 'Staff chat',
-        onClick: onStaffChat,
-        icon: <LifeBuoy className="w-4 h-4" />,
-      });
-      return actions;
-    }
-
     if (isOpenForCoordination && onMessage) {
       const hasPrimaryNav = navFooterActions.some((a) => a.variant !== 'secondary' && a.variant !== 'ghost');
       actions.push({
@@ -316,8 +306,6 @@ export default function ItemDetailView({
   }, [
     isOwner,
     navFooterActions,
-    isStaffViewer,
-    onStaffChat,
     isOpenForCoordination,
     onMessage,
     item.type,
@@ -329,7 +317,6 @@ export default function ItemDetailView({
     item.status === 'active' &&
     userProfile &&
     onClaimSubmitted &&
-    !isStaffViewer &&
     !navFooterActions.some((a) => a.id === 'listing_navigate' || a.id === 'go_get_start');
 
   const panel = (
@@ -522,13 +509,14 @@ export default function ItemDetailView({
             )}
           </section>
 
-          {isStaffViewer && !isOwner && userProfile && (
+          {isStaffOfficialMode && !isOwner && userProfile && (
               <section className="sbn-card p-4 space-y-3 border border-role-accent/20">
                 <StaffListingActions
                   item={item}
                   actor={userProfile}
                   onChanged={() => onListingStaffAction?.()}
                   onDeleted={onClose}
+                  onStaffChat={onStaffChat}
                 />
               </section>
             )}

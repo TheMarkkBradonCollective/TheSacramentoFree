@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CommunityEvent, FeedPost, ItemPost, PendingChatCompose, UserProfile } from '../types';
+import { CommunityEvent, FeedPost, ItemPost, PendingChatCompose, UserProfile, InitiateChatOptions } from '../types';
 import SacramentoMapView from './SacramentoMapView';
 import ItemGrid, { ItemsEngagementApi } from './ItemGrid';
 import ChatSystem from './ChatSystem';
@@ -36,7 +36,13 @@ interface DesktopViewProps {
   onOpenNewStuff: () => void;
   onOpenNewEvent?: () => void;
   canAccessEvents?: boolean;
-  onInitiateChat: (posterUid: string, posterName: string, posterPhoto?: string, item?: ItemPost) => void;
+  onInitiateChat: (
+    posterUid: string,
+    posterName: string,
+    posterPhoto?: string,
+    item?: ItemPost,
+    options?: InitiateChatOptions,
+  ) => void;
   onStaffListingChat?: (item: ItemPost) => void;
   onStaffEventChat?: (event: CommunityEvent) => void;
   onClaimSubmitted?: (chatId: string) => void;
@@ -330,6 +336,7 @@ export default function DesktopView({
                 events={events}
                 userProfile={userProfile}
                 onInitiateChat={onInitiateChat}
+                onStaffListingChat={onStaffListingChat}
                 onClaimSubmitted={onClaimSubmitted}
                 onViewItem={onViewItem}
                 onViewEvent={onViewEvent}

@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { ItemPost, SACRAMENTO_NEIGHBORHOODS, UserProfile, ITEM_CATEGORIES, ISO_CATEGORIES, extractGPSCoordinates, NEIGHBORHOOD_COORDS, NEIGHBORHOOD_LAT_LONGS, convertPercentToLatLng, CommunityEvent } from '../types';
+import { ItemPost, SACRAMENTO_NEIGHBORHOODS, UserProfile, ITEM_CATEGORIES, ISO_CATEGORIES, extractGPSCoordinates, NEIGHBORHOOD_COORDS, NEIGHBORHOOD_LAT_LONGS, convertPercentToLatLng, CommunityEvent, InitiateChatOptions } from '../types';
 import {
   canViewerSeeExactLocation,
   getItemMapDestination,
@@ -85,7 +85,14 @@ interface SacramentoMapViewProps {
   selectedCategory?: string;
   selectedNeighborhood?: string;
   searchTerm?: string;
-  onInitiateChat: (posterUid: string, posterName: string, posterPhoto?: string, item?: ItemPost) => void;
+  onInitiateChat: (
+    posterUid: string,
+    posterName: string,
+    posterPhoto?: string,
+    item?: ItemPost,
+    options?: InitiateChatOptions,
+  ) => void;
+  onStaffListingChat?: (item: ItemPost) => void;
   onClaimSubmitted?: (chatId: string) => void;
   onViewItem?: (item: ItemPost) => void;
   onViewEvent?: (event: CommunityEvent) => void;
@@ -405,6 +412,7 @@ export default function SacramentoMapView({
   selectedNeighborhood,
   searchTerm,
   onInitiateChat,
+  onStaffListingChat,
   onClaimSubmitted,
   onViewItem,
   onViewEvent,
@@ -1948,8 +1956,7 @@ export default function SacramentoMapView({
                           )
                         ) : (
                           <>
-                            {!isStaffViewer &&
-                              onClaimSubmitted &&
+                            {onClaimSubmitted &&
                               selectedPost &&
                               !neighborListingUsesNavigate(selectedPost) &&
                               canOfferContactlessClaim(
@@ -1967,6 +1974,16 @@ export default function SacramentoMapView({
                                 compact
                               />
                             )}
+                            {isStaffViewer && onStaffListingChat ? (
+                              <button
+                                type="button"
+                                onClick={() => onStaffListingChat(selectedPost)}
+                                className="sbn-btn sbn-btn-primary sbn-btn-sm"
+                              >
+                                <LifeBuoy className="w-3 h-3" />
+                                Staff chat
+                              </button>
+                            ) : null}
                             {selectedPost &&
                             neighborListingUsesNavigate(selectedPost) &&
                             !isStaffViewer
@@ -1980,21 +1997,13 @@ export default function SacramentoMapView({
                                   selectedPost.userDisplayName,
                                   selectedPost.userPhotoURL,
                                   selectedPost,
+                                  isStaffViewer ? { asNeighbor: true } : undefined,
                                 )
                               }
                               className="sbn-btn sbn-btn-primary sbn-btn-sm"
                             >
-                              {isStaffViewer ? (
-                                <>
-                                  <LifeBuoy className="w-3 h-3" />
-                                  Staff chat
-                                </>
-                              ) : (
-                                <>
-                                  <MessageSquare className="w-3 h-3" />
-                                  Message
-                                </>
-                              )}
+                              <MessageSquare className="w-3 h-3" />
+                              {getListingContactButtonLabel(selectedPost.type)}
                             </button>
                             )}
                           </>
@@ -2554,8 +2563,7 @@ export default function SacramentoMapView({
                       )
                     ) : (
                       <>
-                        {!isStaffViewer &&
-                          onClaimSubmitted &&
+                        {onClaimSubmitted &&
                           selectedPost &&
                           !neighborListingUsesNavigate(selectedPost) &&
                           canOfferContactlessClaim(
@@ -2573,6 +2581,16 @@ export default function SacramentoMapView({
                             compact
                           />
                         )}
+                        {isStaffViewer && onStaffListingChat ? (
+                          <button
+                            type="button"
+                            onClick={() => onStaffListingChat(selectedPost)}
+                            className="px-3 py-1.5 bg-accent hover:bg-accent-hover text-on-accent text-[9.5px] font-bold rounded-xl inline-flex items-center space-x-1.5 transition-colors cursor-pointer select-none border border-transparent"
+                          >
+                            <LifeBuoy className="w-3 h-3" />
+                            <span>Staff chat</span>
+                          </button>
+                        ) : null}
                         {selectedPost &&
                         neighborListingUsesNavigate(selectedPost) &&
                         !isStaffViewer
@@ -2586,21 +2604,13 @@ export default function SacramentoMapView({
                               selectedPost.userDisplayName,
                               selectedPost.userPhotoURL,
                               selectedPost,
+                              isStaffViewer ? { asNeighbor: true } : undefined,
                             )
                           }
                           className="px-3 py-1.5 bg-accent hover:bg-accent-hover text-on-accent text-[9.5px] font-bold rounded-xl inline-flex items-center space-x-1.5 transition-colors cursor-pointer select-none border border-transparent"
                         >
-                          {isStaffViewer ? (
-                            <>
-                              <LifeBuoy className="w-3 h-3" />
-                              <span>Staff chat</span>
-                            </>
-                          ) : (
-                            <>
-                              <MessageSquare className="w-3 h-3" />
-                              <span>{getListingContactButtonLabel(selectedPost.type)}</span>
-                            </>
-                          )}
+                          <MessageSquare className="w-3 h-3" />
+                          <span>{getListingContactButtonLabel(selectedPost.type)}</span>
                         </button>
                         )}
                       </>

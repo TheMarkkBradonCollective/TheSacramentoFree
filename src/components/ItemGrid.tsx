@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ItemPost, PostStatus, SACRAMENTO_NEIGHBORHOODS, ITEM_CATEGORIES, ISO_CATEGORIES, UserProfile } from '../types';
+import { ItemPost, PostStatus, SACRAMENTO_NEIGHBORHOODS, ITEM_CATEGORIES, ISO_CATEGORIES, UserProfile, InitiateChatOptions } from '../types';
 import {
   ArrowDownUp,
   CircleDot,
@@ -169,7 +169,13 @@ interface ItemGridProps {
   items: ItemPost[];
   userProfile: UserProfile;
   engagement: ItemsEngagementApi;
-  onInitiateChat: (posterUid: string, posterName: string, posterPhoto?: string, item?: ItemPost) => void;
+  onInitiateChat: (
+    posterUid: string,
+    posterName: string,
+    posterPhoto?: string,
+    item?: ItemPost,
+    options?: InitiateChatOptions,
+  ) => void;
   onStaffListingChat?: (item: ItemPost) => void;
   onViewItem: (item: ItemPost) => void;
   onNavigateItem?: (item: ItemPost) => void;
@@ -810,7 +816,13 @@ export default function ItemGrid({
                 onEdit={() => setEditingItem(item)}
                 onViewDetail={() => onViewItem(item)}
                 onMessage={() =>
-                  onInitiateChat(item.userId, item.userDisplayName, item.userPhotoURL, item)
+                  onInitiateChat(
+                    item.userId,
+                    item.userDisplayName,
+                    item.userPhotoURL,
+                    item,
+                    isStaffActingOfficial(userProfile) ? { asNeighbor: true } : undefined,
+                  )
                 }
                 onStaffChat={onStaffListingChat ? () => onStaffListingChat(item) : undefined}
                 onViewProfile={onViewProfile}
