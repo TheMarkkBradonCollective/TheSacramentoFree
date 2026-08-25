@@ -2896,33 +2896,105 @@ html.sbn-keyboard-open .sbn-mobile-nav {
 }
 
 .sbn-map-selection-dock {
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding-bottom: 0;
+  bottom: 0.5rem;
+  left: 0.5rem;
+  right: 0.5rem;
+  padding-bottom: var(--sbn-safe-area-bottom, var(--sbn-inset-bottom, env(safe-area-inset-bottom, 0px)));
 }
 
 .sbn-map-selection-card {
-  max-height: min(38dvh, 22rem);
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
-  border-bottom-left-radius: 0;
-  border-bottom-right-radius: 0;
-  padding-bottom: calc(0.9rem + var(--sbn-safe-area-bottom, 0px));
+  overflow: hidden;
+  border-radius: var(--radius-card);
+  box-shadow: 0 14px 36px rgba(15, 23, 42, 0.16);
+}
+
+.sbn-map-selection-card .item-feed-card__main {
+  min-height: 5.75rem;
+}
+
+.sbn-map-selection-card .item-feed-card__media {
+  flex-basis: 5.5rem;
+  width: 5.5rem;
+  border-radius: 0;
+}
+
+.sbn-map-selection-card .item-feed-card__copy {
+  padding: 0 0.7rem 0.55rem;
+}
+
+.sbn-map-selection-card .item-feed-card__footer {
+  padding: 0.45rem 0.7rem;
+}
+
+.sbn-map-mode-row {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.sbn-map-mode {
+  width: 1.85rem;
+  height: 1.85rem;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-inset);
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.sbn-map-mode.is-selected {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  border-color: transparent;
+}
+
+.sbn-map-trip {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: 0.45rem;
+}
+
+.sbn-map-trip-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.sbn-map-trip-copy {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.sbn-map-trip-eta {
+  font-size: 0.7rem;
+  font-weight: 800;
+  line-height: 1.2;
+  color: var(--color-text);
+}
+
+.sbn-map-trip-hint {
+  font-size: 0.58rem;
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .sbn-map-selection-card__actions {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.375rem;
-  justify-content: flex-end;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
 }
 
 .sbn-map-selection-card__actions .sbn-btn {
-  flex: 1 1 auto;
-  min-width: 5.25rem;
-  max-width: 100%;
+  flex: 0 0 auto;
 }
 
 .sbn-map-float-btn {
