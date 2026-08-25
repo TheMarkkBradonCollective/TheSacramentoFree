@@ -373,6 +373,60 @@ export function notifyFeedPostDeleted(postId: string): void {
   window.dispatchEvent(new CustomEvent(FEED_POST_DELETED_EVENT, { detail: { id: postId } }));
 }
 
+export async function updateFeedPost(
+  postId: string,
+  userId: string,
+  isStaff: boolean,
+  input: { text: string; imageFiles: File[]; keepImageUrls?: string[] },
+): Promise<{ ok: boolean; post?: FeedPost; errorMessage?: string }> {
+  const text = input.text.trim();
+  const keepImageUrls = (input.keepImageUrls ?? []).filter((url) => typeof url === 'string' && url.trim().length > 0);
+  if (!text && keepImageUrls.length === 0 && input.imageFiles.length === 0) {
+    return { ok: false, errorMessage: 'Add words, a photo, or both.' };
+  }
+
+  const imageUrls = [...keepImageUrls];
+  const failedUploads: number[] = [];
+
+  for (let i = 0; i < input.imageFiles.length; i++) {
+    const url = await uploadFeedPostImage(input.imageFiles[i], postId, keepImageUrls.length + i);
+    if (url) imageUrls.push(url);
+    else failedUploads.push(i + 1);
+  }
+
+  if (input.imageFiles.length > 0 && failedUploads.length === input.imageFiles.length) {
+    return { ok: false, errorMessage: 'Photos could not be uploaded. Please try again.' };
+  }
+  if (failedUploads.length > 0) {
+    return {
+      ok: false,
+      errorMessage: `${failedUploads.length} photo${failedUploads.length === 1 ? '' : 's'} could not be uploaded. Please try again.`,
+    };
+  }
+
+  const now = new Date().toISOString();
+  const payload = {
+    text,
+    imageUrls,
+    updatedAt: now,
+  };
+
+  try {
+    let query = supabase.from('feed_posts').update(payload).eq('id', postId);
+    if (!isStaff) query = query.eq('userId', userId);
+    const { data, error } = await query.select('*').maybeSingle();
+    if (error) {
+      handleSupabaseError(error, 'feed_posts');
+      return { ok: false, errorMessage: error.message };
+    }
+    if (!data) return { ok: false, errorMessage: 'Post not found or you cannot edit it.' };
+    setSupabaseConfigurationState(true);
+    return { ok: true, post: normalizeFeedPost(data as Record<string, unknown>) };
+  } catch (err) {
+    return { ok: false, errorMessage: err instanceof Error ? err.message : 'Could not update post.' };
+  }
+}
+
 export async function deleteFeedPost(
   postId: string,
   userId: string,

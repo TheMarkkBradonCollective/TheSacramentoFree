@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { FeedPost } from '../types';
-import { createFeedPost, createFeedPollPost, deleteFeedPost, getFeedPosts, FEED_POST_DELETED_EVENT, notifyFeedPostDeleted } from '../lib/feedApi';
+import { createFeedPost, createFeedPollPost, deleteFeedPost, getFeedPosts, updateFeedPost, FEED_POST_DELETED_EVENT, notifyFeedPostDeleted } from '../lib/feedApi';
 import { subscribePostgresChanges } from '../lib/supabaseRealtime';
 import { patchDenormalizedAuthorFields } from '../lib/profilePersistence';
 import type { UserProfile } from '../types';
@@ -153,5 +153,24 @@ export function useFeedPosts(userProfile: UserProfile | null, options?: { enable
     [userProfile, isStaff, confirm, alert, enabled],
   );
 
-  return { posts, loading, creating, publishPost, publishPoll, removePost, reload };
+  const editPost = useCallback(
+    async (
+      post: FeedPost,
+      input: { text: string; imageFiles: File[]; keepImageUrls?: string[] },
+    ) => {
+      if (!enabled || !userProfile) return false;
+      setCreating(true);
+      const result = await updateFeedPost(post.id, userProfile.uid, isStaff, input);
+      setCreating(false);
+      if (!result.ok || !result.post) {
+        await alert({ title: 'Could not save', message: result.errorMessage || 'Try again.' });
+        return false;
+      }
+      setPosts((prev) => prev.map((p) => (p.id === result.post!.id ? result.post! : p)));
+      return true;
+    },
+    [userProfile, isStaff, alert, enabled],
+  );
+
+  return { posts, loading, creating, publishPost, publishPoll, removePost, editPost, reload };
 }

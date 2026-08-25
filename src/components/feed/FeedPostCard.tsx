@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Flag, MapPin, Trash2 } from 'lucide-react';
+import { Flag, MapPin, Pencil, Trash2 } from 'lucide-react';
 import type { FeedPost, UserProfile } from '../../types';
 import type { FeedEngagementApi } from '../../hooks/useFeedEngagement';
 import { isStaffRole } from '../../lib/roles';
@@ -17,6 +17,7 @@ interface FeedPostCardProps {
   engagement: FeedEngagementApi;
   onViewPost?: (post: FeedPost) => void;
   onViewProfile?: (userId: string) => void;
+  onEditPost?: (post: FeedPost) => void;
   onDeletePost: (post: FeedPost) => void;
 }
 
@@ -34,6 +35,7 @@ export default function FeedPostCard({
   engagement,
   onViewPost,
   onViewProfile,
+  onEditPost,
   onDeletePost,
 }: FeedPostCardProps) {
   const [reportOpen, setReportOpen] = useState(false);
@@ -49,14 +51,16 @@ export default function FeedPostCard({
   const cover = !isPoll ? post.imageUrls[0] : undefined;
   const extraPhotos = Math.max(0, post.imageUrls.length - 1);
 
+  const canEdit = isOwn && !isPoll && Boolean(onEditPost);
   const canDelete = isOwn || isStaff;
   const canReport = !isOwn;
+  const showOwnerActions = canEdit || canDelete;
 
   const openPost = () => onViewPost?.(post);
 
   return (
     <article
-      className="item-feed-card sbn-feed-post overflow-hidden cursor-pointer"
+      className="item-feed-card sbn-feed-post relative overflow-hidden cursor-pointer"
       id={`feed_post_${post.id}`}
       onClick={openPost}
       onKeyDown={(event) => {
@@ -69,6 +73,44 @@ export default function FeedPostCard({
       tabIndex={0}
       aria-label={`Open post by ${post.userDisplayName}`}
     >
+      {showOwnerActions ? (
+        <div
+          className="absolute top-2 right-2 z-10 flex items-center gap-0.5 pointer-events-auto"
+          onClick={(event) => event.stopPropagation()}
+        >
+          {canEdit ? (
+            <button
+              type="button"
+              onClick={() => onEditPost?.(post)}
+              className={`p-2 rounded-full ${
+                cover
+                  ? 'bg-black/50 text-white hover:bg-black/70 backdrop-blur-sm'
+                  : 'text-muted hover:text-app hover:bg-inset'
+              }`}
+              title="Edit post"
+              aria-label="Edit post"
+            >
+              <Pencil className="w-4 h-4" />
+            </button>
+          ) : null}
+          {canDelete ? (
+            <button
+              type="button"
+              onClick={() => void onDeletePost(post)}
+              className={`p-2 rounded-full ${
+                cover
+                  ? 'bg-black/50 text-white hover:bg-red-500/90 backdrop-blur-sm'
+                  : 'text-muted hover:text-red-400 hover:bg-red-500/10'
+              }`}
+              title="Delete post"
+              aria-label="Delete post"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+
       {cover ? (
         <div className="relative aspect-[16/10] overflow-hidden bg-inset pointer-events-none">
           <img
@@ -78,7 +120,7 @@ export default function FeedPostCard({
             referrerPolicy="no-referrer"
           />
           {extraPhotos > 0 && (
-            <span className="absolute top-1.5 right-1.5 text-[9px] font-bold bg-black/70 text-white px-1.5 py-0.5 rounded-full">
+            <span className="absolute top-1.5 left-1.5 text-[9px] font-bold bg-black/70 text-white px-1.5 py-0.5 rounded-full">
               +{extraPhotos}
             </span>
           )}
@@ -157,32 +199,19 @@ export default function FeedPostCard({
             onComment={openPost}
           />
 
-          {(canReport || canDelete) && (
+          {canReport ? (
             <div className="flex items-center justify-end gap-1">
-              {canReport && (
-                <button
-                  type="button"
-                  onClick={() => setReportOpen(true)}
-                  className="p-2 rounded-full text-muted hover:text-red-400 hover:bg-red-500/10"
-                  title="Report post"
-                  aria-label="Report post"
-                >
-                  <Flag className="w-4 h-4" />
-                </button>
-              )}
-              {canDelete && (
-                <button
-                  type="button"
-                  onClick={() => void onDeletePost(post)}
-                  className="p-2 rounded-full text-muted hover:text-red-400 hover:bg-red-500/10"
-                  title="Delete post"
-                  aria-label="Delete post"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={() => setReportOpen(true)}
+                className="p-2 rounded-full text-muted hover:text-red-400 hover:bg-red-500/10"
+                title="Report post"
+                aria-label="Report post"
+              >
+                <Flag className="w-4 h-4" />
+              </button>
             </div>
-          )}
+          ) : null}
         </div>
       </div>
 
