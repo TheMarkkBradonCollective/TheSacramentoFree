@@ -40,12 +40,15 @@ export default function AppScreenshotTour() {
           that same community plus live Go Get pickup — both people locked onto a map, like Uber, until the item
           changes hands. Scroll the shots, then decide. If you only want to browse and chat, stay on the website.
         </p>
-        <a
-          href="#download_install"
+        <button
+          type="button"
+          onClick={() => {
+            document.getElementById('download_install')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }}
           className="inline-flex mt-3 text-xs font-bold text-accent hover:underline"
         >
           Skip to install
-        </a>
+        </button>
       </PublicCard>
 
       <PublicCard>
