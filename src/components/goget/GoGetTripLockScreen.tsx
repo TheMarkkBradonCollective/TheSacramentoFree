@@ -129,6 +129,7 @@ export default function GoGetTripLockScreen({
   useEffect(() => retainLiveGeolocation(), []);
 
   useEffect(() => {
+    if (isPlayStoreDemo()) return undefined;
     const unsub = subscribeLiveGeolocation((position) => {
       const next = { lat: position.coords.latitude, lng: position.coords.longitude };
       setSelfLocation(next);
