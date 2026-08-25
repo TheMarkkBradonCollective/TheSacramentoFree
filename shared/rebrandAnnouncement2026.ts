@@ -32,7 +32,7 @@ When version 0.2.0 ships, it also moves us out of **internal testing** (the smal
 Thank you for being here while I get this right. You built this. I'm not walking away — just turning the page.
 
 — Mark
-Buy Nothing Director, Sacramento`;
+TheSacramentoFree Director, Sacramento`;
 
 /** Professional home-page notice — upcoming link change (rebrand is live). */
 export const TRADEMARK_HOME_NOTICE = {

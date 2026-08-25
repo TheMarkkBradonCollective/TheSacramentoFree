@@ -144,32 +144,37 @@ export async function getAwardsLeaderboard(limit = 25): Promise<AwardLeaderboard
     const userIds = ranked.map(([uid]) => uid);
     const { data: users, error: usersError } = await supabase
       .from('users')
-      .select('uid, displayName, photoURL, neighborhood')
+      .select('uid, displayName, photoURL, neighborhood, role')
       .in('uid', userIds);
 
     if (usersError) {
       console.warn('[awards] leaderboard users:', usersError.message);
     }
 
+    const excludedRoles = new Set(['director']);
     const userMap = new Map(
-      (users || []).map((user) => [
-        String((user as { uid: string }).uid),
-        user as { uid: string; displayName?: string; photoURL?: string; neighborhood?: string },
-      ]),
+      (users || [])
+        .filter((user) => !excludedRoles.has(String((user as { role?: string }).role || '')))
+        .map((user) => [
+          String((user as { uid: string }).uid),
+          user as { uid: string; displayName?: string; photoURL?: string; neighborhood?: string },
+        ]),
     );
 
-    return ranked.map(([userId, stats], index) => {
-      const user = userMap.get(userId);
-      return {
-        rank: index + 1,
-        userId,
-        displayName: String(user?.displayName || 'Neighbor').trim() || 'Neighbor',
-        photoURL: user?.photoURL || undefined,
-        neighborhood: String(user?.neighborhood || ''),
-        awardCount: stats.count,
-        latestGrantAt: stats.latest,
-      };
-    });
+    return ranked
+      .filter(([userId]) => userMap.has(userId))
+      .map(([userId, stats], index) => {
+        const user = userMap.get(userId);
+        return {
+          rank: index + 1,
+          userId,
+          displayName: String(user?.displayName || 'Neighbor').trim() || 'Neighbor',
+          photoURL: user?.photoURL || undefined,
+          neighborhood: String(user?.neighborhood || ''),
+          awardCount: stats.count,
+          latestGrantAt: stats.latest,
+        };
+      });
   } catch {
     return [];
   }
