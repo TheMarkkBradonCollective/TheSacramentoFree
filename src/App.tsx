@@ -49,7 +49,7 @@ import {
 } from './supabase';
 import { confirmStaffEventOutreach, confirmStaffListingOutreach } from './lib/staffChatSafety';
 import { isStaffActingOfficial } from './lib/staffInteractionMode';
-import { APP_LOGO_SRC, SITE, SUPPORT, AWARDS, PRIVACY, TERMS } from './siteContent';
+import { APP_ICON_SRC, SITE, SUPPORT, AWARDS, PRIVACY, TERMS } from './siteContent';
 import { NEWSPAPER } from './preview/newspaperBrand';
 import { isNewspaperSkinActive } from './preview/NewspaperSkinContext';
 import GoGetRingCoordinator from './components/goget/GoGetRingCoordinator';
@@ -2870,7 +2870,7 @@ export default function App() {
             <div className="flex items-start space-x-3">
               {!isNewspaperSkinActive() ? (
                 <img
-                  src={APP_LOGO_SRC}
+                  src={APP_ICON_SRC}
                   alt=""
                   className="w-10 h-10 rounded-lg object-contain shrink-0 mt-0.5 bg-surface border border-app"
                 />

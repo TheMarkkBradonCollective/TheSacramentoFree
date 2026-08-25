@@ -1,6 +1,8 @@
-/** App icon — Sacramento green hands / no-money mark (512×512). */
+/** In-app logo — 3D hands / no-money mark on a transparent PNG. */
 export const APP_LOGO_SRC = '/logo.png';
-/** Same lockup as APP_LOGO_SRC for download pages and legacy references. */
+/** Homescreen / PWA / favicon — Sacramento green rounded-square app icon. */
+export const APP_ICON_SRC = '/app-icon.png';
+/** Same artwork as APP_LOGO_SRC for download pages and legacy references. */
 export const SITE_LOGO_SRC = '/logo.png';
 /** Community slogan — newspaper masthead only. Original site uses SITE.tagline. */
 export const COMMUNITY_SLOGAN = 'Give freely. Ask kindly.';
