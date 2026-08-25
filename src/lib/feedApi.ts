@@ -79,6 +79,7 @@ function normalizeFeedPost(row: Record<string, unknown>): FeedPost {
         : undefined,
     createdAt: String(row.createdAt ?? row.created_at ?? new Date().toISOString()),
     updatedAt: String(row.updatedAt ?? row.updated_at ?? new Date().toISOString()),
+    viewCount: Number(row.viewCount ?? row.view_count ?? 0) || 0,
   };
 }
 
@@ -168,6 +169,26 @@ export async function getFeedPostById(postId: string): Promise<FeedPost | null> 
     handleSupabaseError(err, 'feed_posts');
     return null;
   }
+}
+
+let feedPostViewRpcAvailable: boolean | null = null;
+
+/** Record one unique neighbor view when opening full feed post detail. */
+export async function recordFeedPostView(postId: string): Promise<{ ok: boolean; viewCount?: number }> {
+  if (!postId || feedPostViewRpcAvailable === false) return { ok: false };
+
+  const { data, error } = await supabase.rpc('record_feed_post_view', { target_post_id: postId });
+  if (error) {
+    const message = String(error.message || '');
+    if (/record_feed_post_view|viewcount|feed_post_views/i.test(message)) {
+      feedPostViewRpcAvailable = false;
+    }
+    return { ok: false };
+  }
+
+  feedPostViewRpcAvailable = true;
+  const viewCount = typeof data === 'number' ? data : Number(data);
+  return { ok: true, viewCount: Number.isFinite(viewCount) ? viewCount : undefined };
 }
 
 export async function createFeedPost(

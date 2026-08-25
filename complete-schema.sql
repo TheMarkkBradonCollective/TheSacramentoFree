@@ -157,6 +157,19 @@ ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
 CREATE INDEX IF NOT EXISTS messages_chat_id_idx ON public.messages ("chatId");
 CREATE INDEX IF NOT EXISTS messages_created_at_idx ON public.messages ("createdAt");
 
+-- Per-user read receipts (DM + group chats). Honors users.appPreferences.readReceiptsEnabled.
+CREATE TABLE IF NOT EXISTS public.message_reads (
+  "messageId" TEXT NOT NULL REFERENCES public.messages(id) ON DELETE CASCADE,
+  "chatId" TEXT NOT NULL,
+  "userId" TEXT NOT NULL,
+  "readAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY ("messageId", "userId")
+);
+
+ALTER TABLE public.message_reads ENABLE ROW LEVEL SECURITY;
+CREATE INDEX IF NOT EXISTS message_reads_chat_idx ON public.message_reads ("chatId");
+CREATE INDEX IF NOT EXISTS message_reads_message_idx ON public.message_reads ("messageId");
+
 -- 5. Item votes (interested / not interested)
 CREATE TABLE IF NOT EXISTS public.item_votes (
   "itemId" TEXT NOT NULL,
@@ -1750,6 +1763,17 @@ CREATE TABLE IF NOT EXISTS public.feed_posts (
 
 ALTER TABLE public.feed_posts ADD COLUMN IF NOT EXISTS "postKind" TEXT NOT NULL DEFAULT 'standard';
 ALTER TABLE public.feed_posts ADD COLUMN IF NOT EXISTS "pollOptions" JSONB;
+ALTER TABLE public.feed_posts ADD COLUMN IF NOT EXISTS "viewCount" INTEGER NOT NULL DEFAULT 0;
+
+CREATE TABLE IF NOT EXISTS public.feed_post_views (
+  "postId" TEXT NOT NULL REFERENCES public.feed_posts(id) ON DELETE CASCADE,
+  "userId" TEXT NOT NULL,
+  "viewedAt" TIMESTAMPTZ DEFAULT NOW(),
+  PRIMARY KEY ("postId", "userId")
+);
+
+ALTER TABLE public.feed_post_views ENABLE ROW LEVEL SECURITY;
+CREATE INDEX IF NOT EXISTS feed_post_views_post_idx ON public.feed_post_views ("postId");
 
 DO $$
 BEGIN
@@ -2676,6 +2700,130 @@ $recordview$;
 REVOKE ALL ON FUNCTION public.record_listing_view(text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.record_listing_view(text) TO authenticated;
 
+CREATE OR REPLACE FUNCTION public.user_read_receipts_enabled(target_uid text)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT COALESCE(
+    CASE
+      WHEN (u."appPreferences"->>'readReceiptsEnabled')::text = 'false' THEN false
+      ELSE true
+    END,
+    true
+  )
+  FROM public.users u
+  WHERE u.uid = target_uid;
+$$;
+
+REVOKE ALL ON FUNCTION public.user_read_receipts_enabled(text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.user_read_receipts_enabled(text) TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.record_feed_post_view(target_post_id text)
+RETURNS integer
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $recordfeedview$
+DECLARE
+  viewer_uid text;
+  author_uid text;
+  inserted_count integer;
+  result_count integer;
+BEGIN
+  viewer_uid := auth.uid()::text;
+  IF viewer_uid IS NULL OR target_post_id IS NULL OR target_post_id = '' THEN
+    RETURN NULL;
+  END IF;
+
+  SELECT "userId" INTO author_uid FROM public.feed_posts WHERE id = target_post_id AND status = 'active';
+  IF author_uid IS NULL THEN
+    RETURN NULL;
+  END IF;
+
+  IF author_uid = viewer_uid THEN
+    SELECT COALESCE("viewCount", 0) INTO result_count FROM public.feed_posts WHERE id = target_post_id;
+    RETURN result_count;
+  END IF;
+
+  INSERT INTO public.feed_post_views ("postId", "userId")
+  VALUES (target_post_id, viewer_uid)
+  ON CONFLICT ("postId", "userId") DO NOTHING;
+
+  GET DIAGNOSTICS inserted_count = ROW_COUNT;
+
+  IF inserted_count > 0 THEN
+    UPDATE public.feed_posts
+    SET "viewCount" = COALESCE("viewCount", 0) + 1
+    WHERE id = target_post_id
+    RETURNING "viewCount" INTO result_count;
+  ELSE
+    SELECT COALESCE("viewCount", 0) INTO result_count FROM public.feed_posts WHERE id = target_post_id;
+  END IF;
+
+  RETURN result_count;
+END;
+$recordfeedview$;
+
+REVOKE ALL ON FUNCTION public.record_feed_post_view(text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.record_feed_post_view(text) TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.mark_chat_messages_read(target_chat_id text, target_message_ids text[])
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $markread$
+DECLARE
+  viewer_uid text;
+BEGIN
+  viewer_uid := auth.uid()::text;
+  IF viewer_uid IS NULL OR target_chat_id IS NULL OR target_chat_id = '' THEN
+    RETURN;
+  END IF;
+  IF NOT public.can_read_chat(target_chat_id) THEN
+    RETURN;
+  END IF;
+  IF NOT public.user_read_receipts_enabled(viewer_uid) THEN
+    RETURN;
+  END IF;
+  IF target_message_ids IS NULL OR array_length(target_message_ids, 1) IS NULL THEN
+    RETURN;
+  END IF;
+
+  INSERT INTO public.message_reads ("messageId", "chatId", "userId")
+  SELECT m.id, target_chat_id, viewer_uid
+  FROM public.messages m
+  WHERE m."chatId" = target_chat_id
+    AND m.id = ANY(target_message_ids)
+    AND m."senderId" <> viewer_uid
+  ON CONFLICT ("messageId", "userId") DO NOTHING;
+END;
+$markread$;
+
+REVOKE ALL ON FUNCTION public.mark_chat_messages_read(text, text[]) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.mark_chat_messages_read(text, text[]) TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.get_message_read_counts(target_message_ids text[])
+RETURNS TABLE(message_id text, read_count bigint)
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT mr."messageId" AS message_id, COUNT(*)::bigint AS read_count
+  FROM public.message_reads mr
+  JOIN public.messages m ON m.id = mr."messageId"
+  WHERE mr."messageId" = ANY(target_message_ids)
+    AND mr."userId" <> m."senderId"
+  GROUP BY mr."messageId";
+$$;
+
+REVOKE ALL ON FUNCTION public.get_message_read_counts(text[]) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_message_read_counts(text[]) TO authenticated;
+
 CREATE OR REPLACE FUNCTION public.item_feed_image_url_map()
 RETURNS TABLE(id text, image_urls text[])
 LANGUAGE sql
@@ -2756,6 +2904,10 @@ CREATE POLICY "messages_insert" ON public.messages
 
 CREATE POLICY "messages_delete_own" ON public.messages
   FOR DELETE USING (auth.uid()::text = "senderId" OR public.is_staff());
+
+DROP POLICY IF EXISTS "message_reads_select" ON public.message_reads;
+CREATE POLICY "message_reads_select" ON public.message_reads
+  FOR SELECT USING (public.can_read_chat("chatId"));
 
 -- ---------------------------------------------------------
 -- 5. ITEM VOTES & COMMENTS

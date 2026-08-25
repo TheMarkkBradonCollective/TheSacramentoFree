@@ -172,5 +172,9 @@ export function useFeedPosts(userProfile: UserProfile | null, options?: { enable
     [userProfile, isStaff, alert, enabled],
   );
 
-  return { posts, loading, creating, publishPost, publishPoll, removePost, editPost, reload };
+  const updatePostViewCount = useCallback((postId: string, viewCount: number) => {
+    setPosts((prev) => prev.map((post) => (post.id === postId ? { ...post, viewCount } : post)));
+  }, []);
+
+  return { posts, loading, creating, publishPost, publishPoll, removePost, editPost, reload, updatePostViewCount };
 }

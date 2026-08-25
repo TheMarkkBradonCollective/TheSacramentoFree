@@ -108,6 +108,9 @@ import ChatListingPreview from './ChatListingPreview';
 import ChatEventPreview from './ChatEventPreview';
 import { resolveEventStatus } from '../lib/eventRsvp';
 import { persistUserAppPreferences } from '../lib/appPreferences';
+import { readReceiptsEnabledForProfile } from '../lib/readReceiptPrefs';
+import { getMessageReadCounts, markChatMessagesRead } from '../lib/messageReads';
+import MessageReadReceiptLabel from './MessageReadReceiptLabel';
 
 interface ChatSystemProps {
   userProfile: UserProfile;
@@ -196,6 +199,14 @@ export default function ChatSystem({
     () => resolveChatInboxFilters(userProfile).status,
   );
   const [archivedKeys, setArchivedKeys] = useState(() => new Set(resolveChatInboxFilters(userProfile).archivedKeys));
+  const [readReceiptsEnabled, setReadReceiptsEnabled] = useState(() =>
+    readReceiptsEnabledForProfile(userProfile),
+  );
+  const [messageReadCounts, setMessageReadCounts] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    setReadReceiptsEnabled(readReceiptsEnabledForProfile(userProfile));
+  }, [userProfile.uid, userProfile.appPreferences?.readReceiptsEnabled]);
 
   useEffect(() => {
     const next = resolveChatInboxFilters(userProfile);
@@ -1219,6 +1230,42 @@ export default function ChatSystem({
     persistInboxFilters(categoryFilter, filter);
   };
 
+  const handleReadReceiptsChange = (enabled: boolean) => {
+    setReadReceiptsEnabled(enabled);
+    if (!enabled) setMessageReadCounts({});
+    void persistUserAppPreferences(userProfile, { readReceiptsEnabled: enabled });
+  };
+
+  const refreshOwnMessageReadCounts = useCallback(async () => {
+    if (!readReceiptsEnabled || !selectedChat) {
+      setMessageReadCounts({});
+      return;
+    }
+    const ownIds = messages.filter((message) => message.senderId === userProfile.uid).map((message) => message.id);
+    if (ownIds.length === 0) {
+      setMessageReadCounts({});
+      return;
+    }
+    setMessageReadCounts(await getMessageReadCounts(ownIds));
+  }, [messages, readReceiptsEnabled, selectedChat, userProfile.uid]);
+
+  useEffect(() => {
+    if (!selectedChat || !readReceiptsEnabled || messages.length === 0) {
+      setMessageReadCounts({});
+      return;
+    }
+    const incomingIds = messages
+      .filter((message) => message.senderId !== userProfile.uid)
+      .map((message) => message.id);
+    if (incomingIds.length === 0) {
+      void refreshOwnMessageReadCounts();
+      return;
+    }
+    void markChatMessagesRead(selectedChat.id, incomingIds).then(() => {
+      void refreshOwnMessageReadCounts();
+    });
+  }, [selectedChat?.id, messages, readReceiptsEnabled, userProfile.uid, refreshOwnMessageReadCounts]);
+
   const handleArchiveChat = (chatId: string) => {
     const next = archiveInboxConversation(userProfile.uid, 'chat', chatId);
     setArchivedKeys(next);
@@ -1364,6 +1411,8 @@ export default function ChatSystem({
               statusFilter={statusFilter}
               onCategoryFilterChange={handleCategoryFilterChange}
               onStatusFilterChange={handleStatusFilterChange}
+              readReceiptsEnabled={readReceiptsEnabled}
+              onReadReceiptsChange={handleReadReceiptsChange}
               onStartConversation={onStartDirectMessage}
               onNewSupport={!isStaffSupportInbox ? () => openSupport('new') : undefined}
               onOpenFeedbackPanel={setFeedbackPanel}
@@ -1784,6 +1833,12 @@ export default function ChatSystem({
                                       <Trash2 className="w-3 h-3" />
                                     </button>
                                   )}
+                                  {isUser && readReceiptsEnabled ? (
+                                    <MessageReadReceiptLabel
+                                      readCount={messageReadCounts[msg.id] ?? 0}
+                                      isGroupChat={isCommunity}
+                                    />
+                                  ) : null}
                                   <span
                                     className={`text-[10px] ${isUser ? 'text-white/75' : 'text-subtle'}`}
                                   >
