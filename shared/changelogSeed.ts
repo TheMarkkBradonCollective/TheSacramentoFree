@@ -33,6 +33,7 @@ const APK_0052_AT = '2026-08-21T23:50:00.000Z';
 const APK_0053_AT = '2026-08-25T03:05:00.000Z';
 const APK_0054_AT = '2026-08-25T03:32:00.000Z';
 const APK_0055_AT = '2026-08-25T03:48:00.000Z';
+const ENGAGEMENT_UPDATE_AT = '2026-08-25T12:00:00.000Z';
 const CLOSED_TESTING_NEWS_AT = '2026-08-21T23:20:00.000Z';
 const TESTER_LIST_NEWS_AT = '2026-08-22T00:40:00.000Z';
 const TESTER_LIST_NEWS_UPDATED_AT = '2026-08-22T00:50:00.000Z';
@@ -43,6 +44,42 @@ const PLAY_CLOSED_TESTING_URL = 'https://play.google.com/apps/testing/org.sacram
 
 /** Canonical Updates feed — current APK plus later posts. */
 export const SEEDED_APP_UPDATES: SeededAppUpdate[] = [
+  {
+    id: '2026-08-25_feed-listings-events-chat',
+    date: '2026-08-25',
+    title: 'Feed, listings, events, and Messages — what is new',
+    body: 'Sort by pickup style, view counts on posts and listings, votes on events, and read receipts in chat.',
+    detail: `WHAT NEIGHBORS SEE
+
+Sort feed
+• Go Get, Drop off, Meet up, and Pick Up options in the Sort feed menu
+
+Listings
+• View counts on cards and when you open a listing (one count per neighbor)
+• +N photo badges on thumbnails replaced with view counts
+• Grid cards: distance and neighborhood in the card body instead of on the photo
+• List and grid cards show views, upvotes, downvotes, and comments — only when above zero
+
+Feed posts
+• View counts when you open a neighbor post
+
+Messages
+• Read receipts — see when someone read your message (toggle in Messages ⋯ menu)
+• Group chats show how many neighbors read a message
+
+Events
+• View counts when you open an event
+• Upvote and downvote events like listings
+• Card stats for views, votes, and comments
+• Repeating-event badge and distance on the card body, not over the photo
+
+— Mark`,
+    directorName: DIRECTOR_NAME,
+    directorTitle: DIRECTOR_TITLE,
+    postedByUserId: CHANGELOG_AUTHOR_UID,
+    createdAt: ENGAGEMENT_UPDATE_AT,
+    updatedAt: ENGAGEMENT_UPDATE_AT,
+  },
   {
     id: '2026-08-25_apk-0055',
     date: '2026-08-25',
