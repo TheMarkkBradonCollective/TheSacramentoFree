@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Loader2, Send, X } from 'lucide-react';
 import type { Message, UserProfile } from '../../types';
 import { createSupabaseMessage, getSupabaseMessages } from '../../supabase';
+import { takeSafetyCooldownBlockMessage } from '../../lib/safetyCooldowns';
 import { subscribePostgresChanges } from '../../lib/supabaseRealtime';
 import { isPlayStoreDemo } from '../../preview/playStoreDemo';
 
@@ -21,6 +22,7 @@ export default function GoGetTripChatSheet({
   const [messages, setMessages] = useState<Message[]>([]);
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
+  const [sendError, setSendError] = useState('');
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -57,10 +59,14 @@ export default function GoGetTripChatSheet({
     const trimmed = text.trim();
     if (!trimmed || busy) return;
     setBusy(true);
+    setSendError('');
     const id = `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
     const ok = await createSupabaseMessage(chatId, trimmed, userProfile.uid, id);
     setBusy(false);
-    if (!ok) return;
+    if (!ok) {
+      setSendError(takeSafetyCooldownBlockMessage() || 'Could not send. Try again.');
+      return;
+    }
     setText('');
     setMessages((prev) => [
       ...prev,
@@ -105,6 +111,7 @@ export default function GoGetTripChatSheet({
           )}
           <div ref={bottomRef} />
         </div>
+        {sendError ? <p className="px-4 pb-1 text-xs font-semibold text-red-400">{sendError}</p> : null}
         <form
           className="flex items-center gap-2 px-4 pb-3"
           onSubmit={(event) => {

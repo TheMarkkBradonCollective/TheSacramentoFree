@@ -1,4 +1,5 @@
-import { supabase, handleSupabaseError, setSupabaseConfigurationState } from '../supabase';
+import { supabase, handleSupabaseError, setSupabaseConfigurationState, isSafetyCooldownBlocked } from '../supabase';
+import { SAFETY_LIMITS, takeSafetyCooldownBlockMessage } from './safetyCooldowns';
 import type { FeedPost, FeedPostComment, FeedPostCommentNode, FeedPostReaction, FeedPollOption, FeedPollVote, FeedPollState, UserProfile } from '../types';
 import { resolveProfileIdentity } from '../lib/profilePersistence';
 import { compressImageIfNeeded, guessImageContentType } from './imageUrl';
@@ -178,6 +179,13 @@ export async function createFeedPost(
     return { ok: false, errorMessage: 'Add words, a photo, or both.' };
   }
 
+  if (await isSafetyCooldownBlocked(profile.uid, 'feed_post')) {
+    return {
+      ok: false,
+      errorMessage: takeSafetyCooldownBlockMessage() || SAFETY_LIMITS.feed_post.message,
+    };
+  }
+
   const postId = `feed_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
   const imageUrls: string[] = [];
   const failedUploads: number[] = [];
@@ -252,6 +260,13 @@ export async function createFeedPollPost(
   if (!text) return { ok: false, errorMessage: 'Add a question for your poll.' };
   if (labels.length < 2) return { ok: false, errorMessage: 'Add at least two poll choices.' };
   if (labels.length > 6) return { ok: false, errorMessage: 'Polls can have at most six choices.' };
+
+  if (await isSafetyCooldownBlocked(profile.uid, 'feed_post')) {
+    return {
+      ok: false,
+      errorMessage: takeSafetyCooldownBlockMessage() || SAFETY_LIMITS.feed_post.message,
+    };
+  }
 
   const pollOptions: FeedPollOption[] = labels.map((label, index) => ({
     id: `opt_${index + 1}`,
@@ -494,6 +509,13 @@ export async function createFeedPostComment(
 ): Promise<{ ok: boolean; comment?: FeedPostComment; errorMessage?: string }> {
   const trimmed = text.trim();
   if (!trimmed) return { ok: false, errorMessage: 'Comment cannot be empty.' };
+
+  if (await isSafetyCooldownBlocked(profile.uid, 'comment')) {
+    return {
+      ok: false,
+      errorMessage: takeSafetyCooldownBlockMessage() || SAFETY_LIMITS.comment.message,
+    };
+  }
 
   const identity = resolveProfileIdentity(profile);
 

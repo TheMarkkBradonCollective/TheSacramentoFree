@@ -11,6 +11,7 @@ import { subscribePostgresChanges } from '../lib/supabaseRealtime';
 import { commentPostedAsNeighbor } from '../lib/staffInteractionMode';
 import { resolveProfileIdentity } from '../lib/profilePersistence';
 import { VOTE_COOLDOWN_MESSAGE } from '../lib/voteCooldown';
+import { takeSafetyCooldownBlockMessage } from '../lib/safetyCooldowns';
 import { useConfirm } from '../contexts/ConfirmContext';
 import { isStaffRole } from '../lib/roles';
 import { isPlayStoreDemo, PLAY_STORE_DEMO_ITEM_COMMENTS, PLAY_STORE_DEMO_ITEM_VOTES } from '../preview/playStoreDemo';
@@ -239,7 +240,10 @@ export function useItemsEngagement(
     void createSupabaseItemComment(newComment).then((ok) => {
       if (ok) return;
       setItemComments((prev) => ({ ...prev, [itemId]: current }));
-      void alert({ title: 'Could not comment', message: 'Your comment was not saved. Please try again.' });
+      void alert({
+        title: 'Could not comment',
+        message: takeSafetyCooldownBlockMessage() || 'Your comment was not saved. Please try again.',
+      });
     }).catch((err) => {
       console.warn('Failed to persist comment:', err);
       setItemComments((prev) => ({ ...prev, [itemId]: current }));
