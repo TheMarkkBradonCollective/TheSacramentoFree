@@ -12,6 +12,7 @@ import { getPickupAvailability } from '../lib/pickupAvailability';
 import {
   mergeGoGetPrefsIntoProfile,
   persistUserGoGetSettings,
+  subscribeStoredGoGetPrefs,
 } from '../lib/goGetPrefs';
 import PickupAvailabilityEditor from './goget/PickupAvailabilityEditor';
 import { useConfirm } from '../contexts/ConfirmContext';
@@ -26,7 +27,7 @@ function resolveGoGetProfile(userProfile: UserProfile): UserProfile {
 }
 
 export default function GoGetSettings({ userProfile, onUpdateProfile }: GoGetSettingsProps) {
-  const { alert } = useConfirm();
+  const { confirm } = useConfirm();
   const profileWithPrefs = resolveGoGetProfile(userProfile);
   const [enabled, setEnabled] = useState(profileWithPrefs.goGetEnabled === true);
   const [availability, setAvailability] = useState<PickupAvailabilitySchedule>(() =>
@@ -50,6 +51,18 @@ export default function GoGetSettings({ userProfile, onUpdateProfile }: GoGetSet
     setRingPattern(normalizeGoGetRingPattern(merged.goGetRingPattern));
   }, [userProfile.uid]);
 
+  useEffect(
+    () =>
+      subscribeStoredGoGetPrefs(userProfile.uid, (stored) => {
+        if (!stored) return;
+        setEnabled(stored.goGetEnabled);
+        setAvailability(stored.pickupAvailability);
+        setRingDuration(stored.goGetRingDurationSeconds);
+        setRingPattern(stored.goGetRingPattern);
+      }),
+    [userProfile.uid],
+  );
+
   const persist = async (patch: Partial<UserProfile>, successMsg?: string) => {
     setSaving(true);
     setMsg('');
@@ -67,13 +80,17 @@ export default function GoGetSettings({ userProfile, onUpdateProfile }: GoGetSet
 
   const handleToggle = async (next: boolean) => {
     if (next) {
-      await alert({
+      const confirmed = await confirm({
         title: 'Turn on app pickup coordination?',
         message:
           'Neighbors can start Go Get with you when you both use the installed app and notifications. Incoming requests ring your phone (like a delivery alert) for the duration you choose below. You can set pickup hours and ring style anytime.',
-        okLabel: 'Turn on',
+        confirmLabel: 'Turn on',
+        cancelLabel: 'Not now',
       });
+      if (!confirmed) return;
     }
+    const previousEnabled = enabled;
+    setEnabled(next);
     const ok = await persist(
       {
         goGetEnabled: next,
@@ -85,7 +102,7 @@ export default function GoGetSettings({ userProfile, onUpdateProfile }: GoGetSet
         ? 'Pickup coordination is on — set your hours and ring style below.'
         : 'Opted out — you can still list and message neighbors without app pickup support.',
     );
-    if (ok) setEnabled(next);
+    if (!ok) setEnabled(previousEnabled);
   };
 
   const saveAvailability = async () => {

@@ -29,16 +29,27 @@ function shouldPreferStoredNavPrefs(profile: UserProfile): boolean {
   return !jsonEqual(stored.settings, normalizeNavigationSettings(profile.navigationSettings));
 }
 
+function storedGoGetPrefsMatchProfile(
+  stored: NonNullable<ReturnType<typeof readStoredGoGetPrefs>>,
+  profile: UserProfile,
+): boolean {
+  return (
+    stored.goGetEnabled === (profile.goGetEnabled === true) &&
+    jsonEqual(stored.pickupAvailability, profile.pickupAvailability ?? null) &&
+    stored.goGetRingDurationSeconds === profile.goGetRingDurationSeconds &&
+    stored.goGetRingPattern === profile.goGetRingPattern
+  );
+}
+
+/** Keep device Go Get prefs until the cloud row confirms the same values (not a fixed timeout). */
 function shouldPreferStoredGoGetPrefs(profile: UserProfile): boolean {
   const stored = readStoredGoGetPrefs(profile.uid);
   if (!stored) return false;
-  if (Date.now() - stored.savedAt > PENDING_LOCAL_PREFS_MS) return false;
-  return (
-    stored.goGetEnabled !== (profile.goGetEnabled === true) ||
-    !jsonEqual(stored.pickupAvailability, profile.pickupAvailability ?? null) ||
-    stored.goGetRingDurationSeconds !== profile.goGetRingDurationSeconds ||
-    stored.goGetRingPattern !== profile.goGetRingPattern
-  );
+  if (storedGoGetPrefsMatchProfile(stored, profile)) return false;
+  // Recent explicit saves still win over heartbeat rows that have not caught up yet.
+  if (Date.now() - stored.savedAt <= PENDING_LOCAL_PREFS_MS) return true;
+  // After the grace window, only keep local prefs when the server still disagrees.
+  return !storedGoGetPrefsMatchProfile(stored, profile);
 }
 
 /** Prefer device-local prefs when the DB row is empty or a heartbeat arrives before cloud sync finishes. */

@@ -466,7 +466,11 @@ export default function App() {
 
   const handleUpdateProfile = useCallback(
     (updated: UserProfile) => {
-      setUserProfile((prev) => mergeProfileFromDbRead(prev, updated));
+      setUserProfile((prev) => {
+        const merged = mergeProfileFromDbRead(prev, updated);
+        writeCachedProfile(merged);
+        return merged;
+      });
       if (!isStaffActingOfficial(updated) && isStaffTab(activeTab)) {
         handleTabChange('profile');
       }

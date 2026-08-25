@@ -2,6 +2,7 @@ import type { GoGetRingPattern, PickupAvailabilitySchedule, UserProfile } from '
 import { upsertSupabaseProfile } from '../supabase';
 import { normalizeGoGetRingDuration, normalizeGoGetRingPattern } from './goGetRing';
 import { normalizePickupAvailability } from './pickupAvailability';
+import { writeCachedProfile } from './sessionCache';
 
 const STORAGE_KEY = 'sbn_goget_prefs_v1';
 const GOGET_PREFS_EVENT = 'sbn-goget-prefs-changed';
@@ -143,9 +144,18 @@ export async function persistUserGoGetSettings(
   profile: UserProfile,
   patch: GoGetSettingsPatch,
 ): Promise<{ ok: boolean; profile?: UserProfile; errorMessage?: string }> {
+  const previousStored = readStoredGoGetPrefs(profile.uid);
   const updated = mergeGoGetPrefsIntoProfile({ ...profile, ...patch });
   writeStoredGoGetPrefs(profileToStoredGoGetPrefs(updated));
   const result = await upsertSupabaseProfile(updated, { scope: 'preferences' });
-  if (!result.ok) return result;
+  if (!result.ok) {
+    if (previousStored) {
+      writeStoredGoGetPrefs(previousStored);
+    } else {
+      writeStoredGoGetPrefs(profileToStoredGoGetPrefs(mergeGoGetPrefsIntoProfile(profile)));
+    }
+    return result;
+  }
+  writeCachedProfile(updated);
   return { ok: true, profile: updated };
 }
