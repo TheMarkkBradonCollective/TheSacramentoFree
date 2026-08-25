@@ -341,7 +341,7 @@ html.sbn-session-restore #root:empty {
   inset: 0;
   z-index: 20;
   display: grid;
-  grid-template-rows: minmax(0, auto) minmax(5.5rem, 1fr) minmax(0, auto);
+  grid-template-rows: minmax(0, auto) minmax(4rem, 1fr) minmax(0, auto);
   min-height: 0;
   overflow: hidden;
   pointer-events: none;
@@ -887,21 +887,30 @@ html.sbn-session-restore #root:empty {
   50% { height: 1rem; opacity: 1; }
 }
 
+#map_navigation_view .sbn-nav-sheet-dock {
+  width: 100%;
+  min-width: 0;
+  align-self: end;
+}
+
 #map_navigation_view .sbn-nav-sheet {
   background: var(--sbn-nav-chrome);
   color: var(--sbn-nav-text);
   border-top-left-radius: 1.35rem;
   border-top-right-radius: 1.35rem;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
   box-shadow: 0 -8px 28px rgba(0, 0, 0, 0.2);
   border-top: 1px solid var(--sbn-nav-glass-border);
-  max-height: 34dvh;
+  max-height: 22dvh;
   min-width: 0;
   overflow: hidden;
   pointer-events: auto;
+  padding-bottom: var(--sbn-safe-area-bottom, var(--sbn-inset-bottom, env(safe-area-inset-bottom, 0px)));
 }
 
 #map_navigation_view .sbn-nav-sheet.is-expanded {
-  max-height: min(70dvh, calc(100% - 6rem));
+  max-height: min(56dvh, calc(100% - 5.5rem));
 }
 
 #map_navigation_view .sbn-nav-sheet-body {
@@ -2777,16 +2786,20 @@ html.sbn-keyboard-open .sbn-mobile-nav {
 }
 
 .sbn-map-selection-dock {
-  bottom: calc(0.5rem + var(--sbn-safe-area-bottom, 0px));
-  left: 1rem;
-  right: 1rem;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding-bottom: 0;
 }
 
 .sbn-map-selection-card {
-  max-height: min(52dvh, 30rem);
+  max-height: min(38dvh, 22rem);
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  padding-bottom: calc(0.9rem + var(--sbn-safe-area-bottom, 0px));
 }
 
 .sbn-map-selection-card__actions {

@@ -24,6 +24,21 @@ export const ROUTE_LINE_MAIN = {
   opacity: 1,
 };
 
+/** Turn-by-turn remaining path — brand green so GPS mode reads like a navigation app. */
+export const NAV_ROUTE_LINE_CASING = {
+  ...SHARED,
+  color: '#FFFFFF',
+  weight: 14,
+  opacity: 1,
+};
+
+export const NAV_ROUTE_LINE_MAIN = {
+  ...SHARED,
+  color: '#00845A',
+  weight: 8,
+  opacity: 1,
+};
+
 export const ROUTE_LINE_TRAVELED_CASING = {
   ...SHARED,
   color: '#FFFFFF',
