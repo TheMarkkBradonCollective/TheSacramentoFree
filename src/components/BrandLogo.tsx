@@ -94,7 +94,7 @@ function NewspaperBrandMark({
 
 export default function BrandLogo({
   className = 'flex items-center gap-2.5 min-w-0',
-  imgClassName = 'h-9 w-auto max-w-[140px] object-contain rounded-lg shrink-0',
+  imgClassName = 'h-9 w-9 object-contain rounded-xl shrink-0',
   showTitle = false,
   subtitle,
   compact = false,
