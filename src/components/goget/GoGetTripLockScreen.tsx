@@ -13,6 +13,9 @@ import type { GoGetFulfillerLiveLocation, GoGetLiveLocation, GoGetSession, ItemP
 import type { LatLng } from '../../lib/mapRoute';
 import { formatRouteDistance, formatRouteDuration } from '../../lib/mapRoute';
 import { getLastLiveLatLng, retainLiveGeolocation, subscribeLiveGeolocation } from '../../lib/liveGeolocation';
+import { createNavHeadingTracker, headingFromGeolocation } from '../../lib/navHeading';
+import { readNavigationSettings } from '../../lib/navigationSettings';
+import { usePhoneCompassHeading, usePhoneCompassSetting } from '../../hooks/usePhoneCompassHeading';
 import { unlockNavigationSpeech } from '../../lib/navigationVoice';
 import {
   buildGoGetNavigationFollowUpMessages,
@@ -82,6 +85,16 @@ export default function GoGetTripLockScreen({
   const [posterLocation, setPosterLocation] = useState<GoGetFulfillerLiveLocation | null>(null);
   const arrivalHandledRef = useRef(false);
   const autoShareAttemptedRef = useRef(false);
+  const fulfillerHeadingTrackerRef = useRef(createNavHeadingTracker());
+  const usePhoneCompass = usePhoneCompassSetting();
+
+  usePhoneCompassHeading(
+    isFulfiller && session.fulfillerSharingLocation === true,
+    usePhoneCompass,
+    (degrees) => {
+      fulfillerHeadingTrackerRef.current.setCompassHeading(degrees);
+    },
+  );
 
   const isFulfiller = session.fulfillerUserId === userProfile.uid;
   const isRequester = session.requesterUserId === userProfile.uid;
@@ -188,14 +201,19 @@ export default function GoGetTripLockScreen({
     if (!isFulfiller || !session.fulfillerSharingLocation) return;
     if (!['scheduled', 'active', 'arrived'].includes(session.status)) return;
     const unsub = subscribeLiveGeolocation((position) => {
+      const settings = readNavigationSettings();
+      const heading = headingFromGeolocation(fulfillerHeadingTrackerRef.current, position, {
+        travelMode: settings.travelMode,
+        usePhoneCompass: settings.usePhoneCompass,
+      });
       void upsertFulfillerLiveLocation(session.id, {
         lat: position.coords.latitude,
         lng: position.coords.longitude,
-        heading: Number.isFinite(position.coords.heading) ? position.coords.heading : null,
+        heading,
       });
     });
     return unsub;
-  }, [isFulfiller, session.fulfillerSharingLocation, session.id, session.status]);
+  }, [isFulfiller, session.fulfillerSharingLocation, session.id, session.status, usePhoneCompass]);
 
   const handleProgressUpdate = useCallback(
     (update: NavProgressUpdate) => {

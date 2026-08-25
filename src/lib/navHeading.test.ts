@@ -34,7 +34,12 @@ test('on-route heading holds through GPS wiggles', () => {
     lastPosition: { lat: 38.58007, lng: -121.49 },
     currentPosition: here,
     routeCoords: route,
+    gpsHeading: 70,
+    compassHeading: 95,
+    speedMps: 8,
+    travelMode: 'driving',
     offRouteMeters: 4,
+    usePhoneCompass: false,
   });
   assert.ok(
     Math.abs(headingDeltaDegrees(2, locked)) < NAV_HEADING_HOLD_DEG,
@@ -50,20 +55,40 @@ test('a real left turn on the route updates heading quickly', () => {
     lastPosition: { lat: 38.58, lng: -121.4897 },
     currentPosition: atTurn,
     routeCoords: route,
+    gpsHeading: 88,
+    speedMps: 9,
+    travelMode: 'driving',
     offRouteMeters: 3,
+    usePhoneCompass: false,
   });
   assert.ok(Math.abs(headingDeltaDegrees(0, next)) < 40, `expected north after the turn, got ${next}`);
 });
 
-test('stationary off-route heading ignores phone rotation and holds previous', () => {
+test('stationary off-route heading ignores phone rotation unless compass setting is on', () => {
   const held = resolveNavHeading({
     previous: 45,
     lastPosition: { lat: 38.58, lng: -121.49 },
     currentPosition: { lat: 38.58, lng: -121.49 },
     routeCoords: null,
+    compassHeading: 200,
+    speedMps: 0,
+    usePhoneCompass: false,
     offRouteMeters: 80,
   });
   assert.equal(held, 45);
+
+  const withCompass = resolveNavHeading({
+    previous: 45,
+    lastPosition: { lat: 38.58, lng: -121.49 },
+    currentPosition: { lat: 38.58, lng: -121.49 },
+    routeCoords: null,
+    compassHeading: 200,
+    speedMps: 0,
+    usePhoneCompass: true,
+    offRouteMeters: 80,
+  });
+  assert.notEqual(withCompass, 45);
+  assert.ok(Math.abs(headingDeltaDegrees(200, withCompass)) < 170);
 });
 
 test('movement bearing drives heading when traveling off-route', () => {
@@ -72,7 +97,24 @@ test('movement bearing drives heading when traveling off-route', () => {
     lastPosition: { lat: 38.58, lng: -121.49 },
     currentPosition: { lat: 38.58006, lng: -121.49 },
     routeCoords: null,
+    speedMps: 6,
+    travelMode: 'driving',
+    usePhoneCompass: false,
     offRouteMeters: 80,
   });
   assert.ok(Math.abs(headingDeltaDegrees(0, next)) < 20, `expected northbound movement, got ${next}`);
+});
+
+test('slow walking updates heading with a short GPS step', () => {
+  const next = resolveNavHeading({
+    previous: 10,
+    lastPosition: { lat: 38.58, lng: -121.49 },
+    currentPosition: { lat: 38.58003, lng: -121.49 },
+    routeCoords: null,
+    speedMps: 1.1,
+    travelMode: 'walking',
+    usePhoneCompass: false,
+    offRouteMeters: 80,
+  });
+  assert.ok(Math.abs(headingDeltaDegrees(0, next)) < 25, `expected northbound walk, got ${next}`);
 });

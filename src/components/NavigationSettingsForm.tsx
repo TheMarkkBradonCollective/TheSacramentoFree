@@ -166,9 +166,18 @@ export default function NavigationSettingsForm({
         <ToggleRow
           id={variant === 'nav' ? 'nav_setting_heading' : 'profile_nav_heading'}
           title="Follow phone heading"
-          description="On: the map turns with your phone. Off: north stays up."
+          description="On: the map turns with your direction arrow. Off: north stays up."
           checked={settings.headingUp}
           onChange={(headingUp) => onChange({ headingUp })}
+          icon={Compass}
+          variant={variant}
+        />
+        <ToggleRow
+          id={variant === 'nav' ? 'nav_setting_phone_compass' : 'profile_nav_phone_compass'}
+          title="Use phone compass for direction"
+          description="Off by default — the arrow follows GPS movement. Turn on to point where your phone is facing (helpful when standing still)."
+          checked={settings.usePhoneCompass}
+          onChange={(usePhoneCompass) => onChange({ usePhoneCompass })}
           icon={Compass}
           variant={variant}
         />

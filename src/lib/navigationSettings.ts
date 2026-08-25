@@ -18,6 +18,8 @@ export interface NavigationSettings {
   travelMode: NavTravelMode;
   voiceEnabled: boolean;
   headingUp: boolean;
+  /** When true, direction arrow follows the phone compass instead of GPS movement only. */
+  usePhoneCompass: boolean;
   followAppTheme: boolean;
   showLaneGuidance: boolean;
   speakOnRecenter: boolean;
@@ -27,6 +29,7 @@ export const DEFAULT_NAV_SETTINGS: NavigationSettings = {
   travelMode: 'driving',
   voiceEnabled: true,
   headingUp: true,
+  usePhoneCompass: false,
   followAppTheme: true,
   showLaneGuidance: true,
   speakOnRecenter: true,
@@ -45,6 +48,8 @@ export function normalizeNavigationSettings(raw: unknown): NavigationSettings {
     travelMode: isTravelMode(source.travelMode) ? source.travelMode : DEFAULT_NAV_SETTINGS.travelMode,
     voiceEnabled: typeof source.voiceEnabled === 'boolean' ? source.voiceEnabled : DEFAULT_NAV_SETTINGS.voiceEnabled,
     headingUp: typeof source.headingUp === 'boolean' ? source.headingUp : DEFAULT_NAV_SETTINGS.headingUp,
+    usePhoneCompass:
+      typeof source.usePhoneCompass === 'boolean' ? source.usePhoneCompass : DEFAULT_NAV_SETTINGS.usePhoneCompass,
     followAppTheme:
       typeof source.followAppTheme === 'boolean' ? source.followAppTheme : DEFAULT_NAV_SETTINGS.followAppTheme,
     showLaneGuidance:
