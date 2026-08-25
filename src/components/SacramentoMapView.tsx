@@ -136,7 +136,7 @@ export const getCategoryColor = (category: string): string => {
   const colors: Record<string, string> = {
     'Curb Alert': '#EF4444', 
     'Porch Pickup': '#F97316', 
-    'Free Pile / Box': '#F59E0B', 
+    'Free Pile / Box': '#00845A', 
     'Furniture': '#3B82F6', 
     'Kitchen & Dining': '#10B981', 
     'Appliances': '#14B8A6', 
@@ -151,7 +151,7 @@ export const getCategoryColor = (category: string): string => {
     'Food & Pantry': '#F43F5E', 
     'Health & Beauty': '#F472B6', 
     'Pet Supplies': '#78350F', 
-    'Borrow Request': '#EAB308', 
+    'Borrow Request': '#00A36C', 
     'Household Needed': '#3B82F6', 
     'Furniture Wanted': '#6366F1', 
     'Appliances Needed': '#14B8A6', 
@@ -165,7 +165,7 @@ export const getCategoryColor = (category: string): string => {
     'Other Seeking Support': '#6B7280', 
     'Other / Custom': '#6B7280'
   };
-  return colors[category] || '#FF6A39'; 
+  return colors[category] || '#00845A'; 
 };
 
 /** Pin ring color by listing type: giving = black, looking = white, trade = grey. */

@@ -173,7 +173,7 @@ export default function PushNotificationCelebration({
               exit={{ opacity: 0, y: 20, scale: 0.96 }}
               transition={{ type: 'spring', stiffness: 380, damping: 28 }}
             >
-              <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-accent via-[#FFB347] to-accent" />
+              <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-accent via-[#5DBF95] to-accent" />
 
               <button
                 type="button"
