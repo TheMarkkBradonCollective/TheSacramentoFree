@@ -2438,7 +2438,6 @@ button {
 
 .sbn-hero-wordmark {
   min-width: 0;
-  overflow-wrap: anywhere;
 }
 
 .sbn-hero-wordmark__the {
@@ -2447,9 +2446,39 @@ button {
 }
 
 .sbn-hero-wordmark__name {
-  font-size: clamp(1.875rem, 10vw, 3.75rem);
+  display: block;
+  font-size: clamp(1.75rem, 9vw, 3.75rem);
   line-height: 1.05;
   letter-spacing: -0.02em;
+}
+
+.sbn-hero-wordmark__city,
+.sbn-hero-wordmark__free {
+  display: block;
+  white-space: nowrap;
+}
+
+/* Wide enough: SacramentoFree on one line (browser / tablet). */
+@media (min-width: 30rem) {
+  .sbn-hero-wordmark__city,
+  .sbn-hero-wordmark__free {
+    display: inline;
+  }
+}
+
+/* Native app WebView: stack lines and scale down so nothing clips. */
+html.capacitor-native .home-scroll-stage {
+  padding-left: max(0.75rem, var(--sbn-inset-left, 0px));
+  padding-right: max(0.75rem, var(--sbn-inset-right, 0px));
+}
+
+html.capacitor-native .sbn-hero-wordmark__name {
+  font-size: clamp(1.5rem, 7.5vw, 2.5rem);
+}
+
+html.capacitor-native .sbn-hero-wordmark__city,
+html.capacitor-native .sbn-hero-wordmark__free {
+  display: block;
 }
 
 /* Public home — normal document layout (no 3D scroll / pointer tilt) */
