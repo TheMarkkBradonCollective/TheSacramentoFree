@@ -57,11 +57,6 @@ function requireCmd(cmd) {
 requireCmd('ffmpeg');
 requireCmd('ffprobe');
 
-execFileSync(process.execPath, [join(root, 'scripts', 'composite-app-icon.mjs')], {
-  cwd: root,
-  stdio: 'inherit',
-});
-
 if (!existsSync(appIconSrc)) {
   throw new Error(`Missing app icon at ${appIconSrc}`);
 }
@@ -71,9 +66,10 @@ if (!existsSync(notificationIconSrc)) {
 
 mkdirSync(assetsDir, { recursive: true });
 
-const { width, height } = readImageSize(maskableIconSrc);
-writeCompositeLauncher(maskableIconSrc, compositeDest, Math.max(width, height));
-console.log(`Legacy launcher composite ${width}x${height} from app-icon-maskable.png → ${compositeDest}`);
+const launcherSrc = existsSync(maskableIconSrc) ? maskableIconSrc : appIconSrc;
+const { width, height } = readImageSize(launcherSrc);
+writeCompositeLauncher(launcherSrc, compositeDest, Math.max(width, height));
+console.log(`Legacy launcher composite ${width}x${height} from ${launcherSrc} → ${compositeDest}`);
 
 if (prepareOnly) {
   process.exit(0);
@@ -83,7 +79,7 @@ if (!iconsOnly) {
   generateSplashScreens(launcherBg);
 }
 
-writeLauncherIcons(appIconSrc, compositeDest, launcherBg);
+writeLauncherIcons(compositeDest, compositeDest, launcherBg);
 writeAdaptiveIconXml();
 writeFileSync(
   join(resDir, 'values', 'ic_launcher_background.xml'),
@@ -194,8 +190,6 @@ function writeCompositeLauncher(srcPng, destPng, size) {
 }
 
 function scaleAdaptiveForeground(srcPng, destPng, canvasSize) {
-  const iconSize = Math.round(canvasSize * 0.66);
-  const pad = Math.round((canvasSize - iconSize) / 2);
   execFileSync('ffmpeg', [
     '-y',
     '-loglevel',
@@ -205,7 +199,7 @@ function scaleAdaptiveForeground(srcPng, destPng, canvasSize) {
     '-frames:v',
     '1',
     '-vf',
-    `scale=${iconSize}:${iconSize}:flags=lanczos,format=rgba,pad=${canvasSize}:${canvasSize}:${pad}:${pad}:color=black@0.0`,
+    `scale=${canvasSize}:${canvasSize}:flags=lanczos,format=rgba`,
     destPng,
   ]);
 }
@@ -303,33 +297,17 @@ function hexToRgb(hex) {
 
 function assertLauncherForeground(pngPath) {
   const { width, height, pixels } = readRgbaFrame(pngPath);
-  const corners = [
-    [0, 0],
-    [width - 1, 0],
-    [0, height - 1],
-    [width - 1, height - 1],
-  ];
-  let transparentCorners = 0;
-  for (const [x, y] of corners) {
-    const i = (y * width + x) * 4;
-    if (pixels[i + 3] < 24) transparentCorners += 1;
-  }
-  if (transparentCorners < 2) {
-    throw new Error(`Expected transparent corners on adaptive foreground ${pngPath}`);
-  }
-
   let greenish = 0;
-  for (let y = Math.round(height * 0.35); y < Math.round(height * 0.65); y++) {
-    for (let x = Math.round(width * 0.35); x < Math.round(width * 0.65); x++) {
+  for (let y = Math.round(height * 0.08); y < Math.round(height * 0.25); y++) {
+    for (let x = Math.round(width * 0.08); x < Math.round(width * 0.25); x++) {
       const i = (y * width + x) * 4;
-      if (pixels[i + 3] < 24) continue;
       const r = pixels[i];
       const g = pixels[i + 1];
       const b = pixels[i + 2];
-      if (g > 70 && g > r + 20 && b > 30) greenish += 1;
+      if (pixels[i + 3] > 24 && g > 70 && g > r + 20 && b > 30) greenish += 1;
     }
   }
-  if (greenish < 80) {
+  if (greenish < 40) {
     throw new Error(`Expected Sacramento green artwork in ${pngPath}, found ${greenish} greenish pixels.`);
   }
 }
