@@ -49,8 +49,12 @@ const EXPLORE_LINKS: { route: PublicRoute; title: string; blurb: string; icon: t
 
 export default function HomePage(props: HomePageProps) {
   const { newspaper } = useBrand();
-  if (newspaper) return <NewspaperFrontPage {...props} />;
-  return <OriginalHomePage {...props} />;
+  return (
+    <>
+      <TrademarkNoticeBanner />
+      {newspaper ? <NewspaperFrontPage {...props} /> : <OriginalHomePage {...props} />}
+    </>
+  );
 }
 
 function listingCover(item: ItemPost): string | undefined {
@@ -125,8 +129,6 @@ function NewspaperFrontPage({
 
   return (
     <div className="tsf-edition">
-      <TrademarkNoticeBanner />
-
       <p className="tsf-folio">{NEWSPAPER.standfirst}</p>
 
       <section className="tsf-broadsheet" aria-label="Front page">
@@ -321,8 +323,6 @@ function OriginalHomePage({
 
   return (
     <HomeScrollStage>
-      <TrademarkNoticeBanner />
-
       <section className="sbn-hero-glow pb-4">
         <div className="lg:grid lg:grid-cols-[1.05fr_0.95fr] lg:gap-14 lg:items-center max-w-3xl lg:max-w-none mx-auto">
           <div className="min-w-0">
