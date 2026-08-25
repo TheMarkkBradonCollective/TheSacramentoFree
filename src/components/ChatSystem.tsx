@@ -1991,8 +1991,7 @@ export default function ChatSystem({
                   )}
                   {staffActingOfficial && (linkedItem || linkedEvent) && !isCommunity && (
                     <p className="text-[11px] text-accent/90 bg-accent/10 border border-accent/20 rounded-lg px-3 py-2 text-center leading-snug">
-                      Staff oversight — neighbor coordination chat. Use Staff chat on the listing or event for
-                      official outreach; reply here only when needed for safety or moderation.
+                      Staff oversight — neighbor chat.
                     </p>
                   )}
                   {isChatDisabled && (

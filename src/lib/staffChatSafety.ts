@@ -41,10 +41,9 @@ export async function confirmStaffCoordinationChatView(
 ): Promise<boolean> {
   const subject = contextTitle?.trim() ? `"${contextTitle}"` : 'this conversation';
   return confirm({
-    title: 'View neighbor coordination chat?',
+    title: 'View neighbor chat?',
     message:
-      `You are opening a private neighbor coordination chat about ${subject}. ` +
-      'Only participate when needed for safety or moderation. For official staff outreach, use Staff chat on the listing or event.',
+      `Private neighbor chat about ${subject}. Reply only when needed.`,
     confirmLabel: 'View chat',
     cancelLabel: 'Cancel',
   });
