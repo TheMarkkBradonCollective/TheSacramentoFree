@@ -1,5 +1,5 @@
 import { ArrowLeft, Bookmark, Calendar, ExternalLink, LifeBuoy, MapPin, MessageSquare, Pencil, Tag, Trash2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ItemPost, extractGPSCoordinates, ItemComment, ListingSubItem, UserProfile } from '../types';
 import {
@@ -25,6 +25,7 @@ import {
 } from '../lib/listingContent';
 import ListingPhotoGallery from './ListingPhotoGallery';
 import ListingEngagement from './ListingEngagement';
+import DetailActionFooter, { type DetailFooterButton } from './DetailActionFooter';
 import { PresenceUserAvatar } from './UserAvatar';
 import ItemDetailNavigation from './ItemDetailNavigation';
 import { PostVoteState } from '../hooks/useItemsEngagement';
@@ -99,14 +100,10 @@ export default function ItemDetailView({
 }: ItemDetailViewProps) {
   const [subitems, setSubitems] = useState<ListingSubItem[]>([]);
   const [hasAppClaim, setHasAppClaim] = useState(false);
+  const [navFooterActions, setNavFooterActions] = useState<DetailFooterButton[]>([]);
   const isOwner = item.userId === currentUserId;
   const isStaffViewer = isStaffActingOfficial(userProfile);
   const isOpenForCoordination = isListingOpenForCoordination(item.status);
-  const showNeighborNavigate =
-    supportsInAppNavigation() &&
-    !isOwner &&
-    item.status === 'active' &&
-    isOpenForCoordination;
 
   const { isSaved, toggleSaved } = useSavedItems(currentUserId);
   const tradeSeeking = item.type === 'trade' ? parseTradeSeeking(item.description) : null;
@@ -171,6 +168,170 @@ export default function ItemDetailView({
       ).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
     : 'Recently posted';
 
+  const ownerFooterActions = useMemo((): DetailFooterButton[] => {
+    if (!isOwner) return [];
+
+    if (item.status === 'active') {
+      return [
+        { id: 'edit', label: 'Edit', onClick: onEdit, disabled: updating, icon: <Pencil className="w-4 h-4" /> },
+        {
+          id: 'withdraw',
+          label: 'Withdraw',
+          onClick: () => onUpdateStatus('withdrawn'),
+          disabled: updating,
+          variant: 'ghost',
+        },
+        {
+          id: 'complete',
+          label: getOwnerCompletedActionLabel(item.type),
+          onClick: () => onUpdateStatus('completed'),
+          disabled: updating,
+          variant: 'secondary',
+          className: 'col-span-2',
+        },
+      ];
+    }
+    if (item.status === 'pending_pickup') {
+      return [
+        {
+          id: 'picked_up',
+          label: 'Mark picked up',
+          onClick: () => onUpdateStatus('completed'),
+          disabled: updating,
+        },
+        {
+          id: 'back_active',
+          label: 'Back to active',
+          onClick: () => onUpdateStatus('active'),
+          disabled: updating,
+          variant: 'secondary',
+        },
+        {
+          id: 'on_hold',
+          label: 'Put on hold',
+          onClick: () => onUpdateStatus('on_hold'),
+          disabled: updating,
+          variant: 'ghost',
+        },
+      ];
+    }
+    if (item.status === 'on_hold') {
+      return [
+        {
+          id: 'release',
+          label: 'Release hold',
+          onClick: () => onUpdateStatus('active'),
+          disabled: updating,
+        },
+        {
+          id: 'pending',
+          label: 'Pending pickup',
+          onClick: () => onUpdateStatus('pending_pickup'),
+          disabled: updating,
+          variant: 'secondary',
+        },
+      ];
+    }
+    if (item.status === 'completed' && onEditPickupAttribution && !hasAppClaim) {
+      return [
+        {
+          id: 'attribution',
+          label: needsPickupAttribution ? 'Who picked this up?' : 'Update who picked up',
+          onClick: onEditPickupAttribution,
+          variant: 'secondary',
+        },
+      ];
+    }
+    if (item.status === 'withdrawn') {
+      const actions: DetailFooterButton[] = [
+        {
+          id: 'edit_repost',
+          label: 'Edit & repost',
+          onClick: onEdit,
+          disabled: updating,
+          variant: 'secondary',
+          icon: <Pencil className="w-4 h-4" />,
+        },
+        {
+          id: 'repost',
+          label: 'Repost',
+          onClick: () => onUpdateStatus('active'),
+          disabled: updating,
+        },
+      ];
+      if (onDelete) {
+        actions.push({
+          id: 'delete',
+          label: 'Delete',
+          onClick: onDelete,
+          disabled: updating,
+          variant: 'ghost',
+          icon: <Trash2 className="w-4 h-4" />,
+          className: 'text-red-400',
+        });
+      }
+      return actions;
+    }
+    return [];
+  }, [
+    isOwner,
+    item.status,
+    item.type,
+    onEdit,
+    onUpdateStatus,
+    updating,
+    onEditPickupAttribution,
+    hasAppClaim,
+    needsPickupAttribution,
+    onDelete,
+  ]);
+
+  const visitorFooterActions = useMemo((): DetailFooterButton[] => {
+    if (isOwner) return [];
+
+    const actions: DetailFooterButton[] = [...navFooterActions];
+
+    if (isStaffViewer && onStaffChat) {
+      actions.push({
+        id: 'staff_chat',
+        label: 'Staff chat',
+        onClick: onStaffChat,
+        icon: <LifeBuoy className="w-4 h-4" />,
+      });
+      return actions;
+    }
+
+    if (isOpenForCoordination && onMessage) {
+      const hasPrimaryNav = navFooterActions.some((a) => a.variant !== 'secondary' && a.variant !== 'ghost');
+      actions.push({
+        id: 'message',
+        label: getListingContactButtonLabel(item.type),
+        onClick: onMessage,
+        icon: <MessageSquare className="w-4 h-4" />,
+        variant: hasPrimaryNav ? 'secondary' : undefined,
+      });
+    }
+
+    return actions;
+  }, [
+    isOwner,
+    navFooterActions,
+    isStaffViewer,
+    onStaffChat,
+    isOpenForCoordination,
+    onMessage,
+    item.type,
+  ]);
+
+  const footerActions = isOwner ? ownerFooterActions : visitorFooterActions;
+  const showClaimInFooter =
+    !isOwner &&
+    item.status === 'active' &&
+    userProfile &&
+    onClaimSubmitted &&
+    !isStaffViewer &&
+    !navFooterActions.some((a) => a.id === 'listing_navigate' || a.id === 'go_get_start');
+
   const panel = (
     <div
       id="item_detail_fullscreen"
@@ -179,8 +340,7 @@ export default function ItemDetailView({
       aria-modal="true"
       aria-label={item.title}
     >
-      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden sbn-safe-bottom">
-        <header className="sbn-glass-nav sbn-safe-top border-b border-app">
+      <header className="shrink-0 sbn-glass-nav sbn-safe-top border-b border-app">
           <div className="px-4 min-h-14 flex items-center gap-3">
             <button
               type="button"
@@ -206,50 +366,53 @@ export default function ItemDetailView({
             </button>
             {isOwner && isOpenForCoordination ? (
               <span className="text-xs font-medium text-muted shrink-0">Your listing</span>
-            ) : !isOwner ? (
-              isStaffViewer && onStaffChat ? (
-                <button type="button" onClick={onStaffChat} className="sbn-btn sbn-btn-primary sbn-btn-sm shrink-0">
-                  <LifeBuoy className="w-4 h-4" />
-                  Staff chat
-                </button>
-              ) : (
-                isOpenForCoordination &&
-                onMessage && (
-                  <button type="button" onClick={onMessage} className="sbn-btn sbn-btn-primary sbn-btn-sm shrink-0">
-                    <MessageSquare className="w-4 h-4" />
-                    {getListingContactButtonLabel(item.type)}
-                  </button>
-                )
-              )
             ) : null}
           </div>
         </header>
 
-        <div className="sbn-page-content pb-6">
-        <ListingPhotoGallery urls={photos} title={item.title} />
+        <div className="shrink-0 border-b border-app">
+          <ListingPhotoGallery urls={photos} title={item.title} compact />
+          <div className="px-4 sm:px-5 pt-3 pb-4 space-y-3">
+            <div className="flex flex-wrap gap-2">
+              <span className={`sbn-badge ${getPostTypeBadgeClass(item.type)}`}>
+                {getPostTypeLabel(item.type)}
+              </span>
+              <span className="sbn-badge">{item.category}</span>
+              {item.status === 'completed' && (
+                <span className="sbn-badge sbn-badge-done">
+                  {getPostTypeCompletedLabel(item.type)}
+                </span>
+              )}
+              {partialClaimed && (
+                <span className="sbn-badge sbn-badge-done">
+                  {subitems.filter((s) => s.status === 'claimed').length}/{subitems.length} claimed
+                </span>
+              )}
+              {item.status === 'withdrawn' && <span className="sbn-badge">Withdrawn</span>}
+              {item.status === 'pending_pickup' && <span className="sbn-badge sbn-badge-done">Pending pickup</span>}
+              {item.status === 'on_hold' && <span className="sbn-badge">On hold</span>}
+            </div>
 
-        <div className="p-5 sm:p-6 space-y-5">
-          <div className="flex flex-wrap gap-2">
-            <span className={`sbn-badge ${getPostTypeBadgeClass(item.type)}`}>
-              {getPostTypeLabel(item.type)}
-            </span>
-            <span className="sbn-badge">{item.category}</span>
-            {item.status === 'completed' && (
-              <span className="sbn-badge sbn-badge-done">
-                {getPostTypeCompletedLabel(item.type)}
-              </span>
+            <h2 className="font-display text-xl sm:text-2xl font-bold text-app leading-tight">{item.title}</h2>
+
+            {userProfile && supportsInAppNavigation() && (
+              <ItemDetailNavigation
+                item={item}
+                currentUserId={currentUserId}
+                userProfile={userProfile}
+                onOpenChat={onOpenChat}
+                autoStartNavigation={startNavigationOnOpen}
+                onAutoStartNavigationConsumed={onStartNavigationConsumed}
+                onPickupCompleted={onPickupCompleted}
+                onFooterActions={setNavFooterActions}
+              />
             )}
-            {partialClaimed && (
-              <span className="sbn-badge sbn-badge-done">
-                {subitems.filter((s) => s.status === 'claimed').length}/{subitems.length} claimed
-              </span>
-            )}
-            {item.status === 'withdrawn' && <span className="sbn-badge">Withdrawn</span>}
-            {item.status === 'pending_pickup' && <span className="sbn-badge sbn-badge-done">Pending pickup</span>}
-            {item.status === 'on_hold' && <span className="sbn-badge">On hold</span>}
           </div>
+        </div>
 
-          <h2 className="font-display text-2xl sm:text-3xl font-bold text-app leading-tight">{item.title}</h2>
+        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden sbn-safe-bottom">
+        <div className="sbn-page-content pb-6">
+        <div className="p-5 sm:p-6 space-y-5">
 
           {tradeSeeking && (
             <section className="sbn-card p-4 space-y-2 border border-purple-500/25 bg-purple-500/5">
@@ -332,23 +495,9 @@ export default function ItemDetailView({
                 poster if you need the exact address.
               </p>
             )}
+          </section>
 
-            {/* Renders itself only when there's a pickup pin OR an already-active Go Get
-                session — the latter matters for Looking/Trade, where the destination is
-                wherever the fulfiller is, not the listing's own (often absent) pin. */}
-            {userProfile && supportsInAppNavigation() && (
-              <ItemDetailNavigation
-                item={item}
-                currentUserId={currentUserId}
-                userProfile={userProfile}
-                onOpenChat={onOpenChat}
-                autoStartNavigation={startNavigationOnOpen}
-                onAutoStartNavigationConsumed={onStartNavigationConsumed}
-                onPickupCompleted={onPickupCompleted}
-              />
-            )}
-
-            {isStaffViewer && !isOwner && userProfile && (
+          {isStaffViewer && !isOwner && userProfile && (
               <section className="sbn-card p-4 space-y-3 border border-role-accent/20">
                 <StaffListingActions
                   item={item}
@@ -358,7 +507,6 @@ export default function ItemDetailView({
                 />
               </section>
             )}
-          </section>
 
           {isOwner && item.status === 'completed' && !hasAppClaim && onEditPickupAttribution && (
             <section className="rounded-2xl border border-app bg-inset p-4 space-y-2">
@@ -416,173 +564,36 @@ export default function ItemDetailView({
           </button>
         </div>
         </div>
-      </div>
+        </div>
 
-      <div className="shrink-0 p-4 sbn-glass-nav border-t border-app safe-area-pb">
-        <div className="max-w-2xl mx-auto flex flex-col gap-2">
-          {isOwner ? (
-            <>
-              {item.status === 'active' ? (
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    disabled={updating}
-                    onClick={onEdit}
-                    className="sbn-btn sbn-btn-primary"
-                  >
-                    <Pencil className="w-4 h-4" />
-                    Edit
-                  </button>
-                  <button
-                    type="button"
-                    disabled={updating}
-                    onClick={() => onUpdateStatus('withdrawn')}
-                    className="sbn-btn sbn-btn-ghost"
-                  >
-                    Withdraw
-                  </button>
-                  <button
-                    type="button"
-                    disabled={updating}
-                    onClick={() => onUpdateStatus('completed')}
-                    className="sbn-btn sbn-btn-secondary col-span-2"
-                  >
-                    {getOwnerCompletedActionLabel(item.type)}
-                  </button>
-                  <p className="col-span-2 text-[11px] text-muted text-center leading-snug">
-                    {item.type === 'trade'
-                      ? 'Confirm the swap in Messages once you and your neighbor have traded.'
-                      : item.type === 'looking'
-                        ? 'Mark fulfilled once a neighbor has helped with your request.'
-                        : 'Confirm neighbor pickups from Messages, or when they self-claim at the pin.'}
-                  </p>
-                </div>
-              ) : item.status === 'pending_pickup' ? (
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    disabled={updating}
-                    onClick={() => onUpdateStatus('completed')}
-                    className="sbn-btn sbn-btn-primary"
-                  >
-                    Mark picked up
-                  </button>
-                  <button
-                    type="button"
-                    disabled={updating}
-                    onClick={() => onUpdateStatus('active')}
-                    className="sbn-btn sbn-btn-secondary"
-                  >
-                    Back to active
-                  </button>
-                  <button
-                    type="button"
-                    disabled={updating}
-                    onClick={() => onUpdateStatus('on_hold')}
-                    className="sbn-btn sbn-btn-ghost col-span-2"
-                  >
-                    Put on hold
-                  </button>
-                </div>
-              ) : item.status === 'on_hold' ? (
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    disabled={updating}
-                    onClick={() => onUpdateStatus('active')}
-                    className="sbn-btn sbn-btn-primary"
-                  >
-                    Release hold
-                  </button>
-                  <button
-                    type="button"
-                    disabled={updating}
-                    onClick={() => onUpdateStatus('pending_pickup')}
-                    className="sbn-btn sbn-btn-secondary"
-                  >
-                    Pending pickup
-                  </button>
-                </div>
-              ) : item.status === 'completed' ? (
-                <div className="grid grid-cols-1 gap-2">
-                  {onEditPickupAttribution && !hasAppClaim && (
-                    <button
-                      type="button"
-                      onClick={onEditPickupAttribution}
-                      className="sbn-btn sbn-btn-secondary"
-                    >
-                      {needsPickupAttribution ? 'Who picked this up?' : 'Update who picked up'}
-                    </button>
-                  )}
-                </div>
-              ) : item.status === 'withdrawn' ? (
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    disabled={updating}
-                    onClick={onEdit}
-                    className="sbn-btn sbn-btn-secondary"
-                  >
-                    <Pencil className="w-4 h-4" />
-                    Edit & repost
-                  </button>
-                  <button
-                    type="button"
-                    disabled={updating}
-                    onClick={() => onUpdateStatus('active')}
-                    className="sbn-btn sbn-btn-primary"
-                  >
-                    Repost
-                  </button>
-                  {onDelete && (
-                    <button
-                      type="button"
-                      disabled={updating}
-                      onClick={onDelete}
-                      className="sbn-btn sbn-btn-ghost text-red-400 border-red-900/50 hover:bg-red-950/30"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                      Delete
-                    </button>
-                  )}
-                </div>
-              ) : null}
-            </>
-          ) : (
-            <div className="flex flex-col gap-2">
-              {isStaffViewer && onStaffChat ? (
-                <button type="button" onClick={onStaffChat} className="sbn-btn sbn-btn-primary w-full">
-                  <LifeBuoy className="w-4 h-4" />
-                  Staff chat
-                </button>
-              ) : (
-                isOpenForCoordination &&
-                onMessage &&
-                !showNeighborNavigate && (
-                  <button type="button" onClick={onMessage} className="sbn-btn sbn-btn-primary w-full">
-                    <MessageSquare className="w-4 h-4" />
-                    {getListingContactButtonLabel(item.type)}
-                  </button>
-                )
-              )}
-              {item.status === 'active' &&
-                userProfile &&
-                onClaimSubmitted &&
-                !isStaffViewer &&
-                !showNeighborNavigate && (
+      {(footerActions.length > 0 || showClaimInFooter) && (
+        <div className="shrink-0">
+          {footerActions.length > 0 && <DetailActionFooter actions={footerActions} id="listing_detail_footer" />}
+          {showClaimInFooter && (
+            <div className={footerActions.length > 0 ? 'px-3 pb-3 sm:px-4 sm:pb-4 border-t border-app bg-[var(--sbn-nav-bg)]' : ''}>
+              <div className="max-w-2xl mx-auto">
                 <ClaimAtPickupButton
                   item={item}
-                  user={userProfile}
+                  user={userProfile!}
                   userLat={userLat}
                   userLng={userLng}
-                  onClaimSubmitted={onClaimSubmitted}
+                  onClaimSubmitted={onClaimSubmitted!}
                   className="w-full"
                 />
-              )}
+              </div>
             </div>
           )}
+          {isOwner && item.status === 'active' && footerActions.length > 0 && (
+            <p className="px-4 pb-3 text-[11px] text-muted text-center leading-snug max-w-2xl mx-auto">
+              {item.type === 'trade'
+                ? 'Confirm the swap in Messages once you and your neighbor have traded.'
+                : item.type === 'looking'
+                  ? 'Mark fulfilled once a neighbor has helped with your request.'
+                  : 'Confirm neighbor pickups from Messages, or when they self-claim at the pin.'}
+            </p>
+          )}
         </div>
-      </div>
+      )}
     </div>
   );
 

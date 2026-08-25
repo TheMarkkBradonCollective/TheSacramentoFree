@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowLeft, Calendar, LifeBuoy, MapPin, MessageSquare, Pencil, Repeat } from 'lucide-react';
+import { ArrowLeft, Calendar, Check, HelpCircle, LifeBuoy, MapPin, MessageSquare, Pencil, Repeat, UserCheck, UserX, X } from 'lucide-react';
 import { CommunityEvent, EventComment, EventRsvpStatus, UserProfile } from '../types';
 import { EventRsvpState } from '../hooks/useEventsEngagement';
 import EventEngagement from './EventEngagement';
@@ -11,6 +11,8 @@ import { isEventEditable, isEventPast, isEventUpcoming, resolveEventStatus } fro
 import { getSeriesSiblings, getUpcomingSeriesOccurrences, isSeriesEvent } from '../lib/eventSeries';
 import EventStatusBadge from './EventStatusBadge';
 import EventDetailNavigation from './EventDetailNavigation';
+import DetailActionFooter, { type DetailFooterButton } from './DetailActionFooter';
+import { effectivePastRsvp } from '../lib/eventRsvp';
 import { PresenceUserAvatar } from './UserAvatar';
 import { useDismissOnEscape } from '../hooks/useDismissOnEscape';
 
@@ -95,6 +97,7 @@ export default function EventDetailView({
   onStartNavigationConsumed,
 }: EventDetailViewProps) {
   const [showPinModal, setShowPinModal] = useState(false);
+  const [navFooterActions, setNavFooterActions] = useState<DetailFooterButton[]>([]);
   const eventStatus = resolveEventStatus(event);
   const isOwner = event.userId === currentUserId;
   const isStaffViewer = isStaffActingOfficial(userProfile);
@@ -107,6 +110,71 @@ export default function EventDetailView({
   const upcomingInSeries =
     event.seriesId ? getUpcomingSeriesOccurrences(allEvents, event.seriesId) : [];
   const pastSiblings = seriesSiblings.filter((sibling) => !isEventUpcoming(sibling));
+
+  const activeRsvp = isPast ? effectivePastRsvp(rsvpState.userRsvp) : rsvpState.userRsvp;
+
+  const footerActions = useMemo((): DetailFooterButton[] => {
+    const actions: DetailFooterButton[] = [];
+
+    if (!isCancelled && !isOwner) {
+      const rsvpOptions = isPast
+        ? [
+            { status: 'gone' as EventRsvpStatus, label: 'Gone', icon: <UserCheck className="w-4 h-4" /> },
+            { status: 'missed' as EventRsvpStatus, label: 'Missed', icon: <UserX className="w-4 h-4" /> },
+          ]
+        : [
+            { status: 'going' as EventRsvpStatus, label: 'Going', icon: <Check className="w-4 h-4" /> },
+            { status: 'maybe' as EventRsvpStatus, label: 'Maybe', icon: <HelpCircle className="w-4 h-4" /> },
+            { status: 'not_going' as EventRsvpStatus, label: "Can't go", icon: <X className="w-4 h-4" /> },
+          ];
+
+      for (const option of rsvpOptions) {
+        actions.push({
+          id: `rsvp_${option.status}`,
+          label: option.label,
+          onClick: () => onRsvp(option.status),
+          variant: 'secondary',
+          icon: option.icon,
+          className: activeRsvp === option.status ? 'border-accent text-accent bg-accent-soft' : '',
+        });
+      }
+    }
+
+    actions.push(...navFooterActions);
+
+    if (!isOwner && isOpenForCoordination) {
+      if (isStaffViewer && onStaffChat) {
+        actions.push({
+          id: 'staff_chat',
+          label: 'Staff chat',
+          onClick: onStaffChat,
+          icon: <LifeBuoy className="w-4 h-4" />,
+          variant: navFooterActions.length > 0 ? 'secondary' : undefined,
+        });
+      } else if (onMessage) {
+        actions.push({
+          id: 'message',
+          label: 'Message',
+          onClick: onMessage,
+          icon: <MessageSquare className="w-4 h-4" />,
+          variant: navFooterActions.length > 0 ? 'secondary' : undefined,
+        });
+      }
+    }
+
+    return actions;
+  }, [
+    isCancelled,
+    isOwner,
+    isPast,
+    activeRsvp,
+    onRsvp,
+    navFooterActions,
+    isOpenForCoordination,
+    isStaffViewer,
+    onStaffChat,
+    onMessage,
+  ]);
 
   useDismissOnEscape(onClose);
 
@@ -126,8 +194,7 @@ export default function EventDetailView({
       aria-modal="true"
       aria-label={event.title}
     >
-      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden sbn-safe-bottom">
-        <header className="sbn-glass-nav sbn-safe-top border-b border-app">
+      <header className="shrink-0 sbn-glass-nav sbn-safe-top border-b border-app">
           <div className="px-4 min-h-14 flex items-center gap-2 sm:gap-3">
             <button
               type="button"
@@ -161,36 +228,20 @@ export default function EventDetailView({
                   <span className="hidden sm:inline ml-1">Edit</span>
                 </button>
               )}
-              {isStaffViewer && !isOwner && onStaffChat ? (
-                <button type="button" onClick={onStaffChat} className="sbn-btn sbn-btn-primary sbn-btn-sm">
-                  <LifeBuoy className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline ml-1">Staff chat</span>
-                </button>
-              ) : (
-                !isOwner &&
-                isOpenForCoordination &&
-                onMessage && (
-                  <button type="button" onClick={onMessage} className="sbn-btn sbn-btn-primary sbn-btn-sm">
-                    <MessageSquare className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline ml-1">Message</span>
-                  </button>
-                )
-              )}
             </div>
           </div>
         </header>
 
-        <div className="max-w-2xl mx-auto p-4 pb-10 space-y-5">
+        <div className="shrink-0 border-b border-app">
           {event.imageUrl && (
             <img
               src={event.imageUrl}
               alt=""
-              className="w-full max-h-64 object-cover rounded-xl border border-app"
+              className="w-full max-h-[34vh] min-h-[9rem] sm:max-h-64 object-cover"
               referrerPolicy="no-referrer"
             />
           )}
-
-          <div className="space-y-2">
+          <div className="max-w-2xl mx-auto p-4 space-y-3">
             <div className="flex flex-wrap items-center gap-2">
               <span className="sbn-badge sbn-badge-give">Free event</span>
               <EventStatusBadge status={eventStatus} />
@@ -201,9 +252,19 @@ export default function EventDetailView({
                 </span>
               )}
             </div>
-            <h2 className="font-display text-2xl font-bold text-app leading-tight">{event.title}</h2>
+            <h2 className="font-display text-xl sm:text-2xl font-bold text-app leading-tight">{event.title}</h2>
+            <EventDetailNavigation
+              event={event}
+              currentUserId={currentUserId}
+              autoStartNavigation={startNavigationOnOpen}
+              onAutoStartNavigationConsumed={onStartNavigationConsumed}
+              onFooterActions={setNavFooterActions}
+            />
           </div>
+        </div>
 
+        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden sbn-safe-bottom">
+        <div className="max-w-2xl mx-auto p-4 pb-10 space-y-5">
           <p className="text-muted leading-relaxed whitespace-pre-wrap">{event.description}</p>
 
           <div className="sbn-card p-4 space-y-3 text-sm">
@@ -284,13 +345,6 @@ export default function EventDetailView({
             </div>
           )}
 
-          <EventDetailNavigation
-            event={event}
-            currentUserId={currentUserId}
-            autoStartNavigation={startNavigationOnOpen}
-            onAutoStartNavigationConsumed={onStartNavigationConsumed}
-          />
-
           {isStaffViewer && !isOwner && userProfile && (
             <section className="sbn-card p-4 border border-role-accent/20">
               <StaffEventActions
@@ -361,9 +415,14 @@ export default function EventDetailView({
             rsvpDisabled={isCancelled}
             commentsLocked={commentsLocked}
             isPast={isPast}
+            hideRsvp={!isOwner && !isCancelled}
           />
         </div>
-      </div>
+        </div>
+
+      {footerActions.length > 0 && (
+        <DetailActionFooter actions={footerActions} id="event_detail_footer" />
+      )}
 
       {showPinModal && (
         <EventPinAdjustModal

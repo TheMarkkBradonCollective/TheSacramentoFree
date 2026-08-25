@@ -6,9 +6,11 @@ interface ListingPhotoGalleryProps {
   urls: string[];
   title: string;
   className?: string;
+  /** Shorter hero for mobile detail sheets — keeps title and actions above the fold. */
+  compact?: boolean;
 }
 
-export default function ListingPhotoGallery({ urls, title, className = '' }: ListingPhotoGalleryProps) {
+export default function ListingPhotoGallery({ urls, title, className = '', compact = false }: ListingPhotoGalleryProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
@@ -21,7 +23,7 @@ export default function ListingPhotoGallery({ urls, title, className = '' }: Lis
       <button
         type="button"
         onClick={() => setLightboxOpen(true)}
-        className="aspect-[4/3] sm:aspect-video bg-inset overflow-hidden relative w-full block cursor-zoom-in"
+        className={`${compact ? 'max-h-[34vh] min-h-[9rem] sm:max-h-none sm:aspect-video' : 'aspect-[4/3] sm:aspect-video'} bg-inset overflow-hidden relative w-full block cursor-zoom-in`}
         aria-label="View full size photo"
       >
         <ListingImage
@@ -41,7 +43,7 @@ export default function ListingPhotoGallery({ urls, title, className = '' }: Lis
         <ImageLightbox src={active} alt={title} onClose={() => setLightboxOpen(false)} />
       )}
       {urls.length > 1 && (
-        <div className="flex gap-2 p-3 overflow-x-auto bg-inset/50 border-t border-app">
+        <div className={`flex gap-2 overflow-x-auto bg-inset/50 border-t border-app ${compact ? 'p-2' : 'p-3'}`}>
           {urls.map((url, i) => (
             <button
               key={`${url}_${i}`}
@@ -49,9 +51,9 @@ export default function ListingPhotoGallery({ urls, title, className = '' }: Lis
               onClick={() => setActiveIndex(i)}
               aria-label={`Show photo ${i + 1} of ${urls.length}`}
               aria-current={i === activeIndex}
-              className={`shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-colors cursor-pointer ${
-                i === activeIndex ? 'border-accent' : 'border-app opacity-80 hover:opacity-100'
-              }`}
+              className={`shrink-0 rounded-lg overflow-hidden border-2 transition-colors cursor-pointer ${
+                compact ? 'w-12 h-12' : 'w-16 h-16'
+              } ${i === activeIndex ? 'border-accent' : 'border-app opacity-80 hover:opacity-100'}`}
             >
               <ListingImage src={url} alt="" width={128} className="w-full h-full object-cover" />
             </button>

@@ -1,5 +1,6 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { Navigation } from 'lucide-react';
 import type { CommunityEvent } from '../types';
 import {
   haversineMeters,
@@ -19,6 +20,7 @@ import { supportsInAppNavigation } from '../lib/goGetCoordinationGating';
 import MapNavigationView from './MapNavigationView';
 import { unlockNavigationSpeech } from '../lib/navigationVoice';
 import MapSelectionRouteRow from './MapSelectionRouteRow';
+import type { DetailFooterButton } from './DetailActionFooter';
 
 interface EventDetailNavigationProps {
   event: CommunityEvent;
@@ -26,6 +28,9 @@ interface EventDetailNavigationProps {
   /** When true, start in-app navigation once GPS is ready. */
   autoStartNavigation?: boolean;
   onAutoStartNavigationConsumed?: () => void;
+  /** Pin navigate CTA to the parent detail footer instead of inline. */
+  primaryActionPlacement?: 'inline' | 'footer';
+  onFooterActions?: (actions: DetailFooterButton[]) => void;
 }
 
 export default function EventDetailNavigation({
@@ -33,7 +38,10 @@ export default function EventDetailNavigation({
   currentUserId,
   autoStartNavigation = false,
   onAutoStartNavigationConsumed,
+  primaryActionPlacement = 'footer',
+  onFooterActions,
 }: EventDetailNavigationProps) {
+  const pinActionsToFooter = primaryActionPlacement === 'footer' && !!onFooterActions;
   const destination = useMemo<LatLng | null>(() => {
     if (
       typeof event.locationLat !== 'number' ||
@@ -150,6 +158,23 @@ export default function EventDetailNavigation({
     onAutoStartNavigationConsumed,
   ]);
 
+  useEffect(() => {
+    if (!pinActionsToFooter || !onFooterActions || !destination) {
+      onFooterActions?.([]);
+      return;
+    }
+    onFooterActions([
+      {
+        id: 'event_navigate',
+        label: 'Navigate',
+        onClick: openNavigation,
+        disabled: !userLocation,
+        icon: <Navigation className="w-4 h-4" />,
+      },
+    ]);
+    return () => onFooterActions([]);
+  }, [pinActionsToFooter, onFooterActions, destination, userLocation, openNavigation]);
+
   if (!destination) {
     return (
       <p className="text-xs text-muted bg-inset border border-app rounded-lg px-3 py-2">
@@ -176,6 +201,7 @@ export default function EventDetailNavigation({
           routeOnMap={isRoadGeometry(routeCoords)}
           hasLiveGps={!!userLocation}
           canNavigate={!!userLocation}
+          showNavigateButton={!pinActionsToFooter}
           onStartNavigation={openNavigation}
           onOpenExternalMaps={() => {
             if (!routeEndpoints) {
