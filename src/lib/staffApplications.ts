@@ -91,7 +91,7 @@ export const STAFF_ROLE_APPLY_COPY: Record<
   },
   director: {
     summary:
-      'Sacramento Buy Nothing Director — full owner-level access, public welcome note, and app updates.',
+      'TheSacramentoFree Director — full owner-level access, public welcome note, and app updates.',
     duties: [
       'Set the public voice of the project and ship neighbor-facing updates.',
       'Assign staff roles and hold the last call on hard decisions.',

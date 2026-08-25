@@ -188,7 +188,7 @@ export const SUPPORT = {
 export const DIRECTOR_MESSAGE = {
   /** Fallback until the director profile loads from the database. */
   name: 'Markeith White',
-  title: 'Sacramento Buy Nothing Director',
+  title: 'TheSacramentoFree Director',
   headline: 'A note from your director',
   goal:
     'Sacramento Buy Nothing exists so neighbors can give freely, ask kindly, and keep good things out of the landfill — with no money involved. That is the goal, plain and simple.',

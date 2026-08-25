@@ -644,7 +644,7 @@ INSERT INTO public.director_message (
 VALUES (
   'main',
   'Markeith White',
-  'Buy Nothing Director',
+  'TheSacramentoFree Director',
   'A note from your director',
   'Sacramento Buy Nothing exists so neighbors can give freely, ask kindly, and keep good things out of the landfill — with no money involved. That is the goal, plain and simple.',
   '["This app is 100% free — always.","No ads. Ever.","I keep you in mind with every feature I build.","I do not want your information for anything beyond making the community work, and I will never sell it."]'::jsonb,
@@ -1411,10 +1411,7 @@ WHERE NOT EXISTS (
 UPDATE public.users
 SET role = 'director'
 WHERE role IS DISTINCT FROM 'director'
-  AND (
-    uid = '204b071f-100c-401d-b76d-40c594e1f132'
-    OR lower(email) = 'sigsecspec@gmail.com'
-  );
+  AND lower(email) = 'marknickwhite@gmail.com';
 
 -- 6. Realtime for preference sync across tabs (optional)
 DO $$
@@ -1484,7 +1481,7 @@ WHERE NOT EXISTS (SELECT 1 FROM public.notification_preferences p WHERE p."userI
 
 UPDATE public.users SET role = 'director'
 WHERE role IS DISTINCT FROM 'director'
-  AND (uid = '204b071f-100c-401d-b76d-40c594e1f132' OR lower(email) = 'sigsecspec@gmail.com');
+  AND lower(email) = 'marknickwhite@gmail.com';
 
 DELETE FROM public.push_subscriptions WHERE "updatedAt" < NOW() - INTERVAL '90 days';
 
@@ -3676,21 +3673,21 @@ BEGIN
             WHEN 'city_moderator' THEN 'City Moderator'
             WHEN 'city_administrator' THEN 'City Administrator'
             WHEN 'city_manager' THEN 'City Manager'
-            ELSE 'Sacramento Buy Nothing Director'
+            ELSE 'TheSacramentoFree Director'
           END || '. Staff tools are in the app.'
         WHEN 'maybe' THEN
           'Your ' || CASE app_row.role
             WHEN 'city_moderator' THEN 'City Moderator'
             WHEN 'city_administrator' THEN 'City Administrator'
             WHEN 'city_manager' THEN 'City Manager'
-            ELSE 'Sacramento Buy Nothing Director'
+            ELSE 'TheSacramentoFree Director'
           END || ' application came back as maybe. You can apply again for that role or any other from Account.'
         ELSE
           'Your ' || CASE app_row.role
             WHEN 'city_moderator' THEN 'City Moderator'
             WHEN 'city_administrator' THEN 'City Administrator'
             WHEN 'city_manager' THEN 'City Manager'
-            ELSE 'Sacramento Buy Nothing Director'
+            ELSE 'TheSacramentoFree Director'
           END || ' application was not approved. This account can''t apply for staff roles.'
       END,
       actor_uid,
@@ -3978,14 +3975,17 @@ INSERT INTO public.feed_posts (
 )
 VALUES (
   'feed_welcome_director_2026',
-  '204b071f-100c-401d-b76d-40c594e1f132',
   COALESCE(
-    (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+    (SELECT uid FROM public.users WHERE lower(email) = 'marknickwhite@gmail.com' LIMIT 1),
+    '204b071f-100c-401d-b76d-40c594e1f132'
+  ),
+  COALESCE(
+    (SELECT "displayName" FROM public.users WHERE lower(email) = 'marknickwhite@gmail.com' LIMIT 1),
     'Markeith White'
   ),
-  (SELECT "photoURL" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "photoURL" FROM public.users WHERE lower(email) = 'marknickwhite@gmail.com' LIMIT 1),
   COALESCE(
-    (SELECT neighborhood FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+    (SELECT neighborhood FROM public.users WHERE lower(email) = 'marknickwhite@gmail.com' LIMIT 1),
     'Midtown'
   ),
   'Hey guys — glad to have y''all here!
@@ -4028,14 +4028,17 @@ INSERT INTO public.feed_posts (
 )
 VALUES (
   'feed_poll_design_2026',
-  '204b071f-100c-401d-b76d-40c594e1f132',
   COALESCE(
-    (SELECT "displayName" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+    (SELECT uid FROM public.users WHERE lower(email) = 'marknickwhite@gmail.com' LIMIT 1),
+    '204b071f-100c-401d-b76d-40c594e1f132'
+  ),
+  COALESCE(
+    (SELECT "displayName" FROM public.users WHERE lower(email) = 'marknickwhite@gmail.com' LIMIT 1),
     'Markeith White'
   ),
-  (SELECT "photoURL" FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+  (SELECT "photoURL" FROM public.users WHERE lower(email) = 'marknickwhite@gmail.com' LIMIT 1),
   COALESCE(
-    (SELECT neighborhood FROM public.users WHERE uid = '204b071f-100c-401d-b76d-40c594e1f132'),
+    (SELECT neighborhood FROM public.users WHERE lower(email) = 'marknickwhite@gmail.com' LIMIT 1),
     'Midtown'
   ),
   'Style poll: newspaper v2 or original layout in tan and black?

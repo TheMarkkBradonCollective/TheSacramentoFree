@@ -16,7 +16,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   city_moderator: 'City Moderator',
   city_administrator: 'City Administrator',
   city_manager: 'City Manager',
-  director: 'Sacramento Buy Nothing Director',
+  director: 'TheSacramentoFree Director',
 };
 
 /**
@@ -93,7 +93,7 @@ export const ASSIGNABLE_ROLE_OPTIONS: {
   {
     value: 'director',
     label: ROLE_LABELS.director,
-    description: 'Sacramento Buy Nothing Director — full owner-level access',
+    description: 'TheSacramentoFree Director — full owner-level access',
   },
 ];
 

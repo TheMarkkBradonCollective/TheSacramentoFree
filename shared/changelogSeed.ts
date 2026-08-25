@@ -27,7 +27,7 @@ export interface SeededHelpAnnouncement {
 }
 
 const DIRECTOR_NAME = 'Markeith White';
-const DIRECTOR_TITLE = 'Buy Nothing Director';
+const DIRECTOR_TITLE = 'TheSacramentoFree Director';
 const APK_0051_AT = '2026-08-21T22:35:00.000Z';
 const APK_0052_AT = '2026-08-21T23:50:00.000Z';
 const CLOSED_TESTING_NEWS_AT = '2026-08-21T23:20:00.000Z';
