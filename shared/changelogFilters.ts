@@ -14,6 +14,7 @@ const NEWS_CHANGE_ONLY_IDS = new Set([
   '2026-08-20_event-recurrence',
   '2026-08-20_staff-participation-mode',
   '2026-08-18_feed-hide-given-fulfilled',
+  '2026-08-25_feed-listings-events-chat',
 ]);
 
 export function isNewsEligible(id: string): boolean {

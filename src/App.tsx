@@ -1861,6 +1861,13 @@ export default function App() {
     setDetailFeedPost((current) => (current?.id === postId ? { ...current, viewCount } : current));
   }, []);
 
+  const handleEventViewCountUpdated = useCallback((eventId: string, viewCount: number) => {
+    setEvents((current) =>
+      current.map((row) => (row.id === eventId ? { ...row, viewCount } : row)),
+    );
+    setDetailEvent((current) => (current?.id === eventId ? { ...current, viewCount } : current));
+  }, []);
+
   const handleDeleteFeedPost = useCallback(
     async (post: FeedPost) => {
       if (!userProfile) return;
@@ -2720,8 +2727,12 @@ export default function App() {
                   currentUserId={userProfile.uid}
                   userProfile={userProfile}
                   rsvpState={eventsEngagement.getRsvpsForEvent(detailEvent.id)}
+                  voteState={eventsEngagement.getVotesForEvent(detailEvent.id)}
                   comments={eventsEngagement.getCommentsForEvent(detailEvent.id)}
                   getOccurrenceRsvps={eventsEngagement.getRsvpsForEvent}
+                  onVote={(direction) =>
+                    eventsEngagement.handleVote(detailEvent.id, detailEvent.userId, direction)
+                  }
                   onRsvp={(status) =>
                     eventsEngagement.handleRsvp(
                       detailEvent.id,
@@ -2813,6 +2824,7 @@ export default function App() {
                   commentsLocked={!canAccessEvents}
                   startNavigationOnOpen={detailEventNavigateOnOpen}
                   onStartNavigationConsumed={() => setDetailEventNavigateOnOpen(false)}
+                  onViewCountUpdated={handleEventViewCountUpdated}
                 />
               )}
 

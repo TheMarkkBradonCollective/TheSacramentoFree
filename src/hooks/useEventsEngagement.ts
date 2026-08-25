@@ -1,20 +1,29 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { EventComment, EventRsvp, EventRsvpStatus, UserProfile } from '../types';
+import { EventComment, EventRsvp, EventRsvpStatus, EventVote, UserProfile } from '../types';
 import {
   createSupabaseEventComment,
   deleteSupabaseEventComment,
   getSupabaseEventComments,
   getSupabaseEventRsvps,
+  getSupabaseEventVotes,
   setSupabaseEventRsvp,
+  setSupabaseEventVote,
 } from '../supabase';
 import { subscribePostgresChanges } from '../lib/supabaseRealtime';
 import { commentPostedAsNeighbor } from '../lib/staffInteractionMode';
 import { resolveProfileIdentity } from '../lib/profilePersistence';
 import { takeSafetyCooldownBlockMessage } from '../lib/safetyCooldowns';
 import { countPastRsvps, effectivePastRsvp } from '../lib/eventRsvp';
+import { VOTE_COOLDOWN_MESSAGE } from '../lib/voteCooldown';
 import { useConfirm } from '../contexts/ConfirmContext';
 import { isStaffRole } from '../lib/roles';
-import { isPlayStoreDemo, PLAY_STORE_DEMO_EVENT_COMMENTS, PLAY_STORE_DEMO_EVENT_RSVPS } from '../preview/playStoreDemo';
+import {
+  isPlayStoreDemo,
+  PLAY_STORE_DEMO_EVENT_COMMENTS,
+  PLAY_STORE_DEMO_EVENT_RSVPS,
+  PLAY_STORE_DEMO_EVENT_VOTES,
+} from '../preview/playStoreDemo';
+import type { PostVoteState } from './useItemsEngagement';
 
 export interface EventRsvpState {
   userRsvp: EventRsvpStatus | null;
@@ -34,6 +43,12 @@ const EMPTY_RSVP_STATE: EventRsvpState = {
   missed: 0,
 };
 
+const EMPTY_VOTE_STATE: PostVoteState = {
+  userVote: null,
+  upvotes: 0,
+  downvotes: 0,
+};
+
 function buildRsvpState(rsvpsForEvent: EventRsvp[], uid: string): EventRsvpState {
   const rawUserRsvp = (rsvpsForEvent.find((rsvp) => rsvp.userId === uid)?.rsvpStatus || null) as
     | EventRsvpStatus
@@ -48,6 +63,17 @@ function buildRsvpState(rsvpsForEvent: EventRsvp[], uid: string): EventRsvpState
     notGoing: rsvpsForEvent.filter((rsvp) => rsvp.rsvpStatus === 'not_going').length,
     gone: pastCounts.gone,
     missed: pastCounts.missed,
+  };
+}
+
+function buildVoteState(votesForEvent: EventVote[], uid: string): PostVoteState {
+  return {
+    userVote: (votesForEvent.find((vote) => vote.userId === uid)?.voteType || null) as
+      | 'up'
+      | 'down'
+      | null,
+    upvotes: votesForEvent.filter((vote) => vote.voteType === 'up').length,
+    downvotes: votesForEvent.filter((vote) => vote.voteType === 'down').length,
   };
 }
 
@@ -88,6 +114,9 @@ export function useEventsEngagement(
   const [eventRsvps, setEventRsvps] = useState<Record<string, EventRsvpState>>(
     () => (isPlayStoreDemo() ? PLAY_STORE_DEMO_EVENT_RSVPS : {}),
   );
+  const [eventVotes, setEventVotes] = useState<Record<string, PostVoteState>>(
+    () => (isPlayStoreDemo() ? PLAY_STORE_DEMO_EVENT_VOTES : {}),
+  );
   const [eventComments, setEventComments] = useState<Record<string, EventComment[]>>(
     () => (isPlayStoreDemo() ? PLAY_STORE_DEMO_EVENT_COMMENTS : {}),
   );
@@ -102,6 +131,11 @@ export function useEventsEngagement(
     [eventRsvps],
   );
 
+  const getVotesForEvent = useCallback(
+    (eventId: string): PostVoteState => eventVotes[eventId] ?? EMPTY_VOTE_STATE,
+    [eventVotes],
+  );
+
   const getCommentsForEvent = useCallback(
     (eventId: string): EventComment[] =>
       (eventComments[eventId] ?? []).filter((comment) => !blockedUserIds.has(comment.userId)),
@@ -112,6 +146,7 @@ export function useEventsEngagement(
     if (isPlayStoreDemo()) return;
     if (!uid || eventIds.length === 0) {
       setEventRsvps({});
+      setEventVotes({});
       setEventComments({});
       return;
     }
@@ -119,18 +154,24 @@ export function useEventsEngagement(
     let mounted = true;
 
     const loadEngagement = async () => {
-      const [rsvps, comments] = await Promise.all([
+      const [rsvps, votes, comments] = await Promise.all([
         getSupabaseEventRsvps(eventIds),
+        getSupabaseEventVotes(eventIds),
         getSupabaseEventComments(eventIds),
       ]);
       if (!mounted) return;
 
       const nextRsvps: Record<string, EventRsvpState> = {};
+      const nextVotes: Record<string, PostVoteState> = {};
       for (const eventId of eventIds) {
         const rsvpsForEvent = rsvps.filter((rsvp) => rsvp.eventId === eventId);
         nextRsvps[eventId] = buildRsvpState(rsvpsForEvent, uid);
+
+        const votesForEvent = votes.filter((vote) => vote.eventId === eventId);
+        nextVotes[eventId] = buildVoteState(votesForEvent, uid);
       }
       setEventRsvps(nextRsvps);
+      setEventVotes(nextVotes);
 
       const nextComments: Record<string, EventComment[]> = {};
       for (const eventId of eventIds) {
@@ -173,6 +214,36 @@ export function useEventsEngagement(
       });
     };
 
+    const patchVotes = (payload: { eventType: string; new: EventVote | null; old: EventVote | null }) => {
+      const row = (payload.new || payload.old) as EventVote | null;
+      if (!row?.eventId || !eventIdSetRef.current.has(row.eventId)) return;
+      if (row.userId === uid && payload.eventType !== 'DELETE') return;
+
+      setEventVotes((prev) => {
+        const current = prev[row.eventId] ?? EMPTY_VOTE_STATE;
+        let upvotes = current.upvotes;
+        let downvotes = current.downvotes;
+        let userVote = current.userVote;
+
+        const removeVote = (vote: EventVote) => {
+          if (vote.voteType === 'up') upvotes = Math.max(0, upvotes - 1);
+          else downvotes = Math.max(0, downvotes - 1);
+          if (vote.userId === uid) userVote = null;
+        };
+
+        const addVote = (vote: EventVote) => {
+          if (vote.voteType === 'up') upvotes += 1;
+          else downvotes += 1;
+          if (vote.userId === uid) userVote = vote.voteType;
+        };
+
+        if (payload.old) removeVote(payload.old);
+        if (payload.eventType !== 'DELETE' && payload.new) addVote(payload.new);
+
+        return { ...prev, [row.eventId]: { userVote, upvotes, downvotes } };
+      });
+    };
+
     const patchComments = (payload: { eventType: string; new: EventComment | null; old: EventComment | null }) => {
       const row = (payload.new || payload.old) as EventComment | null;
       if (!row?.eventId || !eventIdSetRef.current.has(row.eventId)) return;
@@ -205,6 +276,11 @@ export function useEventsEngagement(
       (payload) => patchRsvps(payload as { eventType: string; new: EventRsvp | null; old: EventRsvp | null }),
     );
 
+    const unsubVotes = subscribePostgresChanges<EventVote>(
+      { channelName: 'live-event-votes', table: 'event_votes', event: '*' },
+      (payload) => patchVotes(payload as { eventType: string; new: EventVote | null; old: EventVote | null }),
+    );
+
     const unsubComments = subscribePostgresChanges<EventComment>(
       { channelName: 'live-event-comments', table: 'event_comments', event: '*' },
       (payload) => patchComments(payload as { eventType: string; new: EventComment | null; old: EventComment | null }),
@@ -212,9 +288,49 @@ export function useEventsEngagement(
 
     return () => {
       unsubRsvps();
+      unsubVotes();
       unsubComments();
     };
   }, [uid, eventIds.join('|')]);
+
+  const handleVote = (eventId: string, hostUserId: string, direction: 'up' | 'down') => {
+    if (!uid || hostUserId === uid) return;
+
+    const current = getVotesForEvent(eventId);
+
+    let newUserVote: 'up' | 'down' | null = null;
+    let newUpvotes = current.upvotes;
+    let newDownvotes = current.downvotes;
+
+    if (current.userVote === direction) {
+      newUserVote = null;
+      if (direction === 'up') newUpvotes = Math.max(0, newUpvotes - 1);
+      else newDownvotes = Math.max(0, newDownvotes - 1);
+    } else {
+      if (current.userVote === 'up') newUpvotes = Math.max(0, newUpvotes - 1);
+      if (current.userVote === 'down') newDownvotes = Math.max(0, newDownvotes - 1);
+      newUserVote = direction;
+      if (direction === 'up') newUpvotes += 1;
+      else newDownvotes += 1;
+    }
+
+    setEventVotes((prev) => ({
+      ...prev,
+      [eventId]: {
+        userVote: newUserVote,
+        upvotes: newUpvotes,
+        downvotes: newDownvotes,
+      },
+    }));
+
+    void setSupabaseEventVote(eventId, uid, newUserVote).then((result) => {
+      if (result.ok) return;
+      setEventVotes((prev) => ({ ...prev, [eventId]: current }));
+      if (result.ok === false && result.reason === 'vote_cooldown') {
+        void alert({ message: VOTE_COOLDOWN_MESSAGE });
+      }
+    });
+  };
 
   const handleRsvp = (
     eventId: string,
@@ -308,7 +424,9 @@ export function useEventsEngagement(
 
   return {
     getRsvpsForEvent,
+    getVotesForEvent,
     getCommentsForEvent,
+    handleVote,
     handleRsvp,
     handleAddComment,
     handleDeleteComment,

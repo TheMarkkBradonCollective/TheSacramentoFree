@@ -593,6 +593,18 @@ ALTER TABLE public.community_events ADD COLUMN IF NOT EXISTS "hostedBy" TEXT;
 ALTER TABLE public.community_events ADD COLUMN IF NOT EXISTS "locationLat" DOUBLE PRECISION;
 ALTER TABLE public.community_events ADD COLUMN IF NOT EXISTS "locationLng" DOUBLE PRECISION;
 ALTER TABLE public.community_events ADD COLUMN IF NOT EXISTS "seriesId" TEXT;
+ALTER TABLE public.community_events ADD COLUMN IF NOT EXISTS "viewCount" INTEGER NOT NULL DEFAULT 0;
+
+-- One view per neighbor per event (denormalized count on community_events.viewCount).
+CREATE TABLE IF NOT EXISTS public.event_views (
+  "eventId" TEXT NOT NULL REFERENCES public.community_events(id) ON DELETE CASCADE,
+  "userId" TEXT NOT NULL,
+  "viewedAt" TIMESTAMPTZ DEFAULT NOW(),
+  PRIMARY KEY ("eventId", "userId")
+);
+
+ALTER TABLE public.event_views ENABLE ROW LEVEL SECURITY;
+CREATE INDEX IF NOT EXISTS event_views_event_idx ON public.event_views ("eventId");
 
 ALTER TABLE public.community_events DROP CONSTRAINT IF EXISTS community_events_status_check;
 UPDATE public.community_events SET status = 'upcoming' WHERE status = 'active';
@@ -643,6 +655,17 @@ CREATE TABLE IF NOT EXISTS public.event_comments (
 
 ALTER TABLE public.event_comments ENABLE ROW LEVEL SECURITY;
 CREATE INDEX IF NOT EXISTS event_comments_event_idx ON public.event_comments ("eventId");
+
+CREATE TABLE IF NOT EXISTS public.event_votes (
+  "eventId" TEXT NOT NULL,
+  "userId" TEXT NOT NULL,
+  "voteType" TEXT NOT NULL CHECK ("voteType" IN ('up', 'down')),
+  "createdAt" TIMESTAMPTZ DEFAULT NOW(),
+  PRIMARY KEY ("eventId", "userId")
+);
+
+ALTER TABLE public.event_votes ENABLE ROW LEVEL SECURITY;
+CREATE INDEX IF NOT EXISTS event_votes_event_idx ON public.event_votes ("eventId");
 
 -- =========================================================
 -- 17b. Events unlock (500 neighbors)
@@ -1254,6 +1277,8 @@ BEGIN
 
   DELETE FROM public.event_rsvps WHERE "eventId" = target_event_id;
   DELETE FROM public.event_comments WHERE "eventId" = target_event_id;
+  DELETE FROM public.event_views WHERE "eventId" = target_event_id;
+  DELETE FROM public.event_votes WHERE "eventId" = target_event_id;
   DELETE FROM public.community_events WHERE id = target_event_id;
   RETURN true;
 END;
@@ -2770,6 +2795,55 @@ $recordfeedview$;
 REVOKE ALL ON FUNCTION public.record_feed_post_view(text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.record_feed_post_view(text) TO authenticated;
 
+CREATE OR REPLACE FUNCTION public.record_event_view(target_event_id text)
+RETURNS integer
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $recordeventview$
+DECLARE
+  viewer_uid text;
+  host_uid text;
+  inserted_count integer;
+  result_count integer;
+BEGIN
+  viewer_uid := auth.uid()::text;
+  IF viewer_uid IS NULL OR target_event_id IS NULL OR target_event_id = '' THEN
+    RETURN NULL;
+  END IF;
+
+  SELECT "userId" INTO host_uid FROM public.community_events WHERE id = target_event_id;
+  IF host_uid IS NULL THEN
+    RETURN NULL;
+  END IF;
+
+  IF host_uid = viewer_uid THEN
+    SELECT COALESCE("viewCount", 0) INTO result_count FROM public.community_events WHERE id = target_event_id;
+    RETURN result_count;
+  END IF;
+
+  INSERT INTO public.event_views ("eventId", "userId")
+  VALUES (target_event_id, viewer_uid)
+  ON CONFLICT ("eventId", "userId") DO NOTHING;
+
+  GET DIAGNOSTICS inserted_count = ROW_COUNT;
+
+  IF inserted_count > 0 THEN
+    UPDATE public.community_events
+    SET "viewCount" = COALESCE("viewCount", 0) + 1
+    WHERE id = target_event_id
+    RETURNING "viewCount" INTO result_count;
+  ELSE
+    SELECT COALESCE("viewCount", 0) INTO result_count FROM public.community_events WHERE id = target_event_id;
+  END IF;
+
+  RETURN result_count;
+END;
+$recordeventview$;
+
+REVOKE ALL ON FUNCTION public.record_event_view(text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.record_event_view(text) TO authenticated;
+
 CREATE OR REPLACE FUNCTION public.mark_chat_messages_read(target_chat_id text, target_message_ids text[])
 RETURNS void
 LANGUAGE plpgsql
@@ -3322,6 +3396,18 @@ CREATE POLICY "event_rsvps_update" ON public.event_rsvps
 
 CREATE POLICY "event_rsvps_delete" ON public.event_rsvps
   FOR DELETE USING (auth.uid()::text = "userId");
+
+DROP POLICY IF EXISTS "Allow read event votes" ON public.event_votes;
+DROP POLICY IF EXISTS "Allow write event votes" ON public.event_votes;
+DROP POLICY IF EXISTS "event_votes_select" ON public.event_votes;
+DROP POLICY IF EXISTS "event_votes_write_own" ON public.event_votes;
+
+CREATE POLICY "event_votes_select" ON public.event_votes
+  FOR SELECT USING (auth.uid() IS NOT NULL);
+
+CREATE POLICY "event_votes_write_own" ON public.event_votes
+  FOR ALL USING (auth.uid()::text = "userId")
+  WITH CHECK (auth.uid()::text = "userId");
 
 DROP POLICY IF EXISTS "Allow read event comments" ON public.event_comments;
 DROP POLICY IF EXISTS "Allow write event comments" ON public.event_comments;
@@ -4185,6 +4271,7 @@ BEGIN
     'community_events',
     'event_rsvps',
     'event_comments',
+    'event_votes',
     'director_message',
     'staff_messages',
     'staff_applications',

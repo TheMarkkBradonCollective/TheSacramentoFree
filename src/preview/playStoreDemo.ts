@@ -411,6 +411,26 @@ export const PLAY_STORE_DEMO_EVENT_RSVPS: Record<
   },
 };
 
+export const PLAY_STORE_DEMO_EVENT_VOTES: Record<
+  string,
+  {
+    userVote: 'up' | 'down' | null;
+    upvotes: number;
+    downvotes: number;
+  }
+> = {
+  'demo-event-picnic': {
+    userVote: 'up',
+    upvotes: 8,
+    downvotes: 1,
+  },
+  'demo-event-books': {
+    userVote: null,
+    upvotes: 3,
+    downvotes: 0,
+  },
+};
+
 export const PLAY_STORE_DEMO_EVENT_COMMENTS: Record<string, EventComment[]> = {
   'demo-event-picnic': [
     {

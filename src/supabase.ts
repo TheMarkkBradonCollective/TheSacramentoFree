@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { UserProfile, ItemPost, Chat, Message, ItemVote, ItemComment, MessageRequest, FriendRequest, ProfileFriend, AccountStatus, ModerationAuditEntry, StaffUserRow, UserReport, SupportTicket, SupportTicketMessage, ListingSubItem, ItemClaimRequest, CommunityEvent, EventRsvp, EventComment, DirectorMessageContent, StaffMessageContent, AppReview, AppUpdateInput, AppUpdateRecord, AppUpdateComment, CommunityContentVote, CommunityContentVoteTarget, HelpAnnouncementComment, HelpAnnouncementInput, HelpAnnouncementRecord, UserNotificationItem } from './types';
+import { UserProfile, ItemPost, Chat, Message, ItemVote, ItemComment, MessageRequest, FriendRequest, ProfileFriend, AccountStatus, ModerationAuditEntry, StaffUserRow, UserReport, SupportTicket, SupportTicketMessage, ListingSubItem, ItemClaimRequest, CommunityEvent, EventRsvp, EventVote, EventComment, DirectorMessageContent, StaffMessageContent, AppReview, AppUpdateInput, AppUpdateRecord, AppUpdateComment, CommunityContentVote, CommunityContentVoteTarget, HelpAnnouncementComment, HelpAnnouncementInput, HelpAnnouncementRecord, UserNotificationItem } from './types';
 import { DIRECTOR_MESSAGE, STAFF_MESSAGE_DEFAULT } from './siteContent';
 import { compressImageIfNeeded, guessImageContentType } from './lib/imageUrl';
 import { formatItemClaimedChatMessage, formatItemFulfilledChatMessage, formatSelfClaimRequestMessage, formatSelfDropOffRequestMessage } from './lib/claims';
@@ -288,6 +288,20 @@ DROP POLICY IF EXISTS "Allow read event comments" ON public.event_comments;
 CREATE POLICY "Allow read event comments" ON public.event_comments FOR SELECT USING (true);
 DROP POLICY IF EXISTS "Allow write event comments" ON public.event_comments;
 CREATE POLICY "Allow write event comments" ON public.event_comments FOR ALL USING (true);
+
+CREATE TABLE IF NOT EXISTS public.event_votes (
+  "eventId" TEXT NOT NULL,
+  "userId" TEXT NOT NULL,
+  "voteType" TEXT NOT NULL CHECK ("voteType" IN ('up', 'down')),
+  "createdAt" TIMESTAMPTZ DEFAULT NOW(),
+  PRIMARY KEY ("eventId", "userId")
+);
+
+ALTER TABLE public.event_votes ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow read event votes" ON public.event_votes;
+CREATE POLICY "Allow read event votes" ON public.event_votes FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow write event votes" ON public.event_votes;
+CREATE POLICY "Allow write event votes" ON public.event_votes FOR ALL USING (true) WITH CHECK (true);
 `;
 
 // Helper states to track connection warnings on UI
@@ -1280,6 +1294,26 @@ export async function recordListingView(itemId: string): Promise<{ ok: boolean; 
   }
 
   listingViewRpcAvailable = true;
+  const viewCount = typeof data === 'number' ? data : Number(data);
+  return { ok: true, viewCount: Number.isFinite(viewCount) ? viewCount : undefined };
+}
+
+let eventViewRpcAvailable: boolean | null = null;
+
+/** Record one unique neighbor view when the full event detail is opened (not feed cards). */
+export async function recordEventView(eventId: string): Promise<{ ok: boolean; viewCount?: number }> {
+  if (!eventId || eventViewRpcAvailable === false) return { ok: false };
+
+  const { data, error } = await supabase.rpc('record_event_view', { target_event_id: eventId });
+  if (error) {
+    const message = String(error.message || '');
+    if (/record_event_view|viewcount|event_views/i.test(message)) {
+      eventViewRpcAvailable = false;
+    }
+    return { ok: false };
+  }
+
+  eventViewRpcAvailable = true;
   const viewCount = typeof data === 'number' ? data : Number(data);
   return { ok: true, viewCount: Number.isFinite(viewCount) ? viewCount : undefined };
 }
@@ -4012,11 +4046,12 @@ async function countUserRowsSince(
 async function countSafetyActions(kind: SafetyCooldownKind, userId: string, windowMs: number): Promise<number> {
   const sinceIso = new Date(Date.now() - windowMs).toISOString();
   if (kind === 'vote') {
-    const [items, content] = await Promise.all([
+    const [items, content, events] = await Promise.all([
       countUserRowsSince('item_votes', 'userId', userId, sinceIso),
       countUserRowsSince('community_content_votes', 'userId', userId, sinceIso),
+      countUserRowsSince('event_votes', 'userId', userId, sinceIso),
     ]);
-    return items + content;
+    return items + content + events;
   }
   if (kind === 'comment') {
     const [items, events, feed, updates, news] = await Promise.all([
@@ -4238,6 +4273,7 @@ export function normalizeSupabaseEvent(row: CommunityEvent): CommunityEvent {
     ...row,
     hostedBy: row.hostedBy?.trim() || null,
     seriesId: row.seriesId?.trim() || null,
+    viewCount: typeof row.viewCount === 'number' && Number.isFinite(row.viewCount) ? row.viewCount : 0,
     locationLat:
       typeof row.locationLat === 'number' && Number.isFinite(row.locationLat) ? row.locationLat : null,
     locationLng:
@@ -4614,6 +4650,7 @@ export async function deleteSupabaseEvent(eventId: string): Promise<{ ok: boolea
   try {
     await supabase.from('event_rsvps').delete().eq('eventId', eventId);
     await supabase.from('event_comments').delete().eq('eventId', eventId);
+    await supabase.from('event_votes').delete().eq('eventId', eventId);
     const { error } = await supabase.from('community_events').delete().eq('id', eventId);
     if (error) {
       handleSupabaseError(error, 'community_events');
@@ -4626,6 +4663,83 @@ export async function deleteSupabaseEvent(eventId: string): Promise<{ ok: boolea
       ok: false,
       errorMessage: err instanceof Error ? err.message : 'Could not delete event.',
     };
+  }
+}
+
+export async function getSupabaseEventVotes(eventIds: string[]): Promise<EventVote[]> {
+  if (eventIds.length === 0) return [];
+  try {
+    const { data, error } = await supabase
+      .from('event_votes')
+      .select('*')
+      .in('eventId', eventIds);
+
+    if (error) {
+      handleSupabaseError(error, 'event_votes');
+      return [];
+    }
+
+    setSupabaseConfigurationState(true);
+    return (data || []) as EventVote[];
+  } catch (err: unknown) {
+    handleSupabaseError(err, 'event_votes');
+    return [];
+  }
+}
+
+async function userHasEventVote(eventId: string, userId: string): Promise<boolean> {
+  const { data } = await supabase
+    .from('event_votes')
+    .select('eventId')
+    .eq('eventId', eventId)
+    .eq('userId', userId)
+    .maybeSingle();
+  return !!data;
+}
+
+export async function setSupabaseEventVote(
+  eventId: string,
+  userId: string,
+  voteType: 'up' | 'down' | null,
+): Promise<VoteWriteResult> {
+  try {
+    if (!voteType) {
+      const { error: deleteError } = await supabase
+        .from('event_votes')
+        .delete()
+        .eq('eventId', eventId)
+        .eq('userId', userId);
+
+      if (deleteError) {
+        handleSupabaseError(deleteError, 'event_votes');
+        return { ok: false, reason: 'error' };
+      }
+      setSupabaseConfigurationState(true);
+      return { ok: true };
+    }
+
+    const alreadyVoted = await userHasEventVote(eventId, userId);
+    if (!alreadyVoted && (await isSafetyCooldownBlocked(userId, 'vote'))) {
+      return { ok: false, reason: 'vote_cooldown' };
+    }
+
+    const { error } = await supabase
+      .from('event_votes')
+      .upsert(
+        { eventId, userId, voteType, createdAt: new Date().toISOString() },
+        { onConflict: 'eventId,userId' },
+      );
+
+    if (error) {
+      handleSupabaseError(error, 'event_votes');
+      return { ok: false, reason: 'error' };
+    }
+
+    setSupabaseConfigurationState(true);
+    return { ok: true };
+  } catch (err: unknown) {
+    handleSupabaseError(err, 'event_votes');
+    return { ok: false, reason: 'error' };
   }
 }
 
@@ -8209,6 +8323,7 @@ async function purgeUserCommunityDataClient(uid: string): Promise<void> {
   }
   await supabase.from('event_rsvps').delete().eq('userId', uid);
   await supabase.from('event_comments').delete().eq('userId', uid);
+  await supabase.from('event_votes').delete().eq('userId', uid);
   await supabase.from('app_reviews').delete().eq('userId', uid);
   await supabase.from('staff_messages').delete().eq('userId', uid);
   await supabase.from('community_content_votes').delete().eq('userId', uid);

@@ -627,6 +627,8 @@ export interface CommunityEvent {
   isFree: true;
   status: EventStatus;
   imageUrl?: string;
+  /** Unique neighbors who opened the full event detail (denormalized). */
+  viewCount?: number;
   createdAt: any;
   updatedAt: any;
 }
@@ -637,6 +639,12 @@ export interface EventRsvp {
   rsvpStatus: EventRsvpStatus;
   createdAt?: any;
   updatedAt?: any;
+}
+
+export interface EventVote {
+  eventId: string;
+  userId: string;
+  voteType: 'up' | 'down';
 }
 
 export interface EventComment {

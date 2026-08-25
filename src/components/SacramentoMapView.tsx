@@ -283,6 +283,11 @@ function MapSelectedEventCard({
     gone: 0,
     missed: 0,
   };
+  const voteState = eventsEngagement?.getVotesForEvent(event.id) ?? {
+    userVote: null,
+    upvotes: 0,
+    downvotes: 0,
+  };
   const comments = eventsEngagement?.getCommentsForEvent(event.id) ?? [];
 
   return (
@@ -363,8 +368,10 @@ function MapSelectedEventCard({
             <EventEngagement
               hostUserId={event.userId}
               currentUserId={userProfile.uid}
+              voteState={voteState}
               rsvpState={rsvpState}
               comments={comments}
+              onVote={(direction) => eventsEngagement.handleVote(event.id, event.userId, direction)}
               onRsvp={(status) => eventsEngagement.handleRsvp(event.id, event.userId, status, isPast)}
               onAddComment={() => {}}
               variant="card"

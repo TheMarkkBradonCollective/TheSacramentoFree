@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { ArrowLeft, Calendar, Check, HelpCircle, LifeBuoy, MapPin, MessageSquare, Pencil, Repeat, UserCheck, UserX, X } from 'lucide-react';
 import { CommunityEvent, EventComment, EventRsvpStatus, UserProfile } from '../types';
 import { EventRsvpState } from '../hooks/useEventsEngagement';
+import { PostVoteState } from '../hooks/useItemsEngagement';
 import EventEngagement from './EventEngagement';
 import EventPinAdjustModal from './EventPinAdjustModal';
 import StaffEventActions from './StaffEventActions';
@@ -21,6 +22,8 @@ import EventDetailNavigation from './EventDetailNavigation';
 import DetailActionFooter, { type DetailFooterButton } from './DetailActionFooter';
 import { PresenceUserAvatar } from './UserAvatar';
 import { useDismissOnEscape } from '../hooks/useDismissOnEscape';
+import { recordEventView } from '../supabase';
+import { ListingViewCount } from './ListingViewBadge';
 
 interface EventDetailViewProps {
   event: CommunityEvent;
@@ -28,7 +31,9 @@ interface EventDetailViewProps {
   currentUserId: string;
   userProfile?: UserProfile;
   rsvpState: EventRsvpState;
+  voteState: PostVoteState;
   comments: EventComment[];
+  onVote: (direction: 'up' | 'down') => void;
   onRsvp: (status: EventRsvpStatus) => void;
   onAddComment: (text: string) => void;
   onDeleteComment?: (commentId: string) => void;
@@ -50,6 +55,7 @@ interface EventDetailViewProps {
   /** Open event detail and auto-start in-app navigation (events Navigate button). */
   startNavigationOnOpen?: boolean;
   onStartNavigationConsumed?: () => void;
+  onViewCountUpdated?: (eventId: string, viewCount: number) => void;
 }
 
 function formatEventDate(iso: string): string {
@@ -84,7 +90,9 @@ export default function EventDetailView({
   currentUserId,
   userProfile,
   rsvpState,
+  voteState,
   comments,
+  onVote,
   onRsvp,
   onAddComment,
   onDeleteComment,
@@ -104,6 +112,7 @@ export default function EventDetailView({
   commentsLocked = false,
   startNavigationOnOpen = false,
   onStartNavigationConsumed,
+  onViewCountUpdated,
 }: EventDetailViewProps) {
   const [showPinModal, setShowPinModal] = useState(false);
   const [navFooterActions, setNavFooterActions] = useState<DetailFooterButton[]>([]);
@@ -116,6 +125,15 @@ export default function EventDetailView({
   const canEdit = isOwner && isEventEditable(event);
   const canAddDates = isOwner && !isCancelled && onAddDates;
   const seriesDates = event.seriesId ? getSeriesOccurrences(allEvents, event.seriesId) : [];
+
+  useEffect(() => {
+    if (!currentUserId || event.userId === currentUserId) return;
+    void recordEventView(event.id).then((result) => {
+      if (result.ok && result.viewCount != null) {
+        onViewCountUpdated?.(event.id, result.viewCount);
+      }
+    });
+  }, [currentUserId, event.id, event.userId, onViewCountUpdated]);
 
   const activeRsvp = isPast ? effectivePastRsvp(rsvpState.userRsvp) : rsvpState.userRsvp;
 
@@ -248,6 +266,7 @@ export default function EventDetailView({
               )}
             </div>
             <h2 className="font-display text-xl sm:text-2xl font-bold text-app leading-tight">{event.title}</h2>
+            <ListingViewCount count={event.viewCount ?? 0} compact className="text-xs text-muted" />
             <EventDetailNavigation
               event={event}
               currentUserId={currentUserId}
@@ -403,8 +422,10 @@ export default function EventDetailView({
           <EventEngagement
             hostUserId={event.userId}
             currentUserId={currentUserId}
+            voteState={voteState}
             rsvpState={rsvpState}
             comments={comments}
+            onVote={onVote}
             onRsvp={onRsvp}
             onAddComment={onAddComment}
             onDeleteComment={onDeleteComment}
