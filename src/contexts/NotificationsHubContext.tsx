@@ -27,8 +27,8 @@ const HUB_TAB_META: Record<
   { label: string; mobileLabel: string; title: string; subtitle: string; intro: string }
 > = {
   notifications: {
-    label: 'Notify',
-    mobileLabel: 'Notify',
+    label: 'Notifications',
+    mobileLabel: 'Notifs',
     title: 'Notifications',
     subtitle: 'Every alert you receive — messages, listings, comments, claims, and more',
     intro: 'Your inbox mirrors push alerts: if you would get an alert for it, it appears here. Choose what sends push under Alerts (last tab).',
@@ -116,12 +116,12 @@ export function NotificationsHubButton({
     <HeaderActionButton
       onClick={() => openHub('notifications')}
       icon={Bell}
-      label="Notify"
+      label="Notifications"
       glow={shouldGlow}
       compact={compact}
       unboxed
-      title={shouldGlow ? 'You have unread notifications' : 'Notify, news, updates, and alerts'}
-      ariaLabel={shouldGlow ? 'Notifications — unread items' : 'Notify, news, updates, and alerts'}
+      title={shouldGlow ? 'You have unread notifications' : 'Notifications, news, updates, and alerts'}
+      ariaLabel={shouldGlow ? 'Notifications — unread items' : 'Notifications, news, updates, and alerts'}
       id="notifications_hub_btn"
       className={className}
     />

@@ -708,6 +708,8 @@ export interface AppUpdateRecord {
   directorName: string;
   directorTitle: string;
   postedByUserId: string;
+  /** Unique signed-in neighbors who opened the full story. */
+  viewCount?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -723,6 +725,8 @@ export interface HelpAnnouncementRecord {
   authorName: string;
   authorTitle: string;
   postedByUserId: string;
+  /** Unique signed-in neighbors who opened the full story. */
+  viewCount?: number;
   createdAt: string;
   updatedAt: string;
 }

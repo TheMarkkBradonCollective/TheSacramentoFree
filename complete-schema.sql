@@ -740,6 +740,18 @@ CREATE TABLE IF NOT EXISTS public.app_updates (
 ALTER TABLE public.app_updates ENABLE ROW LEVEL SECURITY;
 CREATE INDEX IF NOT EXISTS app_updates_date_idx ON public.app_updates (date DESC, "updatedAt" DESC);
 
+ALTER TABLE public.app_updates ADD COLUMN IF NOT EXISTS "viewCount" INTEGER NOT NULL DEFAULT 0;
+
+CREATE TABLE IF NOT EXISTS public.app_update_views (
+  "updateId" TEXT NOT NULL REFERENCES public.app_updates(id) ON DELETE CASCADE,
+  "userId" TEXT NOT NULL,
+  "viewedAt" TIMESTAMPTZ DEFAULT NOW(),
+  PRIMARY KEY ("updateId", "userId")
+);
+
+ALTER TABLE public.app_update_views ENABLE ROW LEVEL SECURITY;
+CREATE INDEX IF NOT EXISTS app_update_views_update_idx ON public.app_update_views ("updateId");
+
 
 -- =========================================================
 -- 19. App reviews (0–5 stars, half-star steps, one per user)
@@ -1716,6 +1728,19 @@ CREATE INDEX IF NOT EXISTS help_announcements_date_idx
   ON public.help_announcements (date DESC, "updatedAt" DESC);
 
 ALTER TABLE public.help_announcements ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE public.help_announcements ADD COLUMN IF NOT EXISTS "viewCount" INTEGER NOT NULL DEFAULT 0;
+
+CREATE TABLE IF NOT EXISTS public.help_announcement_views (
+  "announcementId" TEXT NOT NULL REFERENCES public.help_announcements(id) ON DELETE CASCADE,
+  "userId" TEXT NOT NULL,
+  "viewedAt" TIMESTAMPTZ DEFAULT NOW(),
+  PRIMARY KEY ("announcementId", "userId")
+);
+
+ALTER TABLE public.help_announcement_views ENABLE ROW LEVEL SECURITY;
+CREATE INDEX IF NOT EXISTS help_announcement_views_announcement_idx
+  ON public.help_announcement_views ("announcementId");
 
 CREATE TABLE IF NOT EXISTS public.community_content_votes (
   id TEXT PRIMARY KEY,
@@ -2844,6 +2869,104 @@ $recordeventview$;
 REVOKE ALL ON FUNCTION public.record_event_view(text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.record_event_view(text) TO authenticated;
 
+CREATE OR REPLACE FUNCTION public.record_app_update_view(target_update_id text)
+RETURNS integer
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $recordupdateview$
+DECLARE
+  viewer_uid text;
+  author_uid text;
+  inserted_count integer;
+  result_count integer;
+BEGIN
+  viewer_uid := auth.uid()::text;
+  IF viewer_uid IS NULL OR target_update_id IS NULL OR target_update_id = '' THEN
+    RETURN NULL;
+  END IF;
+
+  SELECT "postedByUserId" INTO author_uid FROM public.app_updates WHERE id = target_update_id;
+  IF author_uid IS NULL THEN
+    RETURN NULL;
+  END IF;
+
+  IF author_uid = viewer_uid THEN
+    SELECT COALESCE("viewCount", 0) INTO result_count FROM public.app_updates WHERE id = target_update_id;
+    RETURN result_count;
+  END IF;
+
+  INSERT INTO public.app_update_views ("updateId", "userId")
+  VALUES (target_update_id, viewer_uid)
+  ON CONFLICT ("updateId", "userId") DO NOTHING;
+
+  GET DIAGNOSTICS inserted_count = ROW_COUNT;
+
+  IF inserted_count > 0 THEN
+    UPDATE public.app_updates
+    SET "viewCount" = COALESCE("viewCount", 0) + 1
+    WHERE id = target_update_id
+    RETURNING "viewCount" INTO result_count;
+  ELSE
+    SELECT COALESCE("viewCount", 0) INTO result_count FROM public.app_updates WHERE id = target_update_id;
+  END IF;
+
+  RETURN result_count;
+END;
+$recordupdateview$;
+
+REVOKE ALL ON FUNCTION public.record_app_update_view(text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.record_app_update_view(text) TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.record_help_announcement_view(target_announcement_id text)
+RETURNS integer
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $recordannouncementview$
+DECLARE
+  viewer_uid text;
+  author_uid text;
+  inserted_count integer;
+  result_count integer;
+BEGIN
+  viewer_uid := auth.uid()::text;
+  IF viewer_uid IS NULL OR target_announcement_id IS NULL OR target_announcement_id = '' THEN
+    RETURN NULL;
+  END IF;
+
+  SELECT "postedByUserId" INTO author_uid FROM public.help_announcements WHERE id = target_announcement_id;
+  IF author_uid IS NULL THEN
+    RETURN NULL;
+  END IF;
+
+  IF author_uid = viewer_uid THEN
+    SELECT COALESCE("viewCount", 0) INTO result_count FROM public.help_announcements WHERE id = target_announcement_id;
+    RETURN result_count;
+  END IF;
+
+  INSERT INTO public.help_announcement_views ("announcementId", "userId")
+  VALUES (target_announcement_id, viewer_uid)
+  ON CONFLICT ("announcementId", "userId") DO NOTHING;
+
+  GET DIAGNOSTICS inserted_count = ROW_COUNT;
+
+  IF inserted_count > 0 THEN
+    UPDATE public.help_announcements
+    SET "viewCount" = COALESCE("viewCount", 0) + 1
+    WHERE id = target_announcement_id
+    RETURNING "viewCount" INTO result_count;
+  ELSE
+    SELECT COALESCE("viewCount", 0) INTO result_count FROM public.help_announcements WHERE id = target_announcement_id;
+  END IF;
+
+  RETURN result_count;
+END;
+$recordannouncementview$;
+
+REVOKE ALL ON FUNCTION public.record_help_announcement_view(text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.record_help_announcement_view(text) TO authenticated;
+
 CREATE OR REPLACE FUNCTION public.mark_chat_messages_read(target_chat_id text, target_message_ids text[])
 RETURNS void
 LANGUAGE plpgsql
@@ -3602,6 +3725,10 @@ CREATE POLICY "Users read own notifications" ON public.user_notifications
 CREATE POLICY "Users mark own notifications read" ON public.user_notifications
   FOR UPDATE USING (auth.uid()::text = "userId")
   WITH CHECK (auth.uid()::text = "userId");
+
+DROP POLICY IF EXISTS "Users delete own notifications" ON public.user_notifications;
+CREATE POLICY "Users delete own notifications" ON public.user_notifications
+  FOR DELETE USING (auth.uid()::text = "userId");
 
 DROP POLICY IF EXISTS "Users manage own push subscriptions" ON public.push_subscriptions;
 CREATE POLICY "Users manage own push subscriptions" ON public.push_subscriptions

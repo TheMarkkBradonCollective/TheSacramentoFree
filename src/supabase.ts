@@ -1318,6 +1318,48 @@ export async function recordEventView(eventId: string): Promise<{ ok: boolean; v
   return { ok: true, viewCount: Number.isFinite(viewCount) ? viewCount : undefined };
 }
 
+let appUpdateViewRpcAvailable: boolean | null = null;
+
+export async function recordAppUpdateView(updateId: string): Promise<{ ok: boolean; viewCount?: number }> {
+  if (!updateId || appUpdateViewRpcAvailable === false) return { ok: false };
+
+  const { data, error } = await supabase.rpc('record_app_update_view', { target_update_id: updateId });
+  if (error) {
+    const message = String(error.message || '');
+    if (/record_app_update_view|viewcount|app_update_views/i.test(message)) {
+      appUpdateViewRpcAvailable = false;
+    }
+    return { ok: false };
+  }
+
+  appUpdateViewRpcAvailable = true;
+  const viewCount = typeof data === 'number' ? data : Number(data);
+  return { ok: true, viewCount: Number.isFinite(viewCount) ? viewCount : undefined };
+}
+
+let helpAnnouncementViewRpcAvailable: boolean | null = null;
+
+export async function recordHelpAnnouncementView(
+  announcementId: string,
+): Promise<{ ok: boolean; viewCount?: number }> {
+  if (!announcementId || helpAnnouncementViewRpcAvailable === false) return { ok: false };
+
+  const { data, error } = await supabase.rpc('record_help_announcement_view', {
+    target_announcement_id: announcementId,
+  });
+  if (error) {
+    const message = String(error.message || '');
+    if (/record_help_announcement_view|viewcount|help_announcement_views/i.test(message)) {
+      helpAnnouncementViewRpcAvailable = false;
+    }
+    return { ok: false };
+  }
+
+  helpAnnouncementViewRpcAvailable = true;
+  const viewCount = typeof data === 'number' ? data : Number(data);
+  return { ok: true, viewCount: Number.isFinite(viewCount) ? viewCount : undefined };
+}
+
 async function requireAuthUserId(): Promise<string | null> {
   const { data: sessionData } = await supabase.auth.getSession();
   return sessionData.session?.user?.id ?? null;
@@ -5233,6 +5275,7 @@ function normalizeAppUpdateRow(
     directorName,
     directorTitle: String(row.directorTitle || DIRECTOR_MESSAGE.title),
     postedByUserId,
+    viewCount: typeof row.viewCount === 'number' && Number.isFinite(row.viewCount) ? row.viewCount : 0,
     createdAt: coerceToIsoDate(row.createdAt),
     updatedAt: coerceToIsoDate(row.updatedAt),
   };
@@ -5510,6 +5553,7 @@ function normalizeHelpAnnouncementRow(row: Record<string, unknown>): HelpAnnounc
     authorName: String(row.authorName || 'Staff'),
     authorTitle: String(row.authorTitle || 'Community team'),
     postedByUserId: String(row.postedByUserId || ''),
+    viewCount: typeof row.viewCount === 'number' && Number.isFinite(row.viewCount) ? row.viewCount : 0,
     createdAt: coerceToIsoDate(row.createdAt),
     updatedAt: coerceToIsoDate(row.updatedAt),
   };
@@ -5572,6 +5616,26 @@ export async function userHasStaffApplyInviteNotification(userId: string): Promi
       return false;
     }
     return (count ?? 0) > 0;
+  } catch {
+    return false;
+  }
+}
+
+export async function dismissSupabaseNotification(userId: string, notificationId: string): Promise<boolean> {
+  if (!userId || !notificationId) return false;
+  try {
+    const { error } = await supabase
+      .from('user_notifications')
+      .delete()
+      .eq('userId', userId)
+      .eq('id', notificationId);
+
+    if (error) {
+      if (error.code === '42P01') return false;
+      console.warn('[notifications] dismiss:', error.message);
+      return false;
+    }
+    return true;
   } catch {
     return false;
   }
