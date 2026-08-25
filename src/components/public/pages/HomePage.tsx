@@ -313,22 +313,30 @@ function OriginalHomePage({
   onViewListing,
   onRequireSignIn,
 }: HomePageProps) {
-  const { copy, name } = useBrand();
+  const { copy } = useBrand();
   const description = copy(SITE.description);
   const principles = SITE.principles.map((line) => copy(line));
   const freeRule = copy(SITE.freeRule);
+  const [city, free] = NEWSPAPER.title.split(' ');
 
   return (
     <HomeScrollStage>
       <TrademarkNoticeBanner />
 
-      <section className="px-4 sbn-hero-glow pb-4">
+      <section className="sbn-hero-glow pb-4">
         <div className="lg:grid lg:grid-cols-[1.05fr_0.95fr] lg:gap-14 lg:items-center max-w-3xl lg:max-w-none mx-auto">
-          <div>
+          <div className="min-w-0">
             <BrandLogo imgClassName="sbn-hero-logo h-14 w-auto max-w-[220px] object-contain bg-transparent mb-6" />
 
-            <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold text-app leading-[1.08] tracking-tight">
-              {name}
+            <h1
+              className="sbn-hero-wordmark font-display font-bold text-app leading-[1.02] tracking-tight max-w-full"
+              aria-label={NEWSPAPER.name}
+            >
+              <span className="sbn-hero-wordmark__the block font-semibold text-muted">{NEWSPAPER.the}</span>
+              <span className="sbn-hero-wordmark__name block">
+                {city}
+                <span className="text-accent">{free}</span>
+              </span>
             </h1>
 
             <p className="mt-4 text-xl md:text-2xl lg:text-3xl font-display font-semibold text-app leading-snug">
