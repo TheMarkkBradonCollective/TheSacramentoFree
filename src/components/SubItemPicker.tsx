@@ -81,7 +81,7 @@ function subItemStatusLabel(status: ListingSubItem['status']): string {
 
 function subItemStatusClass(status: ListingSubItem['status']): string {
   if (status === 'claimed') return 'bg-muted/20 text-muted';
-  if (status === 'pending_pickup') return 'bg-amber-500/10 text-amber-500';
+  if (status === 'pending_pickup') return 'bg-accent/10 text-accent';
   return 'bg-emerald-500/10 text-emerald-500';
 }
 

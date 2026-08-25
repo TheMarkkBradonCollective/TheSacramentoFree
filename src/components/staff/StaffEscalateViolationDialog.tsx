@@ -106,7 +106,7 @@ export default function StaffEscalateViolationDialog({
         <div className="flex items-start justify-between gap-3">
           <div>
             <h4 className="font-display font-bold text-app flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-amber-400" />
+              <AlertTriangle className="w-4 h-4 text-accent" />
               Escalate to violation
             </h4>
             <p className="text-xs text-muted mt-1">

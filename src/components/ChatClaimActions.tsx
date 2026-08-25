@@ -269,7 +269,7 @@ export default function ChatClaimActions({
       {pending.map((req) => (
         <div
           key={req.id}
-          className="p-2.5 rounded-xl border border-amber-500/30 bg-amber-500/5 space-y-2"
+          className="p-2.5 rounded-xl border border-accent/30 bg-accent/5 space-y-2"
         >
           <p className="text-xs text-app">
             <span className="font-semibold">{req.claimerName}</span>{' '}

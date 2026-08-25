@@ -135,7 +135,7 @@ function formatEventMapDate(iso: string): string {
 export const getCategoryColor = (category: string): string => {
   const colors: Record<string, string> = {
     'Curb Alert': '#EF4444', 
-    'Porch Pickup': '#F97316', 
+    'Porch Pickup': '#00845A',
     'Free Pile / Box': '#00845A', 
     'Furniture': '#3B82F6', 
     'Kitchen & Dining': '#10B981', 

@@ -459,7 +459,7 @@ export default function NotificationSettings({
       ) : null}
 
       {permission === 'unsupported' && (
-        <p className="text-sm text-amber-500 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2 mb-4">
+        <p className="text-sm text-accent bg-accent/10 border border-accent/20 rounded-lg px-3 py-2 mb-4">
           {isAndroidApp()
             ? 'Push is not configured on this Android build yet. Add google-services.json and redeploy the APK.'
             : 'This browser does not support push notifications.'}
@@ -558,7 +558,7 @@ export default function NotificationSettings({
                       type="button"
                       onClick={() => setBroadcastModalOpen(true)}
                       disabled={isTesting || isBroadcastTesting || isLoading}
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-amber-500/40 bg-amber-500/10 text-sm font-bold text-amber-200 hover:bg-amber-500/20 disabled:opacity-50"
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-accent/40 bg-accent/10 text-sm font-bold text-accent/70 hover:bg-accent/20 disabled:opacity-50"
                     >
                       {isBroadcastTesting ? 'Broadcasting…' : 'Broadcast'}
                     </button>

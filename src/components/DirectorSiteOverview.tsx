@@ -100,7 +100,7 @@ function activityColor(kind: DirectorActivityItem['kind']): string {
     case 'leave':
       return 'bg-slate-500/15 text-slate-400';
     case 'moderation':
-      return 'bg-amber-500/15 text-amber-400';
+      return 'bg-accent/15 text-accent';
     case 'report':
       return 'bg-red-500/15 text-red-400';
     case 'ticket':
@@ -371,7 +371,7 @@ export default function DirectorSiteOverview({ scrollIntoView, onScrolled }: Dir
         <StatTile
           label="Suspended"
           value={data.suspendedCount}
-          accent={data.suspendedCount > 0 ? 'text-amber-400' : undefined}
+          accent={data.suspendedCount > 0 ? 'text-accent' : undefined}
         />
       </div>
 
