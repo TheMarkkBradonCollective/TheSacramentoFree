@@ -280,20 +280,20 @@ export default function ItemCard({
                 <Tag className="w-7 h-7 text-subtle" aria-hidden />
               </div>
             )}
-            <div className="absolute inset-x-0 top-0 z-[1] flex items-start justify-between gap-1 p-1.5 pointer-events-none">
-              <div className="flex min-w-0 flex-1 flex-wrap gap-1">
+            <div className="absolute inset-x-0 top-0 z-[1] flex items-start justify-between gap-0.5 px-1 py-1 pointer-events-none">
+              <div className="flex min-w-0 flex-1 items-start gap-0.5 overflow-hidden">
                 <span
-                  className={`sbn-badge ${getPostTypeBadgeClass(item.type)} text-[8px] px-1 py-0 leading-none whitespace-nowrap shadow-sm`}
+                  className={`sbn-badge sbn-badge-grid ${getPostTypeBadgeClass(item.type)} shrink min-w-0 truncate shadow-sm`}
                 >
                   {getPostTypeGridBadgeLabel(item.type)}
                 </span>
                 {item.status === 'completed' && (
-                  <span className="sbn-badge sbn-badge-done text-[9px] py-0.5 shadow-sm">
+                  <span className="sbn-badge sbn-badge-grid sbn-badge-done shrink-0 shadow-sm">
                     {getPostTypeCompletedLabel(item.type)}
                   </span>
                 )}
               </div>
-              <ListingViewBadge count={item.viewCount ?? 0} placement="inline" />
+              <ListingViewBadge count={item.viewCount ?? 0} placement="inline" compact />
             </div>
             <ListingCardEngagementOverlay
               upvotes={voteState.upvotes}
