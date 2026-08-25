@@ -13,10 +13,15 @@ export type DetailFooterButton = {
 interface DetailActionFooterProps {
   actions: DetailFooterButton[];
   id?: string;
+  /** Pinned bar at bottom of sheet, or inline action cluster in scroll content. */
+  layout?: 'pinned' | 'inline';
 }
 
-/** Pinned neighbor/visitor actions — always visible at the bottom of detail sheets. */
-export default function DetailActionFooter({ actions, id = 'detail_primary_action_footer' }: DetailActionFooterProps) {
+export default function DetailActionFooter({
+  actions,
+  id = 'detail_primary_action_footer',
+  layout = 'pinned',
+}: DetailActionFooterProps) {
   if (actions.length === 0) return null;
 
   const primary = actions.filter((a) => a.variant !== 'secondary' && a.variant !== 'ghost');
@@ -25,7 +30,11 @@ export default function DetailActionFooter({ actions, id = 'detail_primary_actio
   return (
     <div
       id={id}
-      className="shrink-0 p-3 sm:p-4 sbn-glass-nav border-t border-app safe-area-pb"
+      className={
+        layout === 'pinned'
+          ? 'shrink-0 p-3 sm:p-4 sbn-glass-nav border-t border-app safe-area-pb'
+          : 'space-y-2'
+      }
     >
       <div className="max-w-2xl mx-auto flex flex-col gap-2">
         {primary.length > 0 && (

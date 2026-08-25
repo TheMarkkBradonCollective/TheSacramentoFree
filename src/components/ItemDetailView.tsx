@@ -370,9 +370,10 @@ export default function ItemDetailView({
           </div>
         </header>
 
-        <div className="shrink-0 border-b border-app">
+        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden sbn-safe-bottom">
+        <div className="sbn-page-content pb-6">
           <ListingPhotoGallery urls={photos} title={item.title} compact />
-          <div className="px-4 sm:px-5 pt-3 pb-4 space-y-3">
+          <div className="p-4 sm:p-5 space-y-4">
             <div className="flex flex-wrap gap-2">
               <span className={`sbn-badge ${getPostTypeBadgeClass(item.type)}`}>
                 {getPostTypeLabel(item.type)}
@@ -405,14 +406,38 @@ export default function ItemDetailView({
                 onAutoStartNavigationConsumed={onStartNavigationConsumed}
                 onPickupCompleted={onPickupCompleted}
                 onFooterActions={setNavFooterActions}
+                primaryActionPlacement="inline"
               />
             )}
-          </div>
-        </div>
 
-        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden sbn-safe-bottom">
-        <div className="sbn-page-content pb-6">
-        <div className="p-5 sm:p-6 space-y-5">
+            {(footerActions.length > 0 || showClaimInFooter) && (
+              <div className="space-y-2" id="listing_detail_actions_top">
+                {footerActions.length > 0 && (
+                  <DetailActionFooter actions={footerActions} id="listing_detail_footer" layout="inline" />
+                )}
+                {showClaimInFooter && (
+                  <ClaimAtPickupButton
+                    item={item}
+                    user={userProfile!}
+                    userLat={userLat}
+                    userLng={userLng}
+                    onClaimSubmitted={onClaimSubmitted!}
+                    className="w-full"
+                  />
+                )}
+                {isOwner && item.status === 'active' && footerActions.length > 0 && (
+                  <p className="text-[11px] text-muted text-center leading-snug">
+                    {item.type === 'trade'
+                      ? 'Confirm the swap in Messages once you and your neighbor have traded.'
+                      : item.type === 'looking'
+                        ? 'Mark fulfilled once a neighbor has helped with your request.'
+                        : 'Confirm neighbor pickups from Messages, or when they self-claim at the pin.'}
+                  </p>
+                )}
+              </div>
+            )}
+
+        <div className="space-y-5 pt-1">
 
           {tradeSeeking && (
             <section className="sbn-card p-4 space-y-2 border border-purple-500/25 bg-purple-500/5">
@@ -563,37 +588,9 @@ export default function ItemDetailView({
             </div>
           </button>
         </div>
+          </div>
         </div>
         </div>
-
-      {(footerActions.length > 0 || showClaimInFooter) && (
-        <div className="shrink-0">
-          {footerActions.length > 0 && <DetailActionFooter actions={footerActions} id="listing_detail_footer" />}
-          {showClaimInFooter && (
-            <div className={footerActions.length > 0 ? 'px-3 pb-3 sm:px-4 sm:pb-4 border-t border-app bg-[var(--sbn-nav-bg)]' : ''}>
-              <div className="max-w-2xl mx-auto">
-                <ClaimAtPickupButton
-                  item={item}
-                  user={userProfile!}
-                  userLat={userLat}
-                  userLng={userLng}
-                  onClaimSubmitted={onClaimSubmitted!}
-                  className="w-full"
-                />
-              </div>
-            </div>
-          )}
-          {isOwner && item.status === 'active' && footerActions.length > 0 && (
-            <p className="px-4 pb-3 text-[11px] text-muted text-center leading-snug max-w-2xl mx-auto">
-              {item.type === 'trade'
-                ? 'Confirm the swap in Messages once you and your neighbor have traded.'
-                : item.type === 'looking'
-                  ? 'Mark fulfilled once a neighbor has helped with your request.'
-                  : 'Confirm neighbor pickups from Messages, or when they self-claim at the pin.'}
-            </p>
-          )}
-        </div>
-      )}
     </div>
   );
 
