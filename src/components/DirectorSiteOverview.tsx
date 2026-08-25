@@ -50,6 +50,7 @@ function PlayStoreAssetDownload({
   );
 }
 
+function formatWhen(iso: string): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return '';
   const diffMs = Date.now() - date.getTime();
