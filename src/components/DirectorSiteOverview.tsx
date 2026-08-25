@@ -389,12 +389,13 @@ export default function DirectorSiteOverview({ scrollIntoView, onScrolled }: Dir
         </div>
         <div className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
           {playStoreAssets.map((asset) => (
-            <PlayStoreAssetDownload
-              key={asset.file}
-              id={`director_download_play_asset_${asset.file.replace(/[^a-z0-9]+/gi, '_')}`}
-              file={asset.file}
-              label={asset.label}
-            />
+            <div key={asset.file}>
+              <PlayStoreAssetDownload
+                id={`director_download_play_asset_${asset.file.replace(/[^a-z0-9]+/gi, '_')}`}
+                file={asset.file}
+                label={asset.label}
+              />
+            </div>
           ))}
         </div>
         <div className="space-y-1">
