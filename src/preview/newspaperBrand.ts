@@ -4,7 +4,7 @@ import { COMMUNITY_SLOGAN } from '../siteContent';
 export const NEWSPAPER = {
   name: 'TheSacramentoFree',
   the: 'The',
-  title: 'TheSacramentoFree',
+  title: 'Sacramento Free',
   tagline: COMMUNITY_SLOGAN,
   city: 'Sacramento, California',
   cityLine: 'Sacramento • California',
