@@ -489,13 +489,57 @@ export function findCurrentStepIndex(
   return index;
 }
 
-/** Bearing along the route polyline at the user's nearest projected point. */
-export function bearingAlongRoute(coords: [number, number][], user: LatLng): number {
+/** Signed heading difference in degrees, in (-180, 180]. */
+export function headingDeltaDegrees(from: number, to: number): number {
+  return ((to - from + 540) % 360) - 180;
+}
+
+function interpolateSegment(a: LatLng, b: LatLng, t: number): LatLng {
+  const clamped = Math.max(0, Math.min(1, t));
+  return {
+    lat: a.lat + (b.lat - a.lat) * clamped,
+    lng: a.lng + (b.lng - a.lng) * clamped,
+  };
+}
+
+/** Walk forward along the polyline from a projected point. */
+function pointAheadOnRoute(
+  coords: [number, number][],
+  startSegment: number,
+  startAlong: number,
+  metersAhead: number,
+): LatLng {
+  let remaining = Math.max(0, metersAhead);
+  let along = startAlong;
+  for (let i = startSegment; i < coords.length - 1; i++) {
+    const a = latLngFromCoord(coords[i]);
+    const b = latLngFromCoord(coords[i + 1]);
+    const segLen = haversineMeters(a, b);
+    if (segLen < 0.05) {
+      along = 0;
+      continue;
+    }
+    const leftOnSeg = segLen * (1 - along);
+    if (remaining <= leftOnSeg) {
+      return interpolateSegment(a, b, along + remaining / segLen);
+    }
+    remaining -= leftOnSeg;
+    along = 0;
+  }
+  return latLngFromCoord(coords[coords.length - 1]);
+}
+
+/**
+ * Bearing of the street the user is on — a 22 m chord along the route so tiny
+ * polyline jogs do not swing the puck catty-corner.
+ */
+export function bearingAlongRoute(coords: [number, number][], user: LatLng, chordMeters = 22): number {
   if (coords.length < 2) return 0;
 
   let nearestSegment = 0;
   let nearestDist = Infinity;
   let nearestAlong = 0;
+  let nearestPoint = latLngFromCoord(coords[0]);
 
   for (let i = 0; i < coords.length - 1; i++) {
     const a = latLngFromCoord(coords[i]);
@@ -506,20 +550,23 @@ export function bearingAlongRoute(coords: [number, number][], user: LatLng): num
       nearestDist = dist;
       nearestSegment = i;
       nearestAlong = projection.along;
+      nearestPoint = projection.point;
     }
   }
 
-  if (nearestAlong > 0.9 && nearestSegment < coords.length - 2) {
-    return bearingDegrees(latLngFromCoord(coords[nearestSegment + 1]), latLngFromCoord(coords[nearestSegment + 2]));
+  const ahead = pointAheadOnRoute(coords, nearestSegment, nearestAlong, chordMeters);
+  if (haversineMeters(nearestPoint, ahead) < 2) {
+    const a = latLngFromCoord(coords[nearestSegment]);
+    const b = latLngFromCoord(coords[Math.min(nearestSegment + 1, coords.length - 1)]);
+    return bearingDegrees(a, b);
   }
-
-  return bearingDegrees(latLngFromCoord(coords[nearestSegment]), latLngFromCoord(coords[nearestSegment + 1]));
+  return bearingDegrees(nearestPoint, ahead);
 }
 
 /** Smooth heading changes to reduce GPS jitter. */
 export function smoothHeadingDegrees(previous: number, next: number, maxStep = 22): number {
-  const delta = ((next - previous + 540) % 360) - 180;
-  if (Math.abs(delta) <= maxStep) return next;
+  const delta = headingDeltaDegrees(previous, next);
+  if (Math.abs(delta) <= maxStep) return (next + 360) % 360;
   return (previous + Math.sign(delta) * maxStep + 360) % 360;
 }
 

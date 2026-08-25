@@ -39,6 +39,7 @@ import {
   formatNavDuration,
   formatSpeedMph,
   getDisplayedNavGuidance,
+  headingDeltaDegrees,
   remainingRouteMeters,
   shouldFireVoiceCue,
   maneuverIconKind,
@@ -708,20 +709,22 @@ export default function MapNavigationView({
   const routeFetchedForDestRef = useRef<string | null>(null);
   const routeRequestIdRef = useRef(0);
   const lastBearingApplyRef = useRef(0);
+  const lastAppliedRotationRef = useRef(0);
   const compassHeadingRef = useRef<number | null>(null);
   const settingsRef = useRef<NavigationSettings>(readNavigationSettings());
   const handleGpsUpdateRef = useRef<(position: GeolocationPosition) => void>(() => undefined);
   const onProgressUpdateRef = useRef(onProgressUpdate);
   onProgressUpdateRef.current = onProgressUpdate;
 
-  const NAV_GPS_FOLLOW_METERS_DRIVING = 8;
-  const NAV_GPS_FOLLOW_METERS_WALK_BIKE = 3;
-  const NAV_UI_TICK_MS = 700;
-  const NAV_MAP_SYNC_MS = 220;
-  const NAV_ROUTE_DRAW_MIN_METERS = 14;
-  const NAV_ROUTE_DRAW_MIN_MS = 1400;
-  const NAV_HEADING_ICON_DEG = 12;
-  const NAV_DISPLAY_SMOOTH_ALPHA = 0.72;
+  const NAV_GPS_FOLLOW_METERS_DRIVING = 4;
+  const NAV_GPS_FOLLOW_METERS_WALK_BIKE = 2;
+  const NAV_UI_TICK_MS = 450;
+  const NAV_MAP_SYNC_MS = 90;
+  const NAV_ROUTE_DRAW_MIN_METERS = 10;
+  const NAV_ROUTE_DRAW_MIN_MS = 900;
+  const NAV_HEADING_ICON_DEG = 18;
+  const NAV_MAP_ROTATE_DEG = 10;
+  const NAV_DISPLAY_SMOOTH_ALPHA = 0.58;
   const NAV_OFF_ROUTE_THRESHOLD_M = 55;
   const NAV_OFF_ROUTE_EVAL_MS = 900;
   const NAV_OFF_ROUTE_TICKS = 4;
@@ -1267,6 +1270,8 @@ export default function MapNavigationView({
       if (route.coords.length >= 2) {
         const initialHeading = bearingAlongRoute(route.coords, start);
         headingRef.current = initialHeading;
+        lastAppliedRotationRef.current = initialHeading;
+        lastMarkerHeadingRef.current = initialHeading;
         lastGpsPosRef.current = start;
         setHeading(initialHeading);
       }
@@ -1352,7 +1357,7 @@ export default function MapNavigationView({
 
     const headingChanged =
       !userMarkerRef.current ||
-      Math.abs(((markerHeading - lastMarkerHeadingRef.current + 540) % 360) - 180) >= NAV_HEADING_ICON_DEG;
+      Math.abs(headingDeltaDegrees(lastMarkerHeadingRef.current, markerHeading)) >= NAV_HEADING_ICON_DEG;
 
     try {
       if (userMarkerRef.current) {
@@ -1379,11 +1384,13 @@ export default function MapNavigationView({
       settingsRef.current.travelMode === 'driving' ? NAV_GPS_FOLLOW_METERS_DRIVING : NAV_GPS_FOLLOW_METERS_WALK_BIKE;
     const movedEnough = !last || haversineMeters(last, next) >= followMeters;
     const now = Date.now();
-    const bearingDue = now - lastBearingApplyRef.current >= NAV_MAP_SYNC_MS;
+    const rotationDelta = Math.abs(headingDeltaDegrees(lastAppliedRotationRef.current, nextHeading));
+    const shouldRotate = !northUpRef.current && (movedEnough || rotationDelta >= NAV_MAP_ROTATE_DEG);
 
     if (!movedEnough) {
-      if (!northUpRef.current && bearingDue) {
+      if (shouldRotate) {
         lastBearingApplyRef.current = now;
+        lastAppliedRotationRef.current = nextHeading;
         applyHeadingUpRotation(mapRotatorRef.current, map, next, nextHeading, false);
       }
       return;
@@ -1405,6 +1412,7 @@ export default function MapNavigationView({
         Math.max(liveMap.getZoom(), gpsFollowZoom(settingsRef.current.travelMode)),
         !northUpRef.current,
       );
+      lastAppliedRotationRef.current = headingRef.current;
       applyHeadingUpRotation(mapRotatorRef.current, liveMap, target, headingRef.current, northUpRef.current);
     });
   }, []);
@@ -1474,6 +1482,7 @@ export default function MapNavigationView({
         compassHeading: compassHeadingRef.current,
         speedMps: speed,
         travelMode: settingsRef.current.travelMode,
+        offRouteMeters: offRouteDistance,
       });
       lastGpsPosRef.current = snapped;
 

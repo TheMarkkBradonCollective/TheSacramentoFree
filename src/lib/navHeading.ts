@@ -1,5 +1,6 @@
 import type { LatLng } from './mapRoute';
-import { bearingAlongRoute, bearingDegrees, smoothHeadingDegrees } from './navigationRoute';
+import { haversineMeters } from './mapRoute';
+import { bearingAlongRoute, bearingDegrees, headingDeltaDegrees, smoothHeadingDegrees } from './navigationRoute';
 import type { NavTravelMode } from './navigationSettings';
 
 export interface NavHeadingInput {
@@ -11,11 +12,26 @@ export interface NavHeadingInput {
   compassHeading: number | null;
   speedMps: number | null | undefined;
   travelMode: NavTravelMode;
+  /** Distance from the user to the route polyline. On-route locks to the street. */
+  offRouteMeters?: number | null;
 }
+
+/** Ignore heading noise smaller than this — keeps the arrow on the street. */
+export const NAV_HEADING_HOLD_DEG = 28;
+/** A real turn (intersection, U-turn). Catch up immediately. */
+export const NAV_HEADING_DRAMATIC_DEG = 48;
+/** Stay glued to the route tangent inside this offset. */
+export const NAV_HEADING_ON_ROUTE_M = 32;
+/** Movement bearing needs this much travel so GPS jitter cannot aim catty-corner. */
+const MOVEMENT_MIN_METERS = 6;
 
 function finiteHeading(value: number | null | undefined): number | null {
   if (value == null || Number.isNaN(value) || value < 0) return null;
   return (value + 360) % 360;
+}
+
+function absHeadingDelta(from: number, to: number): number {
+  return Math.abs(headingDeltaDegrees(from, to));
 }
 
 /** Prefer a true compass event; fall back to alpha-based heading. */
@@ -29,16 +45,27 @@ export function compassHeadingFromEvent(event: DeviceOrientationEvent): number |
   return (360 - event.alpha) % 360;
 }
 
+function settleToward(previous: number, target: number, dramatic: boolean): number {
+  const delta = absHeadingDelta(previous, target);
+  if (delta < NAV_HEADING_HOLD_DEG) return previous;
+  if (dramatic || delta >= NAV_HEADING_DRAMATIC_DEG) {
+    return smoothHeadingDegrees(previous, target, 62);
+  }
+  return smoothHeadingDegrees(previous, target, 10);
+}
+
 /**
- * Fuse GPS motion, device compass, and the route polyline into a stable heading.
- * Compass wins when you are walking/biking or barely moving; GPS motion wins in a car.
+ * Keep the puck on the street. GPS/compass wiggles are ignored unless the user
+ * actually turns (route tangent jumps, or they leave the road).
  */
 export function resolveNavHeading(input: NavHeadingInput): number {
   const speed = input.speedMps != null && Number.isFinite(input.speedMps) ? Math.max(0, input.speedMps) : 0;
   const gpsHeading = finiteHeading(input.gpsHeading);
   const compass = finiteHeading(input.compassHeading);
+  const movedMeters =
+    input.lastPosition != null ? haversineMeters(input.lastPosition, input.currentPosition) : 0;
   const movement =
-    input.lastPosition && speed >= 0.6
+    input.lastPosition && speed >= 1.2 && movedMeters >= MOVEMENT_MIN_METERS
       ? finiteHeading(bearingDegrees(input.lastPosition, input.currentPosition))
       : null;
   const alongRoute =
@@ -46,37 +73,35 @@ export function resolveNavHeading(input: NavHeadingInput): number {
       ? finiteHeading(bearingAlongRoute(input.routeCoords, input.currentPosition))
       : null;
 
-  const walkingOrBiking = input.travelMode !== 'driving';
-  const movingFast = speed >= (walkingOrBiking ? 2.2 : 1.6);
-  const creeping = speed >= 0.45 && speed < 1.2;
+  const offRoute = input.offRouteMeters != null && input.offRouteMeters > NAV_HEADING_ON_ROUTE_M;
+  const onStreet = alongRoute != null && !offRoute;
 
-  let next = input.previous;
-  let maxStep = 18;
-
-  if (movingFast && movement != null) {
-    next = movement;
-    maxStep = walkingOrBiking ? 16 : 24;
-  } else if (movingFast && gpsHeading != null) {
-    next = gpsHeading;
-    maxStep = 20;
-  } else if (compass != null && (walkingOrBiking || !movingFast)) {
-    next = compass;
-    maxStep = creeping ? 10 : walkingOrBiking ? 14 : 16;
-  } else if (gpsHeading != null && speed >= 0.8) {
-    next = gpsHeading;
-    maxStep = 14;
-  } else if (alongRoute != null) {
-    next = alongRoute;
-    maxStep = 8;
-  } else if (compass != null) {
-    next = compass;
-    maxStep = 12;
-  } else if (gpsHeading != null) {
-    next = gpsHeading;
-    maxStep = 10;
+  if (onStreet && alongRoute != null) {
+    const streetTurn = absHeadingDelta(input.previous, alongRoute);
+    return settleToward(input.previous, alongRoute, streetTurn >= NAV_HEADING_DRAMATIC_DEG);
   }
 
-  return smoothHeadingDegrees(input.previous, next, maxStep);
+  const walkingOrBiking = input.travelMode !== 'driving';
+  const movingFast = speed >= (walkingOrBiking ? 2.4 : 2.0);
+
+  let target = input.previous;
+  if (movingFast && movement != null) {
+    target = movement;
+  } else if (movingFast && gpsHeading != null) {
+    target = gpsHeading;
+  } else if (offRoute && gpsHeading != null && speed >= 1.4) {
+    target = gpsHeading;
+  } else if (offRoute && compass != null) {
+    target = compass;
+  } else if (alongRoute != null) {
+    target = alongRoute;
+  } else if (compass != null) {
+    target = compass;
+  } else if (gpsHeading != null) {
+    target = gpsHeading;
+  }
+
+  return settleToward(input.previous, target, false);
 }
 
 export async function requestCompassPermission(): Promise<boolean> {
