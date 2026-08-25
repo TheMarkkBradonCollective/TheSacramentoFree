@@ -8,7 +8,7 @@ import { pauseAppUpdateWatcher } from '../pwa/appUpdateWatcher';
 import { SITE } from '../siteContent';
 import { useNewspaperSkin } from '../preview/NewspaperSkinContext';
 
-const CONFETTI_COLORS = ['#FF4500', '#FFB347', '#FFD166', '#FF8C42', '#FFFFFF', '#FFECE6'];
+const CONFETTI_COLORS = ['#00845A', '#00A36C', '#5DBF95', '#E6F4EE', '#FFFFFF', '#006B46'];
 /** Under the newspaper skin the confetti becomes torn newsprint and ink flecks. */
 const NEWSPRINT_CONFETTI = ['#0a0a0a', '#2b2b27', '#6b6b64', '#c9c9c2', '#f4f3ee', '#faf9f5'];
 

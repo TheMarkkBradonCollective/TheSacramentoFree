@@ -6,9 +6,9 @@
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Plus Jakarta Sans", "Inter", sans-serif;
-  --color-brand-orange: #0f0f0f;
-  --color-brand-orange-hover: #2a2a2a;
-  --color-brand-orange-light: #f0f0f0;
+  --color-brand-orange: #00845A;
+  --color-brand-orange-hover: #006B46;
+  --color-brand-orange-light: #E6F4EE;
   --radius-sm: 0.25rem;
   --radius-md: 0.375rem;
   --radius-lg: 0.5rem;
@@ -16,7 +16,7 @@
   --radius-pill: 9999px;
 }
 
-/* Light mode — crisp black on white, black accent */
+/* Light mode — crisp black on white, Sacramento green accent */
 :root,
 .light {
   --color-bg: #ffffff;
@@ -29,9 +29,9 @@
   --color-text: #0f0f0f;
   --color-text-muted: #5c5f66;
   --color-text-subtle: #7c7f86;
-  --color-accent: #0f0f0f;
-  --color-accent-hover: #2a2a2a;
-  --color-accent-soft: #f0f0f0;
+  --color-accent: #00845a;
+  --color-accent-hover: #006b46;
+  --color-accent-soft: #e6f4ee;
   --color-on-accent: #ffffff;
   --color-card: #ffffff;
   --color-card-muted: #f6f7f8;
@@ -42,7 +42,7 @@
   --radius-card: var(--radius-lg);
 }
 
-/* Dark mode — sharp contrast, white accent */
+/* Dark mode — sharp contrast, same Sacramento green */
 .dark {
   --color-bg: #0b0b0c;
   --color-bg-secondary: #0f0f10;
@@ -54,10 +54,10 @@
   --color-text: #f4f4f5;
   --color-text-muted: #b4b4bc;
   --color-text-subtle: #8b8b94;
-  --color-accent: #f4f4f5;
-  --color-accent-hover: #ffffff;
-  --color-accent-soft: rgba(255, 255, 255, 0.12);
-  --color-on-accent: #0f0f0f;
+  --color-accent: #00a36c;
+  --color-accent-hover: #00845a;
+  --color-accent-soft: rgba(0, 132, 90, 0.18);
+  --color-on-accent: #ffffff;
   --color-card: #141416;
   --color-card-muted: #1a1a1d;
   --color-danger: #f87171;
@@ -1280,17 +1280,32 @@ html.capacitor-android .sbn-sidebar-overlay {
 .sbn-auth-brand-panel {
   position: relative;
   overflow: hidden;
-  background: linear-gradient(160deg, #ffffff 0%, #f6f7f8 52%, #f0f0f0 100%);
-  color: #0f0f0f;
-  border-right: 1px solid var(--color-border);
+  --sbn-auth-panel-fg: #ffffff;
+  --sbn-auth-panel-fg-muted: rgba(255, 255, 255, 0.82);
+  background:
+    radial-gradient(circle at 15% 15%, rgba(255, 255, 255, 0.16), transparent 45%),
+    radial-gradient(circle at 85% 85%, rgba(0, 0, 0, 0.25), transparent 55%),
+    linear-gradient(160deg, color-mix(in srgb, var(--color-accent) 92%, #fff 8%), var(--color-accent) 45%, color-mix(in srgb, var(--color-accent) 78%, #000 20%));
+  color: var(--sbn-auth-panel-fg);
 }
 
 .sbn-auth-brand-panel::before {
   content: '';
   position: absolute;
   inset: -20%;
-  background: radial-gradient(circle at 30% 20%, rgba(15, 15, 15, 0.04), transparent 60%);
+  background: radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.12), transparent 60%);
   pointer-events: none;
+}
+
+.sbn-auth-brand-panel .text-app,
+.sbn-auth-brand-panel h2,
+.sbn-auth-brand-panel .font-display {
+  color: var(--sbn-auth-panel-fg);
+}
+
+.sbn-auth-brand-panel .text-muted,
+.sbn-auth-brand-footnote {
+  color: var(--sbn-auth-panel-fg-muted);
 }
 
 .sbn-auth-brand-principle {
@@ -1299,15 +1314,19 @@ html.capacitor-android .sbn-sidebar-overlay {
   gap: 0.65rem;
   font-size: 0.875rem;
   font-weight: 600;
-  color: #0f0f0f;
+  color: rgba(255, 255, 255, 0.94);
+}
+
+.sbn-auth-brand-principle svg {
+  color: rgba(255, 255, 255, 0.92);
 }
 
 .sbn-auth-quote {
-  border-left: 2px solid rgba(15, 15, 15, 0.18);
+  border-left: 2px solid rgba(255, 255, 255, 0.35);
   padding-left: 1rem;
   font-size: 0.9rem;
   font-style: italic;
-  color: rgba(15, 15, 15, 0.82);
+  color: rgba(255, 255, 255, 0.9);
   line-height: 1.6;
 }
 
@@ -1342,6 +1361,15 @@ html.capacitor-android .sbn-sidebar-overlay {
   overflow: hidden;
 }
 
+.sbn-native-hero .font-display,
+.sbn-native-hero p {
+  color: #fff;
+}
+
+.sbn-native-hero .text-muted {
+  color: rgba(255, 255, 255, 0.88);
+}
+
 .sbn-native-hero::after {
   content: '';
   position: absolute;
@@ -1373,7 +1401,7 @@ html.capacitor-android .sbn-sidebar-overlay {
   border-bottom: 2px solid var(--sbn-role-accent, var(--color-accent));
 }
 
-/* ——— Design system — sharp, clean, black-and-white ——— */
+/* ——— Design system — sharp, clean, Sacramento green ——— */
 
 @keyframes sbn-fade-in {
   from {
@@ -2851,7 +2879,7 @@ html.sbn-keyboard-open .sbn-fixed-bottom {
 }
 
 .sbn-award-progress-fill {
-  background: linear-gradient(90deg, #8b8b94, var(--color-accent), #d4d4d8);
+  background: linear-gradient(90deg, #5dbf95, var(--color-accent), #00a36c);
   box-shadow: 0 0 12px color-mix(in srgb, var(--color-accent) 35%, transparent);
 }
 
