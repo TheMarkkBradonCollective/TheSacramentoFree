@@ -63,6 +63,7 @@ import { useInstallVersions } from '../hooks/useInstallVersions';
 import { apkWebsiteAccessMessage, canDownloadApkFromWebsite } from '../lib/apkWebsiteAccess';
 import { SITE } from '../siteContent';
 import { detectInstallKind } from '../lib/installContext';
+import { isNativeApp } from '../lib/nativePlatform';
 import TrackedDownloadLink from './TrackedDownloadLink';
 
 interface UserProfileViewProps {
@@ -141,6 +142,7 @@ export default function UserProfileView({
 
   const openDownloadPage = (event?: React.MouseEvent) => {
     event?.preventDefault();
+    if (isNativeApp()) return;
     if (onOpenDownload) {
       onOpenDownload();
       return;
@@ -664,14 +666,16 @@ export default function UserProfileView({
                 <span>Get it from Play Store</span>
               </a>
 
-              <button
-                type="button"
-                onClick={openDownloadPage}
-                className="inline-flex w-full sm:w-auto items-center justify-center gap-2 px-4 py-2.5 border border-accent/40 bg-accent/10 hover:bg-accent/15 text-accent rounded-xl text-xs font-bold uppercase tracking-wide transition-colors cursor-pointer"
-              >
-                <Download className="w-4 h-4 shrink-0" />
-                <span>{canDownloadApk ? 'Compare Play, APK & home screen' : 'Compare Play & home screen'}</span>
-              </button>
+              {!isNativeApp() ? (
+                <button
+                  type="button"
+                  onClick={openDownloadPage}
+                  className="inline-flex w-full sm:w-auto items-center justify-center gap-2 px-4 py-2.5 border border-accent/40 bg-accent/10 hover:bg-accent/15 text-accent rounded-xl text-xs font-bold uppercase tracking-wide transition-colors cursor-pointer"
+                >
+                  <Download className="w-4 h-4 shrink-0" />
+                  <span>{canDownloadApk ? 'Compare Play, APK & home screen' : 'Compare Play & home screen'}</span>
+                </button>
+              ) : null}
 
               {canDownloadApk && apkDownloadHref ? (
                 <TrackedDownloadLink

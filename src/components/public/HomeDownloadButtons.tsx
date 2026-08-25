@@ -48,7 +48,7 @@ export default function HomeDownloadButtons({ onNavigate }: HomeDownloadButtonsP
   const pwaLabel = deferredPrompt ? 'Install app' : 'Add to Home Screen';
 
   return (
-    <div className="mt-4 space-y-2">
+    <div className="mt-4 space-y-2" id="home_get_app">
       <p className="text-xs font-semibold text-muted uppercase tracking-wider">
         {newspaper ? 'Get the paper' : 'Get the app'}
       </p>

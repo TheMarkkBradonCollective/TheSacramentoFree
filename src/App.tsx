@@ -245,7 +245,9 @@ export default function App() {
   const [pickupAttributionMode, setPickupAttributionMode] = useState<'complete' | 'edit'>('complete');
   const [viewProfileUid, setViewProfileUid] = useState<string | null>(null);
   const [showDirectMessageModal, setShowDirectMessageModal] = useState(false);
-  const [showDownloadPage, setShowDownloadPage] = useState(() => isDownloadRoute());
+  const [showDownloadPage, setShowDownloadPage] = useState(
+    () => !isNativeApp() && isDownloadRoute(),
+  );
   const [initialChatFeedbackPanel, setInitialChatFeedbackPanel] = useState<
     'reviews' | 'report' | 'staffReports' | null
   >(null);
@@ -272,6 +274,7 @@ export default function App() {
   }, [markAwardsSeen]);
 
   const handleOpenDownload = useCallback(() => {
+    if (isNativeApp()) return;
     setShowDownloadPage(true);
     try {
       window.history.pushState(window.history.state, '', downloadPagePath());
@@ -718,7 +721,7 @@ export default function App() {
     } else if (publicDest === 'gofundme') {
       setShowGoFundMeDetail(true);
       setLegalPanel(null);
-    } else if (publicDest === 'download') {
+    } else if (publicDest === 'download' && !isNativeApp()) {
       setShowDownloadPage(true);
       try {
         window.history.replaceState(window.history.state, '', downloadPagePath());
@@ -760,7 +763,13 @@ export default function App() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const syncDownloadRoute = () => setShowDownloadPage(isDownloadRoute());
+    const syncDownloadRoute = () => {
+      if (isNativeApp()) {
+        setShowDownloadPage(false);
+        return;
+      }
+      setShowDownloadPage(isDownloadRoute());
+    };
     window.addEventListener('popstate', syncDownloadRoute);
     window.addEventListener('hashchange', syncDownloadRoute);
     return () => {
@@ -2280,7 +2289,7 @@ export default function App() {
     <div id="app_root_layout" className="min-h-screen flex flex-col mesh-bg text-app antialiased font-sans">
       {sessionUser ? <NewspaperPreviewBanner /> : null}
       {sessionUser ? <NewspaperEditionBar /> : null}
-      {showDownloadPage && sessionUser ? (
+      {showDownloadPage && sessionUser && !isNativeApp() ? (
         <DownloadPage
           userProfile={userProfile}
           onBack={() => {

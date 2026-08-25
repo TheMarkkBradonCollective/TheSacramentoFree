@@ -7,6 +7,7 @@ import CommunityReviews from '../../CommunityReviews';
 import CommunityStatsBar from '../../CommunityStatsBar';
 import GuestListingPreview from '../GuestListingPreview';
 import HomeDownloadButtons from '../HomeDownloadButtons';
+import HomeAppShowcase from '../HomeAppShowcase';
 import HomeScrollStage, { DepthSection } from '../HomeScrollStage';
 import { COMMUNITY_SLOGAN, SITE, SUPPORT } from '../../../siteContent';
 import { useBrand } from '../../../preview/useBrand';
@@ -241,6 +242,8 @@ function NewspaperFrontPage({
         </aside>
       </section>
 
+      <HomeAppShowcase />
+
       {onViewListing && onRequireSignIn && (
         <section id="guest_listing_preview" className="tsf-edition__section">
           <NewspaperSectionHead
@@ -399,6 +402,8 @@ function OriginalHomePage({
           <CommunityStatsBar items={items} variant="full" />
         </div>
       </DepthSection>
+
+      <HomeAppShowcase />
 
       {onViewListing && onRequireSignIn && (
         <DepthSection depth={3} id="guest_listing_preview">

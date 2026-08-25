@@ -14,9 +14,9 @@ import {
 import PublicCard from '../PublicCard';
 import PublicPageShell from '../PublicPageShell';
 import TrackedDownloadLink from '../../TrackedDownloadLink';
-import AppScreenshotTour from '../AppScreenshotTour';
 import { useInstallVersions, type VersionStatus } from '../../../hooks/useInstallVersions';
 import { apkWebsiteAccessMessage } from '../../../lib/apkWebsiteAccess';
+import { isWebsiteBrowser } from '../../../lib/installContext';
 import { SITE } from '../../../siteContent';
 import type { UserProfile } from '../../../types';
 import { useNewspaperSkin } from '../../../preview/NewspaperSkinContext';
@@ -139,7 +139,7 @@ function DownloadPageContent({ onBack, userProfile }: DownloadPageProps) {
           <p>
             {newspaper
               ? `Take ${NEWSPAPER.name} with you — Google Play on Android or add to your home screen.`
-              : 'See the screenshots first. Same Sacramento community as the website — live Go Get pickup is the Android extra. Google Play for most neighbors, home screen for everyone, and free APK sideload for our first 500 joiners.'}
+              : 'Install options for Google Play, home screen, or (for early joiners) APK sideload. Screenshot walkthrough lives on the home page when you visit on desktop.'}
           </p>
         </header>
         <div className="space-y-4 min-w-0">{renderBody()}</div>
@@ -151,7 +151,7 @@ function DownloadPageContent({ onBack, userProfile }: DownloadPageProps) {
       subtitle={
         newspaper
           ? `Take ${NEWSPAPER.name} with you — Google Play on Android or add to your home screen.`
-          : 'See the app before you install — same Sacramento community as the website, plus live Go Get pickup on Android.'
+          : 'Install Google Play or add to your home screen. Full screenshot tour is on the home page (desktop).'
       }
       className="min-w-0 overflow-x-hidden"
     >
@@ -191,7 +191,17 @@ function DownloadPageContent({ onBack, userProfile }: DownloadPageProps) {
           <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">{error}</p>
         ) : null}
 
-        <AppScreenshotTour />
+        {isPublicDownloadPage && isWebsiteBrowser() ? (
+          <PublicCard>
+            <p className="text-xs text-muted leading-relaxed">
+              Want the full app walkthrough with screenshots? Open the{' '}
+              <a href="/" className="font-bold text-accent hover:underline">
+                home page on a desktop browser
+              </a>{' '}
+              — furniture, electronics, baby gear, Go Get pickup, and more.
+            </p>
+          </PublicCard>
+        ) : null}
 
         <div id="download_install" className="space-y-4 scroll-mt-8">
         {!isPublicDownloadPage ? (
@@ -428,8 +438,10 @@ function DownloadPageContent({ onBack, userProfile }: DownloadPageProps) {
           <h2 className="text-sm font-black text-app mb-1">Which should you use?</h2>
           <p className="text-xs text-muted mb-4 leading-relaxed">
             {isPublicDownloadPage
-              ? 'The screenshots above are the decision. Stay on the website if browse, post, and messages are enough. Install Google Play on Android only if you want live Go Get pickup. Home screen is the website as an icon — no Go Get.'
-              : 'The screenshots above are the decision. Home screen is the website as an icon. Google Play / APK add live Go Get pickup. Free APK sideload in Account is only for our first 500 joiners.'}
+              ? 'Home screen is the website as an icon. Google Play adds live Go Get pickup on Android. See the desktop home page for the full screenshot tour.'
+              : usingHomeScreen
+                ? 'You are on the home screen app — it updates when you reopen. Google Play / APK add live Go Get pickup on Android.'
+                : 'Home screen is the website as an icon. Google Play / APK add live Go Get pickup. Free APK sideload in Account is only for our first 500 neighbors.'}
           </p>
 
           <div className="overflow-x-auto -mx-1">
@@ -521,8 +533,7 @@ function DownloadPageContent({ onBack, userProfile }: DownloadPageProps) {
               <div>
                 <p className="font-bold text-app">Same community, extra on Android</p>
                 <p className="text-muted mt-1 leading-relaxed">
-                  Listings, chat, map, and events match the website shots. The Go Get walkthrough is Android Play / APK
-                  only — if that is not what you need, skip the install and stay in the browser.
+                  Listings, chat, map, and events match the website. Go Get live pickup is Android Play / APK only.
                 </p>
               </div>
             </div>

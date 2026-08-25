@@ -28,7 +28,12 @@ function PhoneShot({
   );
 }
 
-export default function AppScreenshotTour() {
+interface AppScreenshotTourProps {
+  /** Element id to scroll to from the skip link (home install buttons or download install section). */
+  scrollToInstallId?: string;
+}
+
+export default function AppScreenshotTour({ scrollToInstallId = 'home_get_app' }: AppScreenshotTourProps) {
   return (
     <div className="space-y-4" id="download_app_tour">
       <PublicCard>
@@ -40,15 +45,17 @@ export default function AppScreenshotTour() {
           that same community plus live Go Get pickup — both people locked onto a map, like Uber, until the item
           changes hands. Scroll the shots, then decide. If you only want to browse and chat, stay on the website.
         </p>
-        <button
-          type="button"
-          onClick={() => {
-            document.getElementById('download_install')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          }}
-          className="inline-flex mt-3 text-xs font-bold text-accent hover:underline"
-        >
-          Skip to install
-        </button>
+        {scrollToInstallId ? (
+          <button
+            type="button"
+            onClick={() => {
+              document.getElementById(scrollToInstallId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }}
+            className="inline-flex mt-3 text-xs font-bold text-accent hover:underline"
+          >
+            Skip to install options
+          </button>
+        ) : null}
       </PublicCard>
 
       <PublicCard>
@@ -96,8 +103,8 @@ export default function AppScreenshotTour() {
           ))}
         </ol>
         <p className="text-xs text-app font-semibold mt-6 leading-relaxed bg-inset border border-app rounded-xl px-4 py-3">
-          Want that live pickup? Install the Android app below. Happy to keep using the site? You already can — skip
-          the download and stay in the browser.
+          Want that live pickup? Use the install buttons above. Happy to keep using the site? You already can — stay in
+          the browser.
         </p>
       </PublicCard>
     </div>
