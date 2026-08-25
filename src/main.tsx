@@ -15,11 +15,13 @@ import { isNativeApp } from './lib/nativePlatform';
 import { startAppUpdateWatcher } from './pwa/appUpdateWatcher';
 import { clearAppAssetCaches } from './pwa/clearAppCaches';
 import { registerServiceWorker } from './pwa/registerServiceWorker';
+import { installAppResumeRecovery } from './lib/appResume';
 import './index.css';
 
 void initCapacitorApp();
 void recordInstalledWebVersion();
 void clearAppAssetCaches();
+installAppResumeRecovery();
 
 if (isNativeApp()) {
   startAppUpdateWatcher();

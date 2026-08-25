@@ -100,6 +100,7 @@ import TermsOfUseModal from './components/TermsOfUseModal';
 import { acceptPrivacy, isPrivacyAccepted } from './lib/privacyPolicyPrompt';
 import { acceptTerms, isTermsAccepted } from './lib/termsPolicyPrompt';
 import { useConfirm } from './contexts/ConfirmContext';
+import { noteAppRendered } from './lib/appResume';
 import { confirmDeleteFeedPost, confirmDeleteListing, confirmDeleteOwnEvent, confirmMarkListingCompleted, confirmWithdrawListing } from './lib/destructiveConfirm';
 import { getOwnerCompletedActionLabel } from './lib/postType';
 import { NotificationsHubProvider, openNotificationsHub, closeNotificationsHub } from './contexts/NotificationsHubContext';
@@ -215,6 +216,11 @@ export default function App() {
   const handleLogOutRef = useRef<(() => Promise<void>) | null>(null);
   const logoutCleanupDoneRef = useRef(false);
   const hadSessionOnMountRef = useRef(!!initialAuth.sessionUser);
+
+  useEffect(() => {
+    noteAppRendered();
+  }, []);
+
   const pathnameSeededRef = useRef(false);
   const [activeTab, setActiveTab] = useState<AnyTab>(() => readPersistedTab(initialAuth.userProfile?.uid));
   const [newListingModalMode, setNewListingModalMode] = useState<NewListingModalMode | null>(null);
