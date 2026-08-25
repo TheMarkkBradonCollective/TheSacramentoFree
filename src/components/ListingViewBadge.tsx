@@ -44,10 +44,16 @@ interface ListingViewBadgeProps {
   count: number;
   className?: string;
   compact?: boolean;
+  showZero?: boolean;
 }
 
-export default function ListingViewBadge({ count, className = '', compact = false }: ListingViewBadgeProps) {
-  if (count <= 0) return null;
+export default function ListingViewBadge({
+  count,
+  className = '',
+  compact = false,
+  showZero = false,
+}: ListingViewBadgeProps) {
+  if (count <= 0 && !showZero) return null;
 
   const label = viewCountLabel(count);
 

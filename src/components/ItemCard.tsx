@@ -1,4 +1,4 @@
-import { Bookmark, Calendar, ChevronDown, ChevronUp, Eye, LifeBuoy, MapPin, MessageSquare, Navigation, Pencil, Tag } from 'lucide-react';
+import { Bookmark, Calendar, Eye, LifeBuoy, MapPin, MessageSquare, Navigation, Pencil, Tag } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { ItemComment, ItemPost, UserProfile } from '../types';
 import { stripListingMetadata, parseTradeSeeking } from '../lib/itemLocation';
@@ -16,7 +16,8 @@ import { isStaffActingOfficial } from '../lib/staffInteractionMode';
 import { isListingOpenForCoordination } from '../lib/roles';
 import ListingEngagement from './ListingEngagement';
 import ListingImage from './ListingImage';
-import ListingViewBadge, { ListingViewCount } from './ListingViewBadge';
+import ListingViewBadge from './ListingViewBadge';
+import { ListingCardEngagementOverlay, ListingCardStatsInline } from './ListingCardStats';
 import UserAvatar from './UserAvatar';
 import { usePresence } from '../contexts/PresenceContext';
 import { PostVoteState } from '../hooks/useItemsEngagement';
@@ -254,9 +255,6 @@ export default function ItemCard({
   );
 
   if (layout === 'grid') {
-    const netScore = voteState.upvotes - voteState.downvotes;
-    const hasEngagement = voteState.upvotes > 0 || voteState.downvotes > 0 || comments.length > 0;
-
     return (
       <article
         id={`item_card_${item.id}`}
@@ -282,7 +280,7 @@ export default function ItemCard({
                 <Tag className="w-7 h-7 text-subtle" aria-hidden />
               </div>
             )}
-            <ListingViewBadge count={item.viewCount ?? 0} />
+            <ListingViewBadge count={item.viewCount ?? 0} showZero />
             <div className="absolute inset-x-0 top-0 flex flex-wrap gap-1 p-1.5">
               <span
                 className={`sbn-badge ${getPostTypeBadgeClass(item.type)} text-[8px] px-1 py-0 leading-none whitespace-nowrap shadow-sm`}
@@ -295,22 +293,11 @@ export default function ItemCard({
                 </span>
               )}
             </div>
-            {hasEngagement && (
-              <span className="absolute bottom-1.5 right-1.5 inline-flex items-center gap-1 rounded-full bg-black/75 px-1.5 py-0.5 text-[10px] font-bold text-white">
-                {(voteState.upvotes > 0 || voteState.downvotes > 0) && (
-                  <span className="inline-flex items-center gap-0.5">
-                    <ChevronUp className="w-3 h-3" aria-hidden />
-                    {netScore > 0 ? `+${netScore}` : netScore}
-                  </span>
-                )}
-                {comments.length > 0 && (
-                  <span className="inline-flex items-center gap-0.5">
-                    <MessageSquare className="w-3 h-3" aria-hidden />
-                    {comments.length}
-                  </span>
-                )}
-              </span>
-            )}
+            <ListingCardEngagementOverlay
+              upvotes={voteState.upvotes}
+              downvotes={voteState.downvotes}
+              commentCount={comments.length}
+            />
           </div>
           <div className="item-feed-tile__body p-2">
             <h3 className="font-display text-xs font-bold text-app leading-snug line-clamp-2">{item.title}</h3>
@@ -331,8 +318,6 @@ export default function ItemCard({
       </article>
     );
   }
-
-  const netScore = voteState.upvotes - voteState.downvotes;
 
   return (
     <article
@@ -394,19 +379,12 @@ export default function ItemCard({
               <Calendar className="w-3 h-3 shrink-0" />
               {dateLabel}
             </span>
-            <ListingViewCount count={item.viewCount ?? 0} compact className="gap-0.5 shrink-0" />
-            {(voteState.upvotes > 0 || voteState.downvotes > 0) && (
-              <span className="inline-flex items-center gap-0.5 shrink-0 font-semibold text-app">
-                <ChevronUp className="w-3 h-3 shrink-0" aria-hidden />
-                {netScore > 0 ? `+${netScore}` : netScore}
-              </span>
-            )}
-            {comments.length > 0 && (
-              <span className="inline-flex items-center gap-0.5 shrink-0">
-                <MessageSquare className="w-3 h-3 shrink-0" aria-hidden />
-                {comments.length}
-              </span>
-            )}
+            <ListingCardStatsInline
+              viewCount={item.viewCount ?? 0}
+              upvotes={voteState.upvotes}
+              downvotes={voteState.downvotes}
+              commentCount={comments.length}
+            />
           </div>
 
           <ListingEngagement
