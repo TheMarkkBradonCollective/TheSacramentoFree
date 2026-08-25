@@ -79,7 +79,7 @@ export default function ReportNeighborModal({
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-[120] bg-black/60 flex items-end sm:items-center justify-center p-4 sbn-mobile-prompt-offset">
+    <div className="fixed inset-0 z-[120] bg-black/60 flex items-center justify-center p-4">
       <div
         className="sbn-card w-full max-w-md p-5 space-y-4 max-h-[90vh] overflow-y-auto"
         role="dialog"

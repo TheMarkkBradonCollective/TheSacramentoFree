@@ -79,7 +79,7 @@ export function formatPostClientBadge(
   const title = version?.trim()
     ? `Posted from ${tier} (${hint}), version ${version.trim()}`
     : `Posted from ${tier} (${hint})`;
-  const short = version?.trim() ? `${tier} · ${version.trim()}` : tier;
+  const short = tier;
   return { short, title };
 }
 

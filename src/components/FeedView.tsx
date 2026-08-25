@@ -2,6 +2,8 @@ import { useMemo, useState, useEffect, Fragment } from 'react';
 import { ImageIcon, Newspaper, Plus, Sparkles, Type, Users } from 'lucide-react';
 import type { FeedPost, UserProfile } from '../types';
 import { useFeedEngagement } from '../hooks/useFeedEngagement';
+import { useOptionalFeedEngagement } from '../contexts/FeedEngagementContext';
+import { useFeedPostsApi } from '../contexts/FeedLiveProvider';
 import { useFeedPosts } from '../hooks/useFeedPosts';
 import { useFriendIds } from '../hooks/useFriendIds';
 import FeedPostComposer from './feed/FeedPostComposer';
@@ -76,7 +78,9 @@ export default function FeedView({
   onViewProfile,
   onViewFeedPost,
 }: FeedViewProps) {
-  const { posts, loading, creating, publishPost, publishPoll, removePost } = useFeedPosts(userProfile);
+  const sharedPostsApi = useFeedPostsApi();
+  const localPostsApi = useFeedPosts(userProfile, { enabled: !sharedPostsApi });
+  const { posts, loading, creating, publishPost, publishPoll, removePost } = sharedPostsApi ?? localPostsApi;
   const canCreatePoll = isStaffRole(userProfile.role);
   const { friendIds, loading: friendsLoading } = useFriendIds(userProfile.uid);
   const [composerOpen, setComposerOpen] = useState(false);
@@ -127,7 +131,9 @@ export default function FeedView({
   );
 
   const postIds = useMemo(() => filteredPosts.map((p) => p.id), [filteredPosts]);
-  const engagement = useFeedEngagement(postIds, userProfile, blockedUserIds);
+  const sharedEngagement = useOptionalFeedEngagement();
+  const localEngagement = useFeedEngagement(sharedEngagement ? [] : postIds, userProfile, blockedUserIds);
+  const engagement = sharedEngagement ?? localEngagement;
 
   const handleCycleContentFilter = () => {
     setContentFilter((current) => {

@@ -119,33 +119,86 @@ export function useFeedEngagement(
   useEffect(() => {
     if (isPlayStoreDemo() || postIds.length === 0) return;
 
+    const patchComments = (payload: { eventType: string; new: FeedPostComment | null; old: FeedPostComment | null }) => {
+      const row = (payload.new || payload.old) as FeedPostComment | null;
+      if (!row?.postId || !postIdSetRef.current.has(row.postId)) return;
+      if (payload.eventType === 'INSERT' && row.userId === uid) return;
+
+      setCommentsByPost((prev) => {
+        const list = prev[row.postId] ?? [];
+        if (payload.eventType === 'DELETE' && payload.old) {
+          return {
+            ...prev,
+            [row.postId]: list.filter((c) => c.id !== payload.old!.id && c.parentCommentId !== payload.old!.id),
+          };
+        }
+        if (payload.new) {
+          const updated = payload.new;
+          const idx = list.findIndex((c) => c.id === updated.id);
+          if (idx >= 0) {
+            const next = [...list];
+            next[idx] = updated;
+            return { ...prev, [row.postId]: next };
+          }
+          return { ...prev, [row.postId]: [...list, updated] };
+        }
+        return prev;
+      });
+    };
+
+    const patchReactions = (payload: { eventType: string; new: FeedPostReaction | null; old: FeedPostReaction | null }) => {
+      const row = (payload.new || payload.old) as FeedPostReaction | null;
+      if (!row?.postId || !postIdSetRef.current.has(row.postId)) return;
+
+      setReactionsByPost((prev) => {
+        const list = prev[row.postId] ?? [];
+        if (payload.eventType === 'DELETE' && payload.old) {
+          return {
+            ...prev,
+            [row.postId]: list.filter(
+              (r) => !(r.userId === payload.old!.userId && r.emoji === payload.old!.emoji),
+            ),
+          };
+        }
+        if (payload.new) {
+          const updated = payload.new;
+          const without = list.filter((r) => r.userId !== updated.userId);
+          return { ...prev, [row.postId]: [...without, updated] };
+        }
+        return prev;
+      });
+    };
+
+    const patchPollVotes = (payload: {
+      eventType: string;
+      new: import('../types').FeedPollVote | null;
+      old: import('../types').FeedPollVote | null;
+    }) => {
+      const row = (payload.new || payload.old) as import('../types').FeedPollVote | null;
+      if (!row?.postId || !postIdSetRef.current.has(row.postId)) return;
+      if (payload.eventType === 'INSERT' && row.userId === uid) return;
+
+      setPollVotes((prev) => {
+        const without = prev.filter((vote) => !(vote.postId === row.postId && vote.userId === row.userId));
+        if (payload.eventType === 'DELETE') return without;
+        if (payload.new) return [...without, payload.new];
+        return prev;
+      });
+    };
+
     const unsubComments = subscribePostgresChanges<FeedPostComment>(
       { channelName: 'live-feed-comments', table: 'feed_post_comments', event: '*' },
-      (payload) => {
-        const row = (payload.new || payload.old) as FeedPostComment | null;
-        if (!row?.postId || !postIdSetRef.current.has(row.postId)) return;
-        if (payload.eventType === 'INSERT' && row.userId === uid) return;
-        void reload([row.postId]);
-      },
+      (payload) => patchComments(payload as { eventType: string; new: FeedPostComment | null; old: FeedPostComment | null }),
     );
 
     const unsubReactions = subscribePostgresChanges<FeedPostReaction>(
       { channelName: 'live-feed-reactions', table: 'feed_post_reactions', event: '*' },
-      (payload) => {
-        const row = (payload.new || payload.old) as FeedPostReaction | null;
-        if (!row?.postId || !postIdSetRef.current.has(row.postId)) return;
-        void reload([row.postId]);
-      },
+      (payload) => patchReactions(payload as { eventType: string; new: FeedPostReaction | null; old: FeedPostReaction | null }),
     );
 
     const unsubPollVotes = subscribePostgresChanges<{ postId: string; userId: string; optionId: string }>(
       { channelName: 'live-feed-poll-votes', table: 'feed_poll_votes', event: '*' },
-      (payload) => {
-        const row = (payload.new || payload.old) as { postId?: string } | null;
-        if (!row?.postId || !postIdSetRef.current.has(row.postId)) return;
-        if (payload.eventType === 'INSERT' && (payload.new as { userId?: string } | null)?.userId === uid) return;
-        void reload([row.postId]);
-      },
+      (payload) => patchPollVotes(payload as unknown as { eventType: string; new: import('../types').FeedPollVote | null; old: import('../types').FeedPollVote | null }),
     );
 
     return () => {
@@ -153,7 +206,7 @@ export function useFeedEngagement(
       unsubReactions();
       unsubPollVotes();
     };
-  }, [postIds.join('|'), uid, reload]);
+  }, [postIds.join('|'), uid]);
 
   const toggleComments = useCallback((postId: string) => {
     setExpandedComments((prev) => ({ ...prev, [postId]: !prev[postId] }));
@@ -200,10 +253,24 @@ export function useFeedEngagement(
     async (postId: string, emoji: FeedReactionEmoji, postAuthorId?: string) => {
       if (!uid) return;
       if (postAuthorId && postAuthorId === uid) return;
-      await toggleFeedPostReaction(postId, uid, emoji);
-      void reload([postId]);
+
+      const previous = reactionsByPost[postId] ?? [];
+      const hadEmoji = previous.some((row) => row.userId === uid && row.emoji === emoji);
+      const optimistic: FeedPostReaction[] = hadEmoji
+        ? previous.filter((row) => !(row.userId === uid && row.emoji === emoji))
+        : [
+            ...previous.filter((row) => row.userId !== uid),
+            { postId, userId: uid, emoji, createdAt: new Date().toISOString() },
+          ];
+
+      setReactionsByPost((prev) => ({ ...prev, [postId]: optimistic }));
+
+      const ok = await toggleFeedPostReaction(postId, uid, emoji);
+      if (!ok) {
+        setReactionsByPost((prev) => ({ ...prev, [postId]: previous }));
+      }
     },
-    [uid, reload],
+    [uid, reactionsByPost],
   );
 
   const handleVote = useCallback(
@@ -221,10 +288,13 @@ export function useFeedEngagement(
         await alert({ title: 'Could not vote', message: result.errorMessage || 'Try again.' });
         return false;
       }
-      void reload([postId]);
+      setPollVotes((prev) => {
+        const without = prev.filter((vote) => !(vote.postId === postId && vote.userId === uid));
+        return [...without, { postId, userId: uid, optionId }];
+      });
       return true;
     },
-    [uid, reload, alert],
+    [uid, alert],
   );
 
   return {

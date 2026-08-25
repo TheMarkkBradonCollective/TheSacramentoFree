@@ -55,7 +55,7 @@ export default function NotificationsFirstRunPrompt({
   };
 
   return (
-    <div className="fixed inset-0 z-[126] bg-black/60 flex items-end sm:items-center justify-center p-4">
+    <div className="fixed inset-0 z-[126] bg-black/60 flex items-center justify-center p-4">
       <div
         className="sbn-card w-full max-w-md overflow-hidden"
         role="dialog"

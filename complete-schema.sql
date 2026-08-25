@@ -3988,6 +3988,7 @@ BEGIN
     'feed_posts',
     'feed_post_comments',
     'feed_post_reactions',
+    'feed_poll_votes',
     'native_app_sessions',
     'go_get_sessions',
     'go_get_live_locations',

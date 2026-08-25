@@ -33,7 +33,7 @@ export default function PrivacyPolicyModal({
 
   return (
     <div
-      className="fixed inset-0 z-[130] bg-black/70 flex items-end sm:items-center justify-center p-4"
+      className="fixed inset-0 z-[130] bg-black/70 flex items-center justify-center p-4"
       onClick={handleBackdrop}
     >
       <div

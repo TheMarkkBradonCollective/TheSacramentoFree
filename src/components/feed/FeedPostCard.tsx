@@ -1,13 +1,13 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronUp, Flag, MapPin, MessageSquare, Trash2 } from 'lucide-react';
+import { Flag, MapPin, MessageSquare, Trash2 } from 'lucide-react';
 import type { FeedPost, UserProfile } from '../../types';
 import type { FeedEngagementApi } from '../../hooks/useFeedEngagement';
-import { FEED_REACTION_EMOJI, type FeedReactionEmoji } from '../../lib/feedReactions';
 import { isStaffRole } from '../../lib/roles';
 import { PresenceUserAvatar } from '../UserAvatar';
 import ReportNeighborModal from '../ReportNeighborModal';
 import FeedPostClientBadge from './FeedPostClientBadge';
 import FeedPollBlock from './FeedPollBlock';
+import FeedEngagementBar from './FeedEngagementBar';
 import { feedPostPreview } from '../../lib/feedPostText';
 import { formatDistanceToNow } from '../../lib/timeAgo';
 
@@ -27,13 +27,6 @@ function timeLabel(iso: string): string {
     return 'recently';
   }
 }
-
-const voteBtnClass = (active: boolean) =>
-  `flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
-    active
-      ? 'bg-accent-soft border-accent text-accent'
-      : 'border-app text-muted hover:border-accent'
-  }`;
 
 export default function FeedPostCard({
   post,
@@ -151,68 +144,22 @@ export default function FeedPostCard({
           className="space-y-2 mt-3 pt-3 border-t border-app"
           onClick={(event) => event.stopPropagation()}
         >
-          {canEngage ? (
-            <>
-              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                <button
-                  type="button"
-                  onClick={() => engagement.handleVote(post.id, 'up', post.userId)}
-                  className={voteBtnClass(votes.userVote === 'up')}
-                  title="Upvote"
-                  aria-label="Upvote"
-                >
-                  <ChevronUp className="w-4 h-4" />
-                  <span className="tabular-nums">{votes.upvotes}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => engagement.handleVote(post.id, 'down', post.userId)}
-                  className={`flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
-                    votes.userVote === 'down'
-                      ? 'bg-inset border-app text-app'
-                      : 'border-app text-muted hover:border-app'
-                  }`}
-                  title="Not for me"
-                  aria-label="Downvote"
-                >
-                  <ChevronDown className="w-4 h-4" />
-                  <span className="tabular-nums">{votes.downvotes}</span>
-                </button>
-              </div>
-
-              <div className="flex flex-wrap gap-1">
-                {FEED_REACTION_EMOJI.map((emoji) => {
-                  const active = reactions.mine.has(emoji);
-                  const count = reactions.counts[emoji] ?? 0;
-                  return (
-                    <button
-                      key={emoji}
-                      type="button"
-                      onClick={() =>
-                        void engagement.toggleReaction(post.id, emoji as FeedReactionEmoji, post.userId)
-                      }
-                      className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-sm border transition-colors ${
-                        active
-                          ? 'border-accent bg-accent text-on-accent'
-                          : 'border-app bg-inset text-muted hover:border-accent/40'
-                      }`}
-                      aria-label={`React ${emoji}`}
-                      aria-pressed={active}
-                    >
-                      <span>{emoji}</span>
-                      {count > 0 && <span className="text-[10px] font-bold tabular-nums">{count}</span>}
-                    </button>
-                  );
-                })}
-              </div>
-            </>
-          ) : null}
+          <FeedEngagementBar
+            postId={post.id}
+            authorId={post.userId}
+            isOwn={isOwn}
+            votes={votes}
+            reactions={reactions}
+            votesLoading={engagement.votesLoading}
+            engagement={engagement}
+            layout="compact"
+          />
 
           <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
             <button
               type="button"
               onClick={openPost}
-              className={`${canEngage ? '' : 'mr-auto'} flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-semibold border border-app text-muted hover:border-accent transition-colors`}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-semibold border border-app text-muted hover:border-accent transition-colors"
               aria-label={`Comment, ${comments.length} ${comments.length === 1 ? 'comment' : 'comments'}`}
             >
               <MessageSquare className="w-3.5 h-3.5" />

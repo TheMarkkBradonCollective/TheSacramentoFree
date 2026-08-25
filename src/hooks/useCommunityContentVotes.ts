@@ -66,13 +66,33 @@ export function useCommunityContentVotes(
 
   useEffect(() => {
     if (isPlayStoreDemo()) return;
+    const trackedIds = new Set(stableIds ? stableIds.split('|') : []);
+
     return subscribePostgresChanges<CommunityContentVote>(
       { channelName: `live-content-votes-${targetType}`, table: 'community_content_votes', event: '*' },
-      () => {
-        void reload();
+      (payload) => {
+        const row = (payload.new || payload.old) as CommunityContentVote | null;
+        if (!row || row.targetType !== targetType || !trackedIds.has(row.targetId)) return;
+
+        setRows((prev) => {
+          const without = prev.filter(
+            (existing) =>
+              !(
+                existing.targetType === row.targetType &&
+                existing.targetId === row.targetId &&
+                existing.userId === row.userId
+              ),
+          );
+
+          if (payload.eventType === 'DELETE') return without;
+
+          const nextRow = (payload.new || row) as CommunityContentVote;
+          return [...without, nextRow];
+        });
+        setLoading(false);
       },
     );
-  }, [reload, targetType]);
+  }, [stableIds, targetType]);
 
   const getVoteState = useCallback(
     (targetId: string): ContentVoteState => aggregateVotes(rows, targetType, targetId, uid),

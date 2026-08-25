@@ -63,7 +63,7 @@ export default function EventPinAdjustModal({ event, onClose, onSaved }: EventPi
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-0 sm:p-4 bg-black/70 backdrop-blur-sm">
       <div
         className="w-full sm:max-w-xl max-h-[92dvh] overflow-y-auto bg-surface border border-app rounded-t-2xl sm:rounded-2xl shadow-2xl"
         role="dialog"

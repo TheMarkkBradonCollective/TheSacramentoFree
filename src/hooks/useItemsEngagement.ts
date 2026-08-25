@@ -7,7 +7,7 @@ import {
   getSupabaseItemVotes,
   setSupabaseItemVote,
 } from '../supabase';
-import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
+import { subscribePostgresChanges } from '../lib/supabaseRealtime';
 import { commentPostedAsNeighbor } from '../lib/staffInteractionMode';
 import { resolveProfileIdentity } from '../lib/profilePersistence';
 import { VOTE_COOLDOWN_MESSAGE } from '../lib/voteCooldown';
@@ -99,72 +99,81 @@ export function useItemsEngagement(
     itemIdSetRef.current = new Set(itemIds);
   }, [itemIds.join('|')]);
 
-  const reloadEngagementForItems = useCallback(
-    debounceRealtime(async (ids: string[]) => {
-      if (!uid || ids.length === 0) return;
-      const tracked = ids.filter((id) => itemIdSetRef.current.has(id));
-      if (tracked.length === 0) return;
-
-      const [votes, comments] = await Promise.all([
-        getSupabaseItemVotes(tracked),
-        getSupabaseItemComments(tracked),
-      ]);
-
-      setItemVotes((prev) => {
-        const next = { ...prev };
-        for (const itemId of tracked) {
-          const votesForItem = votes.filter((v) => v.itemId === itemId);
-          next[itemId] = {
-            userVote: (votesForItem.find((v) => v.userId === uid)?.voteType || null) as
-              | 'up'
-              | 'down'
-              | null,
-            upvotes: votesForItem.filter((v) => v.voteType === 'up').length,
-            downvotes: votesForItem.filter((v) => v.voteType === 'down').length,
-          };
-        }
-        return next;
-      });
-
-      setItemComments((prev) => {
-        const next = { ...prev };
-        for (const itemId of tracked) {
-          next[itemId] = comments.filter((c) => c.itemId === itemId);
-        }
-        return next;
-      });
-    }, 150),
-    [uid],
-  );
-
   useEffect(() => {
     if (isPlayStoreDemo() || !uid || itemIds.length === 0) return;
 
+    const patchVotes = (payload: { eventType: string; new: ItemVote | null; old: ItemVote | null }) => {
+      const row = (payload.new || payload.old) as ItemVote | null;
+      if (!row?.itemId || !itemIdSetRef.current.has(row.itemId)) return;
+      if (row.userId === uid && payload.eventType !== 'DELETE') return;
+
+      setItemVotes((prev) => {
+        const current = prev[row.itemId] ?? { userVote: null, upvotes: 0, downvotes: 0 };
+        let upvotes = current.upvotes;
+        let downvotes = current.downvotes;
+        let userVote = current.userVote;
+
+        const removeVote = (vote: ItemVote) => {
+          if (vote.voteType === 'up') upvotes = Math.max(0, upvotes - 1);
+          else downvotes = Math.max(0, downvotes - 1);
+          if (vote.userId === uid) userVote = null;
+        };
+
+        const addVote = (vote: ItemVote) => {
+          if (vote.voteType === 'up') upvotes += 1;
+          else downvotes += 1;
+          if (vote.userId === uid) userVote = vote.voteType;
+        };
+
+        if (payload.old) removeVote(payload.old);
+        if (payload.eventType !== 'DELETE' && payload.new) addVote(payload.new);
+
+        return { ...prev, [row.itemId]: { userVote, upvotes, downvotes } };
+      });
+    };
+
+    const patchComments = (payload: { eventType: string; new: ItemComment | null; old: ItemComment | null }) => {
+      const row = (payload.new || payload.old) as ItemComment | null;
+      if (!row?.itemId || !itemIdSetRef.current.has(row.itemId)) return;
+      if (payload.eventType === 'INSERT' && row.userId === uid) return;
+
+      setItemComments((prev) => {
+        const list = prev[row.itemId] ?? [];
+        if (payload.eventType === 'DELETE' && payload.old) {
+          return {
+            ...prev,
+            [row.itemId]: list.filter((c) => c.id !== payload.old!.id && c.parentCommentId !== payload.old!.id),
+          };
+        }
+        if (payload.new) {
+          const updated = payload.new;
+          const idx = list.findIndex((c) => c.id === updated.id);
+          if (idx >= 0) {
+            const next = [...list];
+            next[idx] = updated;
+            return { ...prev, [row.itemId]: next };
+          }
+          return { ...prev, [row.itemId]: [...list, updated] };
+        }
+        return prev;
+      });
+    };
+
     const unsubVotes = subscribePostgresChanges<ItemVote>(
       { channelName: 'live-item-votes', table: 'item_votes', event: '*' },
-      (payload) => {
-        const row = (payload.new || payload.old) as ItemVote | null;
-        if (!row?.itemId || !itemIdSetRef.current.has(row.itemId)) return;
-        if (row.userId === uid && payload.eventType !== 'DELETE') return;
-        reloadEngagementForItems([row.itemId]);
-      },
+      (payload) => patchVotes(payload as { eventType: string; new: ItemVote | null; old: ItemVote | null }),
     );
 
     const unsubComments = subscribePostgresChanges<ItemComment>(
       { channelName: 'live-item-comments', table: 'item_comments', event: '*' },
-      (payload) => {
-        const row = (payload.new || payload.old) as ItemComment | null;
-        if (!row?.itemId || !itemIdSetRef.current.has(row.itemId)) return;
-        if (payload.eventType === 'INSERT' && row.userId === uid) return;
-        reloadEngagementForItems([row.itemId]);
-      },
+      (payload) => patchComments(payload as { eventType: string; new: ItemComment | null; old: ItemComment | null }),
     );
 
     return () => {
       unsubVotes();
       unsubComments();
     };
-  }, [uid, itemIds.join('|'), reloadEngagementForItems]);
+  }, [uid, itemIds.join('|')]);
 
   const handleVote = (itemId: string, posterUserId: string, direction: 'up' | 'down') => {
     if (!uid || posterUserId === uid) return;
