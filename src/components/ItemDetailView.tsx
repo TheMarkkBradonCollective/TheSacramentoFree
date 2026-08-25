@@ -295,7 +295,7 @@ export default function ItemDetailView({
       const hasPrimaryNav = navFooterActions.some((a) => a.variant !== 'secondary' && a.variant !== 'ghost');
       actions.push({
         id: 'message',
-        label: isStaffViewer ? 'Message about pickup' : getListingContactButtonLabel(item.type),
+        label: isStaffOfficialMode ? 'Message about pickup' : getListingContactButtonLabel(item.type),
         onClick: onMessage,
         icon: <MessageSquare className="w-4 h-4" />,
         variant: hasPrimaryNav ? 'secondary' : undefined,
@@ -306,7 +306,7 @@ export default function ItemDetailView({
   }, [
     isOwner,
     navFooterActions,
-    isStaffViewer,
+    isStaffOfficialMode,
     isOpenForCoordination,
     onMessage,
     item.type,
@@ -315,6 +315,7 @@ export default function ItemDetailView({
   const footerActions = isOwner ? ownerFooterActions : visitorFooterActions;
   const showClaimInFooter =
     !isOwner &&
+    !isStaffOfficialMode &&
     item.status === 'active' &&
     userProfile &&
     onClaimSubmitted &&
