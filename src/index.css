@@ -2436,6 +2436,22 @@ button {
   image-rendering: auto;
 }
 
+.sbn-hero-wordmark {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.sbn-hero-wordmark__the {
+  font-size: clamp(1.25rem, 4.5vw, 1.75rem);
+  line-height: 1.15;
+}
+
+.sbn-hero-wordmark__name {
+  font-size: clamp(1.875rem, 10vw, 3.75rem);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+}
+
 /* Public home — normal document layout (no 3D scroll / pointer tilt) */
 .home-scroll-stage {
   position: relative;
