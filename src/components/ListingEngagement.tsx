@@ -131,10 +131,6 @@ export default function ListingEngagement({
         )}
       </div>
 
-      {isOwner && variant === 'detail' && (
-        <p className="text-[11px] text-muted">Vote counts are from neighbors — you can&apos;t vote on your own post.</p>
-      )}
-
       {variant === 'detail' && (
         <div
           className="space-y-3 pt-1 border-t border-app"
