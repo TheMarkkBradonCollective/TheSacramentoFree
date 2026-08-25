@@ -15,8 +15,7 @@ import {
 import type { DirectorActivityItem, DirectorSiteOverview } from '../types';
 import { getDirectorSiteOverview, supabase } from '../supabase';
 import { apiUrl } from '../lib/appOrigin';
-import { PLAY_STORE_SCREENSHOTS_ZIP_NAME, playStoreScreenshotsZipUrl } from '../lib/apkDownload';
-import { playStoreAssetLinks } from '../lib/playStoreAssets';
+import { downloadPlayStoreAsset, downloadPlayStoreZip, playStoreAssetLinks } from '../lib/playStoreAssets';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 import UserAvatar from './UserAvatar';
 import { formatLastActive } from '../lib/presence';
@@ -27,26 +26,39 @@ interface DirectorSiteOverviewProps {
 }
 
 function PlayStoreAssetDownload({
-  href,
-  download,
+  file,
   label,
   id,
 }: {
-  href: string;
-  download: string;
+  file: string;
   label: string;
   id?: string;
 }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   return (
-    <a
-      id={id}
-      href={href}
-      download={download}
-      className="inline-flex items-center justify-between gap-2 w-full px-3 py-2 rounded-lg border border-app/60 bg-surface text-app text-xs font-semibold hover:bg-surface-hover transition-colors"
-    >
-      <span className="truncate text-left">{label}</span>
-      <Download className="w-3.5 h-3.5 shrink-0 text-muted" strokeWidth={2.5} aria-hidden />
-    </a>
+    <div className="space-y-1">
+      <button
+        type="button"
+        id={id}
+        disabled={busy}
+        onClick={() => {
+          setBusy(true);
+          setError(null);
+          void downloadPlayStoreAsset(file)
+            .catch((err) => {
+              setError(err instanceof Error ? err.message : 'Download failed');
+            })
+            .finally(() => setBusy(false));
+        }}
+        className="inline-flex items-center justify-between gap-2 w-full px-3 py-2 rounded-lg border border-app/60 bg-surface text-app text-xs font-semibold hover:bg-surface-hover transition-colors disabled:opacity-60 cursor-pointer touch-manipulation"
+      >
+        <span className="truncate text-left">{busy ? 'Downloading…' : label}</span>
+        <Download className="w-3.5 h-3.5 shrink-0 text-muted" strokeWidth={2.5} aria-hidden />
+      </button>
+      {error ? <p className="text-[10px] text-red-400 leading-snug">{error}</p> : null}
+    </div>
   );
 }
 
@@ -129,6 +141,8 @@ export default function DirectorSiteOverview({ scrollIntoView, onScrolled }: Dir
   const [exportingTesters, setExportingTesters] = useState(false);
   const [exportTestersError, setExportTestersError] = useState<string | null>(null);
   const [exportTestersNotice, setExportTestersNotice] = useState<string | null>(null);
+  const [zipBusy, setZipBusy] = useState(false);
+  const [zipError, setZipError] = useState<string | null>(null);
   const playStoreAssets = useMemo(() => playStoreAssetLinks(), []);
 
   const reload = useCallback(async () => {
@@ -378,21 +392,32 @@ export default function DirectorSiteOverview({ scrollIntoView, onScrolled }: Dir
             <PlayStoreAssetDownload
               key={asset.file}
               id={`director_download_play_asset_${asset.file.replace(/[^a-z0-9]+/gi, '_')}`}
-              href={asset.href}
-              download={asset.file}
+              file={asset.file}
               label={asset.label}
             />
           ))}
         </div>
-        <a
-          id="director_download_play_screenshots"
-          href={playStoreScreenshotsZipUrl()}
-          download={PLAY_STORE_SCREENSHOTS_ZIP_NAME}
-          className="inline-flex items-center justify-center gap-2 w-full px-3 py-2.5 rounded-xl border border-dashed border-app bg-surface/60 text-app text-xs font-bold hover:bg-surface-hover transition-colors"
-        >
-          <Download className="w-3.5 h-3.5" strokeWidth={2.5} aria-hidden />
-          Download all as zip
-        </a>
+        <div className="space-y-1">
+          <button
+            type="button"
+            id="director_download_play_screenshots"
+            disabled={zipBusy}
+            onClick={() => {
+              setZipBusy(true);
+              setZipError(null);
+              void downloadPlayStoreZip()
+                .catch((err) => {
+                  setZipError(err instanceof Error ? err.message : 'Download failed');
+                })
+                .finally(() => setZipBusy(false));
+            }}
+            className="inline-flex items-center justify-center gap-2 w-full px-3 py-2.5 rounded-xl border border-dashed border-app bg-surface/60 text-app text-xs font-bold hover:bg-surface-hover transition-colors disabled:opacity-60 cursor-pointer touch-manipulation"
+          >
+            <Download className="w-3.5 h-3.5" strokeWidth={2.5} aria-hidden />
+            {zipBusy ? 'Downloading zip…' : 'Download all as zip'}
+          </button>
+          {zipError ? <p className="text-[10px] text-red-400 leading-snug">{zipError}</p> : null}
+        </div>
         <button
           type="button"
           onClick={() => void downloadPlayTesters()}
