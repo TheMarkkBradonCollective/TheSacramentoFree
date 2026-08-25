@@ -1,6 +1,6 @@
 import type { LatLng } from './mapRoute';
 import { haversineMeters } from './mapRoute';
-import { bearingAlongRoute, bearingDegrees, headingDeltaDegrees, smoothHeadingDegrees } from './navigationRoute';
+import { bearingAlongRoute, bearingDegrees, headingDeltaDegrees } from './navigationRoute';
 import type { NavTravelMode } from './navigationSettings';
 
 export interface NavHeadingInput {
@@ -45,13 +45,11 @@ export function compassHeadingFromEvent(event: DeviceOrientationEvent): number |
   return (360 - event.alpha) % 360;
 }
 
-function settleToward(previous: number, target: number, dramatic: boolean): number {
+function settleToward(previous: number, target: number, _dramatic: boolean): number {
   const delta = absHeadingDelta(previous, target);
+  // Hold tiny wiggles on straightaways; let the display layer ease real turns.
   if (delta < NAV_HEADING_HOLD_DEG) return previous;
-  if (dramatic || delta >= NAV_HEADING_DRAMATIC_DEG) {
-    return smoothHeadingDegrees(previous, target, 62);
-  }
-  return smoothHeadingDegrees(previous, target, 10);
+  return target;
 }
 
 function movementMinMeters(speedMps: number): number {

@@ -59,6 +59,11 @@ import {
   subscribeDeviceCompass,
 } from '../lib/navHeading';
 import {
+  headingFollowHalfLifeMs,
+  smoothFollowAngle,
+  smoothFollowLatLng,
+} from '../lib/navSmoothFollow';
+import {
   readNavigationSettings,
   subscribeNavigationSettings,
   travelModeGerund,
@@ -460,13 +465,19 @@ function ManeuverIcon({ kind, className = 'w-10 h-10' }: { kind: ManeuverIconKin
   }
 }
 
-function createNavUserIcon(heading: number): L.DivIcon {
+function createNavUserIcon(): L.DivIcon {
   return L.divIcon({
-    html: `<div class="sbn-nav-user-puck" style="transform: rotate(${heading}deg)"><span class="sbn-nav-user-puck-glow"></span><span class="sbn-nav-user-puck-dot"></span><span class="sbn-nav-user-puck-chevron"></span></div>`,
+    html: `<div class="sbn-nav-user-puck" data-nav-puck="1"><span class="sbn-nav-user-puck-glow"></span><span class="sbn-nav-user-puck-dot"></span><span class="sbn-nav-user-puck-chevron"></span></div>`,
     className: 'nav-user-marker',
     iconSize: [56, 56],
     iconAnchor: [28, 36],
   });
+}
+
+function setNavUserPuckHeading(marker: L.Marker, heading: number): void {
+  const puck = marker.getElement()?.querySelector<HTMLElement>('[data-nav-puck]');
+  if (!puck) return;
+  puck.style.transform = `rotate(${heading}deg)`;
 }
 
 function gpsFollowZoom(mode: NavTravelMode): number {
@@ -606,6 +617,19 @@ function visibleMapCenterOffsetPx(map: L.Map): { x: number; y: number } {
   return { x: 0, y: size.y / 2 - visibleMidY };
 }
 
+/** Shifted map center so the puck sits in the visible hole between chrome. */
+function computeShiftedMapCenter(map: L.Map, center: LatLng, zoom: number, gpsAhead = false): LatLng {
+  const mapSize = map.getSize();
+  if (mapSize.x <= 0 || mapSize.y <= 0) return center;
+
+  const offset = visibleMapCenterOffsetPx(map);
+  if (gpsAhead) {
+    offset.y += Math.round(mapSize.y * 0.16);
+  }
+  const targetPoint = map.project([center.lat, center.lng], zoom);
+  return map.unproject(L.point(targetPoint.x + offset.x, targetPoint.y + offset.y), zoom);
+}
+
 /** Keep the puck in the visible map hole; GPS follow sits lower so more road is ahead. */
 function centerMapOnUser(map: L.Map, center: LatLng, zoom: number, gpsAhead = false): void {
   if (!map.getContainer()?.isConnected) return;
@@ -619,12 +643,7 @@ function centerMapOnUser(map: L.Map, center: LatLng, zoom: number, gpsAhead = fa
   }
 
   try {
-    const offset = visibleMapCenterOffsetPx(map);
-    if (gpsAhead) {
-      offset.y += Math.round(mapSize.y * 0.16);
-    }
-    const targetPoint = map.project([center.lat, center.lng], zoom);
-    const shiftedCenter = map.unproject(L.point(targetPoint.x + offset.x, targetPoint.y + offset.y), zoom);
+    const shiftedCenter = computeShiftedMapCenter(map, center, zoom, gpsAhead);
     withProgrammaticNavCamera(() => {
       if (map.getZoom() !== zoom) {
         map.setView(shiftedCenter, zoom, { animate: false });
@@ -712,39 +731,36 @@ export default function MapNavigationView({
   const followUserRef = useRef(true);
   const userPosRef = useRef<LatLng>(origin);
   const logicPosRef = useRef<LatLng>(origin);
+  const targetPosRef = useRef<LatLng>(origin);
+  const targetHeadingRef = useRef(0);
+  const renderPosRef = useRef<LatLng>(origin);
+  const renderHeadingRef = useRef(0);
+  const renderMapCenterRef = useRef<LatLng | null>(null);
+  const smoothRafRef = useRef<number | null>(null);
+  const lastSmoothFrameMsRef = useRef(0);
+  const smoothRoutePaintRef = useRef(0);
   const headingRef = useRef(0);
-  const lastMarkerHeadingRef = useRef(0);
-  const lastNavPanRef = useRef<LatLng | null>(null);
-  const navPanRafRef = useRef<number | null>(null);
-  const pendingNavPanRef = useRef<LatLng | null>(null);
   const hasFittedRouteRef = useRef(false);
   const routeOverviewLockedRef = useRef(false);
   const isProgrammaticMapMoveRef = useRef(false);
   const uiTickRef = useRef(0);
-  const mapSyncTickRef = useRef(0);
   const lastGpsPosRef = useRef<LatLng | null>(null);
   const displayedPosRef = useRef<LatLng | null>(null);
   const routePolylineHandlesRef = useRef<RoutePolylineHandles>(emptyRouteHandles());
   const lastRouteDrawRef = useRef<{ lat: number; lng: number; at: number } | null>(null);
   const routeFetchedForDestRef = useRef<string | null>(null);
   const routeRequestIdRef = useRef(0);
-  const lastBearingApplyRef = useRef(0);
-  const lastAppliedRotationRef = useRef(0);
   const compassHeadingRef = useRef<number | null>(null);
   const settingsRef = useRef<NavigationSettings>(readNavigationSettings());
   const handleGpsUpdateRef = useRef<(position: GeolocationPosition) => void>(() => undefined);
   const onProgressUpdateRef = useRef(onProgressUpdate);
   onProgressUpdateRef.current = onProgressUpdate;
 
-  const NAV_GPS_FOLLOW_METERS_DRIVING = 4;
-  const NAV_GPS_FOLLOW_METERS_WALK_BIKE = 2;
   const NAV_UI_TICK_MS = 450;
-  const NAV_MAP_SYNC_MS = 90;
   const NAV_ROUTE_DRAW_MIN_METERS = 10;
   const NAV_ROUTE_DRAW_MIN_MS = 900;
-  const NAV_HEADING_ICON_DEG = 18;
-  const NAV_MAP_ROTATE_DEG = 10;
-  const NAV_DISPLAY_SMOOTH_ALPHA = 0.58;
+  const NAV_POS_HALF_LIFE_DRIVING_MS = 95;
+  const NAV_POS_HALF_LIFE_WALK_BIKE_MS = 75;
   const NAV_OFF_ROUTE_THRESHOLD_M = 55;
   const NAV_OFF_ROUTE_EVAL_MS = 900;
   const NAV_OFF_ROUTE_TICKS = 4;
@@ -1213,10 +1229,6 @@ export default function MapNavigationView({
       window.removeEventListener('resize', onWindowResize);
       window.removeEventListener('orientationchange', onWindowResize);
       resizeObserver?.disconnect();
-      if (navPanRafRef.current != null) {
-        cancelAnimationFrame(navPanRafRef.current);
-        navPanRafRef.current = null;
-      }
       map.remove();
       resetMapBearing(map);
       mapRef.current = null;
@@ -1296,9 +1308,11 @@ export default function MapNavigationView({
       if (route.coords.length >= 2) {
         const initialHeading = bearingAlongRoute(route.coords, start);
         headingRef.current = initialHeading;
-        lastAppliedRotationRef.current = initialHeading;
-        lastMarkerHeadingRef.current = initialHeading;
+        targetHeadingRef.current = initialHeading;
+        renderHeadingRef.current = initialHeading;
         lastGpsPosRef.current = start;
+        targetPosRef.current = start;
+        renderPosRef.current = start;
         setHeading(initialHeading);
       }
 
@@ -1314,8 +1328,7 @@ export default function MapNavigationView({
       );
       if (userMarkerRef.current) {
         const markerHeading = settingsRef.current.headingUp ? 0 : headingRef.current;
-        userMarkerRef.current.setIcon(createNavUserIcon(markerHeading));
-        lastMarkerHeadingRef.current = markerHeading;
+        setNavUserPuckHeading(userMarkerRef.current, markerHeading);
       }
       window.requestAnimationFrame(() => {
         const live = mapRef.current;
@@ -1374,30 +1387,29 @@ export default function MapNavigationView({
     }
   }, [route, otherPartyLocation]);
 
-  const syncNavigationMap = useCallback((next: LatLng, nextHeading: number) => {
+  const snapNavRenderToTarget = useCallback(() => {
+    const targetPos = targetPosRef.current;
+    const targetHeading = targetHeadingRef.current;
+    renderPosRef.current = targetPos;
+    renderHeadingRef.current = targetHeading;
+    renderMapCenterRef.current = null;
+    displayedPosRef.current = targetPos;
+    headingRef.current = targetHeading;
+
     const map = mapRef.current;
     if (!map) return;
 
-    headingRef.current = nextHeading;
-    const markerHeading = northUpRef.current ? nextHeading : 0;
-
-    const headingChanged =
-      !userMarkerRef.current ||
-      Math.abs(headingDeltaDegrees(lastMarkerHeadingRef.current, markerHeading)) >= NAV_HEADING_ICON_DEG;
-
+    const markerHeading = northUpRef.current ? targetHeading : 0;
     try {
       if (userMarkerRef.current) {
-        userMarkerRef.current.setLatLng([next.lat, next.lng]);
-        if (headingChanged) {
-          lastMarkerHeadingRef.current = markerHeading;
-          userMarkerRef.current.setIcon(createNavUserIcon(markerHeading));
-        }
+        userMarkerRef.current.setLatLng([targetPos.lat, targetPos.lng]);
+        setNavUserPuckHeading(userMarkerRef.current, markerHeading);
       } else {
-        lastMarkerHeadingRef.current = markerHeading;
-        userMarkerRef.current = L.marker([next.lat, next.lng], {
-          icon: createNavUserIcon(markerHeading),
+        userMarkerRef.current = L.marker([targetPos.lat, targetPos.lng], {
+          icon: createNavUserIcon(),
           zIndexOffset: 500,
         }).addTo(map);
+        setNavUserPuckHeading(userMarkerRef.current, markerHeading);
       }
     } catch (error) {
       console.warn('Could not update navigation user marker:', error);
@@ -1405,42 +1417,107 @@ export default function MapNavigationView({
 
     if (!followUserRef.current) return;
 
-    const last = lastNavPanRef.current;
-    const followMeters =
-      settingsRef.current.travelMode === 'driving' ? NAV_GPS_FOLLOW_METERS_DRIVING : NAV_GPS_FOLLOW_METERS_WALK_BIKE;
-    const movedEnough = !last || haversineMeters(last, next) >= followMeters;
-    const now = Date.now();
-    const rotationDelta = Math.abs(headingDeltaDegrees(lastAppliedRotationRef.current, nextHeading));
-    const shouldRotate = !northUpRef.current && (movedEnough || rotationDelta >= NAV_MAP_ROTATE_DEG);
+    centerMapOnUser(
+      map,
+      targetPos,
+      gpsFollowZoom(settingsRef.current.travelMode),
+      !northUpRef.current,
+    );
+    applyHeadingUpRotation(mapRotatorRef.current, map, targetPos, targetHeading, northUpRef.current);
+  }, []);
 
-    if (!movedEnough) {
-      if (shouldRotate) {
-        lastBearingApplyRef.current = now;
-        lastAppliedRotationRef.current = nextHeading;
-        applyHeadingUpRotation(mapRotatorRef.current, map, next, nextHeading, false);
+  useEffect(() => {
+    let active = true;
+
+    const tick = (now: number) => {
+      if (!active) return;
+      smoothRafRef.current = requestAnimationFrame(tick);
+
+      const lastFrame = lastSmoothFrameMsRef.current;
+      lastSmoothFrameMsRef.current = now;
+      const dtMs = lastFrame > 0 ? Math.min(48, now - lastFrame) : 16;
+
+      const targetPos = targetPosRef.current;
+      const targetHeading = targetHeadingRef.current;
+      const renderPos = renderPosRef.current;
+      const renderHeading = renderHeadingRef.current;
+
+      const travelMode = settingsRef.current.travelMode;
+      const posHalfLife =
+        travelMode === 'driving' ? NAV_POS_HALF_LIFE_DRIVING_MS : NAV_POS_HALF_LIFE_WALK_BIKE_MS;
+      const headingDelta = headingDeltaDegrees(renderHeading, targetHeading);
+      const headingHalfLife = headingFollowHalfLifeMs(headingDelta);
+
+      const nextPos = smoothFollowLatLng(renderPos, targetPos, dtMs, posHalfLife);
+      const nextHeading = smoothFollowAngle(renderHeading, targetHeading, dtMs, headingHalfLife);
+
+      renderPosRef.current = nextPos;
+      renderHeadingRef.current = nextHeading;
+      displayedPosRef.current = nextPos;
+      headingRef.current = nextHeading;
+
+      const map = mapRef.current;
+      if (!map) return;
+
+      const markerHeading = northUpRef.current ? nextHeading : 0;
+      try {
+        if (userMarkerRef.current) {
+          userMarkerRef.current.setLatLng([nextPos.lat, nextPos.lng]);
+          setNavUserPuckHeading(userMarkerRef.current, markerHeading);
+        } else {
+          userMarkerRef.current = L.marker([nextPos.lat, nextPos.lng], {
+            icon: createNavUserIcon(),
+            zIndexOffset: 500,
+          }).addTo(map);
+          setNavUserPuckHeading(userMarkerRef.current, markerHeading);
+        }
+      } catch {
+        // Marker may be mid-teardown.
       }
-      return;
-    }
 
-    lastNavPanRef.current = next;
-    lastBearingApplyRef.current = now;
-    pendingNavPanRef.current = next;
-    if (navPanRafRef.current != null) return;
+      const activeRoute = routeRef.current;
+      if (followUserRef.current && activeRoute && routeLayerRef.current && !arrivedRef.current) {
+        smoothRoutePaintRef.current += 1;
+        if (smoothRoutePaintRef.current % 2 === 0) {
+          paintLiveRouteLine(
+            routeLayerRef.current,
+            routePolylineHandlesRef.current,
+            activeRoute.coords,
+            nextPos,
+            true,
+          );
+        }
+      }
 
-    navPanRafRef.current = requestAnimationFrame(() => {
-      navPanRafRef.current = null;
-      const target = pendingNavPanRef.current;
-      const liveMap = mapRef.current;
-      if (!target || !liveMap || !followUserRef.current) return;
-      centerMapOnUser(
-        liveMap,
-        target,
-        Math.max(liveMap.getZoom(), gpsFollowZoom(settingsRef.current.travelMode)),
-        !northUpRef.current,
-      );
-      lastAppliedRotationRef.current = headingRef.current;
-      applyHeadingUpRotation(mapRotatorRef.current, liveMap, target, headingRef.current, northUpRef.current);
-    });
+      if (!followUserRef.current) return;
+
+      const zoom = Math.max(map.getZoom(), gpsFollowZoom(travelMode));
+      const gpsAhead = !northUpRef.current;
+      const desiredCenter = computeShiftedMapCenter(map, nextPos, zoom, gpsAhead);
+      const prevCenter = renderMapCenterRef.current;
+      const nextCenter = prevCenter
+        ? smoothFollowLatLng(prevCenter, desiredCenter, dtMs, posHalfLife)
+        : desiredCenter;
+      renderMapCenterRef.current = nextCenter;
+
+      withProgrammaticNavCamera(() => {
+        if (map.getZoom() !== zoom) {
+          map.setView(nextCenter, zoom, { animate: false });
+          return;
+        }
+        map.panTo(nextCenter, { animate: false, noMoveStart: true });
+      });
+      applyHeadingUpRotation(mapRotatorRef.current, map, nextPos, nextHeading, northUpRef.current);
+    };
+
+    smoothRafRef.current = requestAnimationFrame(tick);
+    return () => {
+      active = false;
+      if (smoothRafRef.current != null) {
+        cancelAnimationFrame(smoothRafRef.current);
+        smoothRafRef.current = null;
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -1481,33 +1558,14 @@ export default function MapNavigationView({
         activeRoute && !arrivedRef.current ? snapPositionToRoute(activeRoute.coords, raw) : raw;
       const offRouteDistance = projection?.distanceMeters ?? 0;
 
-      const prevDisplay = displayedPosRef.current;
-      const displayPos =
-        prevDisplay && activeRoute && !arrivedRef.current
-          ? {
-              lat: prevDisplay.lat + (snapped.lat - prevDisplay.lat) * NAV_DISPLAY_SMOOTH_ALPHA,
-              lng: prevDisplay.lng + (snapped.lng - prevDisplay.lng) * NAV_DISPLAY_SMOOTH_ALPHA,
-            }
-          : snapped;
-
       userPosRef.current = snapped;
       logicPosRef.current = snapped;
-      displayedPosRef.current = displayPos;
-
-      if (followUserRef.current && activeRoute && routeLayerRef.current && !arrivedRef.current) {
-        paintLiveRouteLine(
-          routeLayerRef.current,
-          routePolylineHandlesRef.current,
-          activeRoute.coords,
-          displayPos,
-          true,
-        );
-      }
+      targetPosRef.current = snapped;
 
       const dest = destinationRef.current;
 
-      let nextHeading = resolveNavHeading({
-        previous: headingRef.current,
+      const nextHeading = resolveNavHeading({
+        previous: targetHeadingRef.current,
         lastPosition: lastGpsPosRef.current,
         currentPosition: snapped,
         routeCoords: activeRoute?.coords,
@@ -1518,31 +1576,21 @@ export default function MapNavigationView({
         travelMode: settingsRef.current.travelMode,
         usePhoneCompass: settingsRef.current.usePhoneCompass,
       });
+      targetHeadingRef.current = nextHeading;
       lastGpsPosRef.current = snapped;
 
       const now = Date.now();
       const shouldUpdateUi = now - uiTickRef.current >= NAV_UI_TICK_MS;
-      const shouldSyncMap = now - mapSyncTickRef.current >= NAV_MAP_SYNC_MS;
 
       if (shouldUpdateUi) {
         uiTickRef.current = now;
+        const displayPos = renderPosRef.current ?? snapped;
         setUserPos(displayPos);
         setGpsAccuracy(position.coords.accuracy ?? null);
         setSpeedMph(formatSpeedMph(position.coords.speed));
-        setHeading(nextHeading);
+        setHeading(renderHeadingRef.current);
         setOffRouteMeters(offRouteDistance);
         touchActiveNavSession();
-      }
-
-      if (shouldSyncMap) {
-        mapSyncTickRef.current = now;
-        syncNavigationMap(displayPos, nextHeading);
-      } else if (userMarkerRef.current) {
-        try {
-          userMarkerRef.current.setLatLng([displayPos.lat, displayPos.lng]);
-        } catch {
-          // Marker may be mid-teardown.
-        }
       }
 
       const distToDest = haversineMeters(snapped, dest);
@@ -1663,7 +1711,7 @@ export default function MapNavigationView({
         }
       }
     },
-    [loadRoute, speakGuidanceCard, syncNavigationMap],
+    [loadRoute, speakGuidanceCard],
   );
 
   handleGpsUpdateRef.current = handleGpsUpdate;
@@ -1685,10 +1733,6 @@ export default function MapNavigationView({
 
     return () => {
       unsubscribe();
-      if (navPanRafRef.current != null) {
-        cancelAnimationFrame(navPanRafRef.current);
-        navPanRafRef.current = null;
-      }
     };
   }, []);
 
@@ -1717,19 +1761,8 @@ export default function MapNavigationView({
     setFollowUser(true);
     followUserRef.current = true;
     routeOverviewLockedRef.current = false;
-    const headingUp = settingsRef.current.headingUp;
-    lastNavPanRef.current = null;
     lastRouteDrawRef.current = null;
-    const pos = userPosRef.current;
-    const map = mapRef.current;
-    if (!map) return;
-    centerMapOnUser(map, pos, gpsFollowZoom(settingsRef.current.travelMode), headingUp);
-    applyHeadingUpRotation(mapRotatorRef.current, map, pos, headingRef.current, !headingUp);
-    if (userMarkerRef.current) {
-      const markerHeading = headingUp ? 0 : headingRef.current;
-      userMarkerRef.current.setIcon(createNavUserIcon(markerHeading));
-      lastMarkerHeadingRef.current = markerHeading;
-    }
+    snapNavRenderToTarget();
     speakRecenterCue();
   };
 
@@ -1741,8 +1774,7 @@ export default function MapNavigationView({
     applyHeadingUpRotation(mapRotatorRef.current, map, userPosRef.current, headingRef.current, true);
     resetMapBearing(map);
     if (userMarkerRef.current) {
-      userMarkerRef.current.setIcon(createNavUserIcon(headingRef.current));
-      lastMarkerHeadingRef.current = headingRef.current;
+      setNavUserPuckHeading(userMarkerRef.current, headingRef.current);
     }
     routeOverviewLockedRef.current = false;
     lastRouteDrawRef.current = null;
@@ -1809,29 +1841,15 @@ export default function MapNavigationView({
     applyHeadingUpRotation(mapRotatorRef.current, map, pos, headingRef.current, northUp);
     if (userMarkerRef.current) {
       const markerHeading = northUp ? headingRef.current : 0;
-      userMarkerRef.current.setIcon(createNavUserIcon(markerHeading));
-      lastMarkerHeadingRef.current = markerHeading;
+      setNavUserPuckHeading(userMarkerRef.current, markerHeading);
     }
   }, [northUp]);
 
   useEffect(() => {
     if (!followUser || !route) return;
-    const map = mapRef.current;
-    if (!map) return;
-    const frame = window.requestAnimationFrame(() => {
-      const live = mapRef.current;
-      if (!live || !followUserRef.current) return;
-      syncNavigationMap(userPosRef.current, headingRef.current);
-      centerMapOnUser(
-        live,
-        userPosRef.current,
-        gpsFollowZoom(settingsRef.current.travelMode),
-        !northUpRef.current,
-      );
-      applyHeadingUpRotation(mapRotatorRef.current, live, userPosRef.current, headingRef.current, northUpRef.current);
-    });
-    return () => window.cancelAnimationFrame(frame);
-  }, [followUser, route, sheetSnap, isCompact, syncNavigationMap]);
+    renderMapCenterRef.current = null;
+    snapNavRenderToTarget();
+  }, [followUser, route, sheetSnap, isCompact, snapNavRenderToTarget]);
 
   useEffect(() => {
     if (navSettings.travelMode !== 'driving' || !navSettings.showLaneGuidance) {
