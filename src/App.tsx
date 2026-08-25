@@ -93,7 +93,6 @@ import GuestItemDetailView from './components/public/GuestItemDetailView';
 import { CLIENT_PUSH_DISPATCH_ENABLED } from './lib/pushConfig';
 import { parsePushDeepLink, shouldPreservePushDeepLink, type PushDeepLinkTarget } from './lib/pushDeepLink';
 import { clearNotificationDataOnLogout, usePushDeepLinkNavigation } from './hooks/usePushNotifications';
-import PushNotificationCelebration from './components/PushNotificationCelebration';
 import PrivacyPolicyModal from './components/PrivacyPolicyModal';
 import TermsOfUseModal from './components/TermsOfUseModal';
 import { acceptPrivacy, isPrivacyAccepted } from './lib/privacyPolicyPrompt';
@@ -108,6 +107,7 @@ import { useEventsUnlock } from './hooks/useEventsUnlock';
 import { useReviewPrompt } from './hooks/useReviewPrompt';
 import ReviewPromptModal from './components/ReviewPromptModal';
 import GoGetFirstRunPrompt from './components/goget/GoGetFirstRunPrompt';
+import NotificationsFirstRunPrompt from './components/NotificationsFirstRunPrompt';
 import { App as CapacitorApp } from '@capacitor/app';
 import { isNativeApp } from './lib/nativePlatform';
 import { applyUserPreferencesToDevice, mergeStoredAppPreferencesIntoProfile } from './lib/appPreferences';
@@ -122,9 +122,7 @@ import {
 } from './lib/nativeAppSession';
 import { PasswordRecoveryForm } from './components/public/AuthPage';
 import { hasSeenGoGetFirstRunPrompt } from './lib/goGetFirstRunState';
-import RebrandAnnouncementModal from './components/RebrandAnnouncementModal';
-import { hasSeenRebrandAnnouncement, markRebrandAnnouncementSeen } from './lib/rebrandAnnouncementState';
-import { REBRAND_ANNOUNCEMENT_ID } from '../shared/rebrandAnnouncement2026';
+import { hasSeenNotificationsFirstRunPrompt } from './lib/notificationsFirstRunState';
 import { clearActiveNavSession, hasFreshNavSession } from './lib/navigationSession';
 import { isEventEditable, isEventPast } from './lib/eventRsvp';
 import { completedActionNeedsAttribution } from './lib/pickupAttribution';
@@ -224,7 +222,6 @@ export default function App() {
   const [showStaffApplyPanel, setShowStaffApplyPanel] = useState(false);
   const [privacyGateOpen, setPrivacyGateOpen] = useState(false);
   const [termsGateOpen, setTermsGateOpen] = useState(false);
-  const [rebrandLetterOpen, setRebrandLetterOpen] = useState(() => !hasSeenRebrandAnnouncement());
   const [editingItem, setEditingItem] = useState<ItemPost | null>(null);
   const [editingEvent, setEditingEvent] = useState<CommunityEvent | null>(null);
   const [addEventDatesMode, setAddEventDatesMode] = useState(false);
@@ -2189,34 +2186,11 @@ export default function App() {
     setNewListingModalMode(null);
   }, []);
 
-  const dismissRebrandLetter = useCallback(() => {
-    markRebrandAnnouncementSeen();
-    setRebrandLetterOpen(false);
-  }, []);
-
-  const handleOpenRebrandNews = useCallback(() => {
-    markRebrandAnnouncementSeen();
-    setRebrandLetterOpen(false);
-    openNotificationsHub('announcements', { announcementId: REBRAND_ANNOUNCEMENT_ID });
-  }, []);
-
-  const showRebrandLetterModal =
-    rebrandLetterOpen &&
-    !authBootstrapping &&
-    !showDownloadPage &&
-    !passwordRecovery &&
-    (!sessionUser ||
-      (Boolean(userProfile) &&
-        !privacyGateOpen &&
-        !termsGateOpen &&
-        !accountRestriction.restricted));
-
   const reviewPromptEnabled =
     Boolean(userProfile) &&
     !privacyGateOpen &&
     !termsGateOpen &&
-    !accountRestriction.restricted &&
-    !rebrandLetterOpen;
+    !accountRestriction.restricted;
 
   const {
     promptKind: reviewPromptKind,
@@ -2853,13 +2827,6 @@ export default function App() {
         </>
       )}
 
-      {userProfile && !accountRestriction.restricted && (
-        <PushNotificationCelebration
-          userId={userProfile.uid}
-          onGoToProfile={() => openNotificationsHub('alerts')}
-        />
-      )}
-
       {/* Floating PWA Install Helper Banner */}
       {showInstallBanner && !isAlreadyInstalled && (
         <div 
@@ -2973,9 +2940,9 @@ export default function App() {
         userProfile &&
         isNativeApp() &&
         !hasSeenGoGetFirstRunPrompt() &&
-        !rebrandLetterOpen &&
         !privacyGateOpen &&
-        !termsGateOpen && (
+        !termsGateOpen &&
+        !accountRestriction.restricted && (
           <GoGetFirstRunPrompt
             userProfile={userProfile}
             onUpdateProfile={handleUpdateProfile}
@@ -2983,12 +2950,18 @@ export default function App() {
           />
         )}
 
-      {showRebrandLetterModal && (
-        <RebrandAnnouncementModal
-          onDismiss={dismissRebrandLetter}
-          onOpenNews={sessionReady ? handleOpenRebrandNews : undefined}
-        />
-      )}
+      {sessionReady &&
+        userProfile &&
+        !hasSeenNotificationsFirstRunPrompt() &&
+        !privacyGateOpen &&
+        !termsGateOpen &&
+        !accountRestriction.restricted &&
+        (!isNativeApp() || hasSeenGoGetFirstRunPrompt()) && (
+          <NotificationsFirstRunPrompt
+            userId={userProfile.uid}
+            onOpenNotificationSettings={() => openNotificationsHub('alerts')}
+          />
+        )}
     </div>
   );
 }
