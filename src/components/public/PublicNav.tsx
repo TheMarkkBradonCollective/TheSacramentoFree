@@ -51,10 +51,18 @@ function useDropdownMenu(onClose: () => void) {
 }
 
 export default function PublicNav({ route, onNavigate, hideBrandOnLarge = false }: PublicNavProps) {
-  // Already inside the installed app — advertising the download is redundant.
+  // Native APK only — PWA and browser tabs keep the public download page in nav.
+  const showDownloadNav = !isNativeApp();
   const COMMUNITY_LINKS = useMemo(
-    () => (isNativeApp() ? ALL_COMMUNITY_LINKS.filter((l) => l.route !== 'download') : ALL_COMMUNITY_LINKS),
+    () => ALL_COMMUNITY_LINKS.filter((l) => l.route !== 'download'),
     [],
+  );
+  const primaryNavItems = useMemo(
+    () =>
+      showDownloadNav
+        ? [...PRIMARY_NAV, { route: 'download' as const, label: 'Download app' }]
+        : PRIMARY_NAV,
+    [showDownloadNav],
   );
   const { enabled: newspaper } = useNewspaperSkin();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -119,7 +127,7 @@ export default function PublicNav({ route, onNavigate, hideBrandOnLarge = false 
         </button>
 
         <nav className={`hidden lg:flex items-center gap-1 ${newspaper ? 'flex-1 justify-center' : ''}`}>
-          {PRIMARY_NAV.map(({ route: r, label }) => (
+          {primaryNavItems.map(({ route: r, label }) => (
             <button key={r} type="button" onClick={() => onNavigate(r)} className={linkClass(r)}>
               {label}
             </button>
@@ -230,7 +238,7 @@ export default function PublicNav({ route, onNavigate, hideBrandOnLarge = false 
             newspaper ? '' : 'bg-surface'
           }`}
         >
-          {PRIMARY_NAV.map(({ route: r, label }) => (
+          {primaryNavItems.map(({ route: r, label }) => (
             <button key={r} type="button" onClick={() => navigateMobile(r)} className={mobileLinkClass(r)}>
               {label}
             </button>

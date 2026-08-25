@@ -44,6 +44,7 @@ drawtext=fontfile=${FONT_SEMI}:text='No selling  ·  No ads  ·  Sacramento neig
 
 if [[ -d "$OUT_DIR/screenshots" ]]; then
   cp "$OUT_DIR/icon-512.png" "$OUT_DIR/screenshots/00-app-icon-512.png"
+  cp "$OUT_DIR/feature-graphic-1024x500.png" "$OUT_DIR/screenshots/00-feature-graphic-1024x500.png"
 fi
 
 echo "Play Store assets written to play-store-assets/"

@@ -133,6 +133,7 @@ import { completedActionNeedsAttribution } from './lib/pickupAttribution';
 import { parsePublicRoute, publicRouteFromPathname, isDownloadRoute, downloadPagePath, normalizePublicPath } from './public/routes';
 import DownloadPage from './components/public/pages/DownloadPage';
 import { canDownloadApkFromWebsite } from './lib/apkWebsiteAccess';
+import { isWebsiteBrowser } from './lib/installContext';
 
 const DEFAULT_OFFLINE_ITEMS: ItemPost[] = [];
 const PENDING_DEEP_LINK_KEY = 'sbn_pending_deep_link_v1';
@@ -245,7 +246,9 @@ export default function App() {
   const [pickupAttributionMode, setPickupAttributionMode] = useState<'complete' | 'edit'>('complete');
   const [viewProfileUid, setViewProfileUid] = useState<string | null>(null);
   const [showDirectMessageModal, setShowDirectMessageModal] = useState(false);
-  const [showDownloadPage, setShowDownloadPage] = useState(() => isDownloadRoute());
+  const [showDownloadPage, setShowDownloadPage] = useState(
+    () => isWebsiteBrowser() && isDownloadRoute(),
+  );
   const [initialChatFeedbackPanel, setInitialChatFeedbackPanel] = useState<
     'reviews' | 'report' | 'staffReports' | null
   >(null);
@@ -272,6 +275,7 @@ export default function App() {
   }, [markAwardsSeen]);
 
   const handleOpenDownload = useCallback(() => {
+    if (!isWebsiteBrowser()) return;
     setShowDownloadPage(true);
     try {
       window.history.pushState(window.history.state, '', downloadPagePath());
@@ -718,7 +722,7 @@ export default function App() {
     } else if (publicDest === 'gofundme') {
       setShowGoFundMeDetail(true);
       setLegalPanel(null);
-    } else if (publicDest === 'download') {
+    } else if (publicDest === 'download' && isWebsiteBrowser()) {
       setShowDownloadPage(true);
       try {
         window.history.replaceState(window.history.state, '', downloadPagePath());
@@ -760,7 +764,13 @@ export default function App() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const syncDownloadRoute = () => setShowDownloadPage(isDownloadRoute());
+    const syncDownloadRoute = () => {
+      if (!isWebsiteBrowser()) {
+        setShowDownloadPage(false);
+        return;
+      }
+      setShowDownloadPage(isDownloadRoute());
+    };
     window.addEventListener('popstate', syncDownloadRoute);
     window.addEventListener('hashchange', syncDownloadRoute);
     return () => {
@@ -2280,7 +2290,7 @@ export default function App() {
     <div id="app_root_layout" className="min-h-screen flex flex-col mesh-bg text-app antialiased font-sans">
       {sessionUser ? <NewspaperPreviewBanner /> : null}
       {sessionUser ? <NewspaperEditionBar /> : null}
-      {showDownloadPage && sessionUser ? (
+      {showDownloadPage && sessionUser && isWebsiteBrowser() ? (
         <DownloadPage
           userProfile={userProfile}
           onBack={() => {
@@ -2917,7 +2927,7 @@ export default function App() {
       )}
 
       {/* Floating PWA Install Helper Banner */}
-      {showInstallBanner && !isAlreadyInstalled && (
+      {showInstallBanner && !isAlreadyInstalled && isWebsiteBrowser() && (
         <div 
           id="pwa_floating_install_banner" 
           className="fixed bottom-20 left-4 right-4 sm:bottom-6 sm:left-auto sm:right-6 sm:max-w-xs md:max-w-md z-[45] bg-surface border border-app border-l-[4px] border-l-accent shadow-2xl p-4 rounded-xl transition-all duration-300 text-app font-sans animate-fade-in"

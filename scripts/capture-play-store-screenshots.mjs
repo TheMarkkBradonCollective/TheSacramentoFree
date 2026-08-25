@@ -235,9 +235,9 @@ async function main() {
     await shot(page, '03-stuff');
 
     await page.evaluate(() => {
-      const chair = document.querySelector('#item_card_demo-item-chair button');
-      if (chair instanceof HTMLElement) {
-        chair.click();
+      const couch = document.querySelector('#item_card_demo-item-couch button');
+      if (couch instanceof HTMLElement) {
+        couch.click();
         return;
       }
       const cards = Array.from(document.querySelectorAll('[id^="item_card_"]'));
@@ -294,7 +294,7 @@ async function main() {
 
     const goGetScenes = [
       ['goget-listing', '09-goget-listing', '#item_detail_fullscreen', 2500],
-      ['goget-chat', '10-goget-chat', '#chat_start_go_get_btn', 2000],
+      ['goget-chat', '10-goget-chat', '#chat_panel_header', 2500],
       ['goget-ring', '11-goget-ring', '#go_get_incoming_ring_overlay', 2500],
       ['goget-waiting', '12-goget-waiting', '#go_get_trip_lock_screen, #go_get_ring_waiting', 2000],
       ['goget-navigation', '13-goget-navigation', '#map_navigation_view', 8000],

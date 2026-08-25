@@ -1,6 +1,7 @@
 import { App } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import { apiUrl } from './appOrigin';
+import { isNativeApp } from './nativePlatform';
 
 export type InstallKind = 'browser' | 'pwa' | 'ios-pwa' | 'android-apk';
 
@@ -24,6 +25,11 @@ export function detectInstallKind(): InstallKind {
   }
 
   return 'browser';
+}
+
+/** Signed-out marketing site in a normal browser tab (not APK, not home-screen PWA). */
+export function isWebsiteBrowser(): boolean {
+  return !isNativeApp() && detectInstallKind() === 'browser';
 }
 
 export function installKindLabel(kind: InstallKind): string {
