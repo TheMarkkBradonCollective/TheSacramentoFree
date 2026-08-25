@@ -185,7 +185,7 @@ export default function PushNotificationCelebration({
               </button>
 
               <div className="px-6 pt-8 pb-6 text-center">
-                <div className="mx-auto mb-4 w-16 h-16 rounded-2xl bg-accent-soft border border-accent/25 flex items-center justify-center shadow-[0_0_32px_rgba(255,69,0,0.25)]">
+                <div className="mx-auto mb-4 w-16 h-16 rounded-2xl bg-accent-soft border border-accent/25 flex items-center justify-center shadow-[0_0_32px_color-mix(in_srgb,var(--color-accent)_35%,transparent)]">
                   <Bell className="w-8 h-8 text-accent" aria-hidden />
                 </div>
 

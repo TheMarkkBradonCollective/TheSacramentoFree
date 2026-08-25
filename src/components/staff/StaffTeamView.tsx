@@ -142,7 +142,7 @@ export default function StaffTeamView({ actor, onViewProfile }: StaffTeamViewPro
             return limit ? (
               <div key={role} className="bg-inset border border-app rounded-lg px-3 py-1.5 text-[10px] font-semibold">
                 <span className="text-muted">{ROLE_LABELS[role]}: </span>
-                <span className={count >= limit ? 'text-amber-400' : 'text-accent'}>{count}/{limit}</span>
+                <span className={count >= limit ? 'text-accent' : 'text-accent'}>{count}/{limit}</span>
               </div>
             ) : null;
           })}
@@ -213,7 +213,7 @@ export default function StaffTeamView({ actor, onViewProfile }: StaffTeamViewPro
                           </div>
                           <p className="text-xs text-muted truncate">{user.email}</p>
                           {user.accountStatus !== 'active' && (
-                            <span className="text-[10px] font-semibold capitalize text-amber-400">
+                            <span className="text-[10px] font-semibold capitalize text-accent">
                               {user.accountStatus}
                             </span>
                           )}
@@ -309,7 +309,7 @@ export default function StaffTeamView({ actor, onViewProfile }: StaffTeamViewPro
                                 <button
                                   type="button"
                                   onClick={() => handleSuspend(user)}
-                                  className="sbn-btn sbn-btn-sm bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20"
+                                  className="sbn-btn sbn-btn-sm bg-accent/10 text-accent hover:bg-accent/20 border border-accent/20"
                                 >
                                   Suspend (3 days)
                                 </button>

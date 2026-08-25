@@ -7,10 +7,10 @@ export const AWARD_CATEGORY_THEME: Record<
   milestone: {
     label: 'Founding neighbors',
     emoji: '🏡',
-    iconBg: 'bg-amber-500/15',
-    iconText: 'text-amber-600 dark:text-amber-400',
-    chip: 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/25',
-    header: 'from-amber-500/10 to-transparent border-amber-500/20',
+    iconBg: 'bg-accent/15',
+    iconText: 'text-accent',
+    chip: 'bg-accent/10 text-accent border-accent/25',
+    header: 'from-accent/10 to-transparent border-accent/20',
   },
   giving: {
     label: 'Giving & sharing',
@@ -31,10 +31,10 @@ export const AWARD_CATEGORY_THEME: Record<
   recognition: {
     label: 'Neighbor love',
     emoji: '⭐',
-    iconBg: 'bg-yellow-500/15',
-    iconText: 'text-yellow-600 dark:text-yellow-400',
-    chip: 'bg-yellow-500/10 text-yellow-700 dark:text-yellow-300 border-yellow-500/25',
-    header: 'from-yellow-500/10 to-transparent border-yellow-500/20',
+    iconBg: 'bg-accent/15',
+    iconText: 'text-accent',
+    chip: 'bg-accent/10 text-accent border-accent/25',
+    header: 'from-accent/10 to-transparent border-accent/20',
   },
   events: {
     label: 'Events & meetups',

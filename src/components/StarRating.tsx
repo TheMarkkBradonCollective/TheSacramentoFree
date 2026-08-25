@@ -50,7 +50,7 @@ export default function StarRating({
                   className="absolute inset-0 overflow-hidden"
                   style={{ width: state === 'half' ? '50%' : '100%' }}
                 >
-                  <Star className={`${iconClass} text-amber-400 fill-amber-400`} aria-hidden />
+                  <Star className={`${iconClass} text-accent fill-accent`} aria-hidden />
                 </span>
               )}
             </span>
@@ -77,7 +77,7 @@ export default function StarRating({
                 className="absolute inset-0 overflow-hidden pointer-events-none"
                 style={{ width: state === 'half' ? '50%' : '100%' }}
               >
-                <Star className={`${iconClass} text-amber-400 fill-amber-400`} aria-hidden />
+                <Star className={`${iconClass} text-accent fill-accent`} aria-hidden />
               </span>
             )}
           </span>

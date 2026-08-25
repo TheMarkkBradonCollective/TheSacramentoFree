@@ -22,7 +22,7 @@ const STATUS_CONFIG: Record<
   GoGetSessionStatus,
   { label: string; color: string; icon: typeof Activity }
 > = {
-  awaiting_availability: { label: 'Ringing', color: 'text-amber-400 bg-amber-500/10', icon: Clock },
+  awaiting_availability: { label: 'Ringing', color: 'text-accent bg-accent/10', icon: Clock },
   awaiting_schedule: { label: 'Schedule', color: 'text-sky-400 bg-sky-500/10', icon: Clock },
   window_offered:        { label: 'Window offered', color: 'text-sky-400 bg-sky-500/10', icon: Clock },
   scheduled:             { label: 'Scheduled', color: 'text-blue-400 bg-blue-500/10', icon: Clock },
@@ -30,7 +30,7 @@ const STATUS_CONFIG: Record<
   arrived:               { label: 'Arrived', color: 'text-teal-400 bg-teal-500/10', icon: MapPin },
   completed:             { label: 'Completed', color: 'text-zinc-400 bg-zinc-500/10', icon: CheckCircle },
   cancelled:             { label: 'Cancelled', color: 'text-red-400 bg-red-500/10', icon: XCircle },
-  expired:               { label: 'Expired', color: 'text-orange-400 bg-orange-500/10', icon: XCircle },
+  expired:               { label: 'Expired', color: 'text-accent bg-accent/10', icon: XCircle },
   disputed:              { label: 'Disputed', color: 'text-red-400 bg-red-500/10', icon: AlertTriangle },
 };
 

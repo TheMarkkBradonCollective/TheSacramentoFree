@@ -85,7 +85,7 @@ export default function AwardsPanel({ userProfile, userPosts = [], onViewProfile
           animate={{ opacity: 1, y: 0 }}
           className="sbn-award-hero sbn-card p-6 text-center space-y-4 border-accent/20"
         >
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl bg-gradient-to-br from-accent-soft to-amber-500/15 border-2 border-accent/25 sbn-awards-glow-btn shadow-md">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl bg-gradient-to-br from-accent-soft to-accent/15 border-2 border-accent/25 sbn-awards-glow-btn shadow-md">
             <Trophy className="w-8 h-8 text-accent" />
           </div>
           <div className="space-y-1">

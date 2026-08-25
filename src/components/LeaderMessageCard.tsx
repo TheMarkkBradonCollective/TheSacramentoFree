@@ -9,10 +9,10 @@ const VARIANT_STYLES: Record<
   { border: string; badge: string; avatar: string; icon: string }
 > = {
   director: {
-    border: 'border-l-amber-500/70',
-    badge: 'text-amber-500/90',
-    avatar: 'bg-amber-500/10 border-amber-500/25 text-amber-500',
-    icon: 'text-amber-500/60',
+    border: 'border-l-accent/70',
+    badge: 'text-accent/90',
+    avatar: 'bg-accent/10 border-accent/25 text-accent',
+    icon: 'text-accent/60',
   },
   staff: {
     border: 'border-l-sky-500/70',

@@ -143,7 +143,7 @@ export default function StaffApplyView({ user }: StaffApplyViewProps) {
     return (
       <div className="sbn-help-card space-y-3">
         <div className="flex items-start gap-3">
-          <span className="p-2 rounded-lg bg-amber-500/10 text-amber-400 shrink-0">
+          <span className="p-2 rounded-lg bg-accent/10 text-accent shrink-0">
             <Clock className="w-5 h-5" />
           </span>
           <div>
@@ -168,7 +168,7 @@ export default function StaffApplyView({ user }: StaffApplyViewProps) {
   return (
     <div className="space-y-6">
       {maybeNotice ? (
-        <div className="sbn-help-card space-y-1 border-amber-500/30">
+        <div className="sbn-help-card space-y-1 border-accent/30">
           <h3 className="font-display font-bold text-app">{maybeNotice.title}</h3>
           <p className="text-sm text-muted leading-relaxed">{maybeNotice.body}</p>
         </div>
