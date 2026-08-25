@@ -62,8 +62,8 @@ export default function MapSelectionRouteRow({
         value={travelMode}
         onChange={(mode) => writeNavigationSettings({ travelMode: mode })}
       />
-      <div className="flex items-center gap-2">
-      <div className="flex-1 min-w-0">
+      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex-1 min-w-[8rem]">
         {distanceMeters != null ? (
           <>
             <p className="text-[10px] font-bold text-app leading-snug">

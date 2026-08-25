@@ -62,7 +62,7 @@ function clampFitPadding(size: L.Point, padding: MapFitPadding): MapFitPadding {
   const maxLeft = size.x * 0.28;
   const maxRight = size.x * 0.28;
   const maxTop = size.y * 0.3;
-  const maxBottom = size.y * 0.48;
+  const maxBottom = size.y * 0.72;
 
   let left = Math.min(maxLeft, Math.max(8, padding.topLeft[0]));
   let top = Math.min(maxTop, Math.max(8, padding.topLeft[1]));

@@ -289,7 +289,7 @@ function MapSelectedEventCard({
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: slideDirection === 'right' ? -(compact ? 70 : 80) : compact ? 70 : 80 }}
       transition={{ duration: 0.25, ease: 'easeOut' }}
-      className={`${compact ? 'pointer-events-auto sbn-card p-4 shadow-2xl w-full' : 'border border-app bg-surface p-4 relative font-sans text-app rounded-2xl shadow-xl'}${isCancelled ? ' opacity-60' : ''}`}
+      className={`${compact ? 'pointer-events-auto sbn-card sbn-map-selection-card p-4 shadow-2xl w-full' : 'border border-app bg-surface p-4 relative font-sans text-app rounded-2xl shadow-xl'}${isCancelled ? ' opacity-60' : ''}`}
       id={compact ? 'mobile_map_event_detail_card' : 'map_event_detail_card'}
     >
       <div className={`flex items-center justify-end gap-1 ${compact ? 'mb-2' : 'mb-2.5'}`}>
@@ -579,8 +579,17 @@ export default function SacramentoMapView({
       });
 
       const cardStack = hasMapSelection ? selectionCardHeight : 0;
+      const safeBottom =
+        typeof window !== 'undefined'
+          ? Number.parseFloat(
+              getComputedStyle(document.documentElement).getPropertyValue('--sbn-safe-area-bottom') || '0',
+            ) || 0
+          : 0;
       const top = Math.max(measured.topLeft[1], isFullScreenMobile ? 52 : 40);
-      const bottom = Math.max(measured.bottomRight[1], cardStack > 0 ? cardStack + 12 : measured.bottomRight[1]);
+      const bottom = Math.max(
+        measured.bottomRight[1],
+        cardStack > 0 ? cardStack + 24 + safeBottom : measured.bottomRight[1],
+      );
 
       const dest = routeEndpointsRef.current?.end;
       const padding = {
@@ -625,8 +634,17 @@ export default function SacramentoMapView({
       margin: 18,
     });
     const cardStack = hasMapSelection ? selectionCardHeight : 0;
+    const safeBottom =
+      typeof window !== 'undefined'
+        ? Number.parseFloat(
+            getComputedStyle(document.documentElement).getPropertyValue('--sbn-safe-area-bottom') || '0',
+          ) || 0
+        : 0;
     const top = Math.max(measured.topLeft[1], isFullScreenMobile ? 52 : 40);
-    const bottom = Math.max(measured.bottomRight[1], cardStack > 0 ? cardStack + 12 : measured.bottomRight[1]);
+    const bottom = Math.max(
+      measured.bottomRight[1],
+      cardStack > 0 ? cardStack + 24 + safeBottom : measured.bottomRight[1],
+    );
     return {
       topLeft: [measured.topLeft[0], top],
       bottomRight: [measured.bottomRight[0], bottom],
@@ -1782,7 +1800,7 @@ export default function SacramentoMapView({
         </AnimatePresence>
 
         {/* Selected listing/event floating panel */}
-        <div ref={selectionCardRef} className="absolute sbn-map-selection-dock left-4 right-4 z-30 pointer-events-none">
+        <div ref={selectionCardRef} className="absolute sbn-map-selection-dock z-30 pointer-events-none">
           <AnimatePresence>
             {selectedEvent && currentEventIndex >= 0 && (
               <MapSelectedEventCard
@@ -1817,7 +1835,7 @@ export default function SacramentoMapView({
                 exit={{ opacity: 0, x: slideDirection === 'right' ? -70 : 70 }}
                 transition={{ duration: 0.25, ease: 'easeOut' }}
                 id="mobile_map_detail_floating_card"
-                className="pointer-events-auto sbn-card p-4 shadow-2xl w-full"
+                className="pointer-events-auto sbn-card sbn-map-selection-card p-4 shadow-2xl w-full"
               >
                 <div className="flex items-center justify-end gap-1 mb-2">
                   <div className="flex items-center space-x-1 bg-inset border border-app px-2 py-1 rounded-lg">
@@ -1926,13 +1944,13 @@ export default function SacramentoMapView({
                       />
                     </div>
 
-                    <div className="flex items-center justify-between mt-2 pt-2 border-t border-app gap-2">
-                      <div className="flex items-center space-x-1 text-[9px] font-medium text-muted min-w-0">
+                    <div className="mt-2 pt-2 border-t border-app space-y-2">
+                      <div className="flex items-center gap-1 text-[9px] font-medium text-muted min-w-0">
                         <MapPin className="w-3 h-3 text-accent shrink-0" />
                         <span className="truncate">{selectedPost.neighborhood}</span>
                       </div>
 
-                      <div className="flex gap-1 shrink-0">
+                      <div className="sbn-map-selection-card__actions">
                         {openItemDetail && (
                           <button
                             type="button"
@@ -2531,13 +2549,13 @@ export default function SacramentoMapView({
                   />
                 </div>
 
-                <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-app flex-wrap gap-2.5">
-                  <div className="flex items-center space-x-1 text-[10px] font-bold text-app uppercase">
+                <div className="mt-3 pt-2.5 border-t border-app space-y-2">
+                  <div className="flex items-center gap-1 text-[10px] font-bold text-app uppercase min-w-0">
                     <MapPin className="w-3.5 h-3.5 text-accent shrink-0" />
-                    <span>{selectedPost.neighborhood}</span>
+                    <span className="truncate">{selectedPost.neighborhood}</span>
                   </div>
 
-                  <div className="flex items-center space-x-2">
+                  <div className="sbn-map-selection-card__actions">
                     {openItemDetail && (
                       <button
                         id="map_view_card_btn"
