@@ -826,6 +826,9 @@ CREATE TABLE IF NOT EXISTS public.go_get_sessions (
 ALTER TABLE public.go_get_sessions ADD COLUMN IF NOT EXISTS "fulfillerSharingLocation" BOOLEAN NOT NULL DEFAULT false;
 ALTER TABLE public.go_get_sessions ADD COLUMN IF NOT EXISTS "ringExpiresAt" TIMESTAMPTZ;
 ALTER TABLE public.go_get_sessions ADD COLUMN IF NOT EXISTS "ringDurationSeconds" INTEGER;
+ALTER TABLE public.go_get_sessions ADD COLUMN IF NOT EXISTS "onTheWayNotifiedAt" TIMESTAMPTZ;
+ALTER TABLE public.go_get_sessions ADD COLUMN IF NOT EXISTS "approachingNotifiedAt" TIMESTAMPTZ;
+ALTER TABLE public.go_get_sessions ADD COLUMN IF NOT EXISTS "ringExpiredNotifiedAt" TIMESTAMPTZ;
 
 ALTER TABLE public.go_get_sessions DROP CONSTRAINT IF EXISTS go_get_sessions_item_type_check;
 ALTER TABLE public.go_get_sessions ADD CONSTRAINT go_get_sessions_item_type_check

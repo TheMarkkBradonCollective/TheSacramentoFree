@@ -1,9 +1,11 @@
+import { goGetDeepLink } from '../../../shared/goGetPushSpec';
 import {
   formatGoGetWhenLabel,
   goGetAvailabilityRequestTransition,
   goGetFulfillerReadyTransition,
   goGetTransitionFromStatusChange,
   type GoGetSessionSnapshot,
+  type GoGetTransition,
 } from '../../../shared/goGetNotifications';
 import { runPushSend, type PushSendBody } from './runPushSend';
 import { getSupabaseAdmin } from './supabaseAdmin';
@@ -12,6 +14,10 @@ type SessionRow = Record<string, unknown>;
 
 function listingUrl(itemId: string): string {
   return `/listing/${itemId}`;
+}
+
+function sessionUrl(sessionId: string): string {
+  return goGetDeepLink(sessionId);
 }
 
 function normalizeSession(row: SessionRow): GoGetSessionSnapshot {
@@ -77,7 +83,7 @@ function buildPayloadForTransition(
         eventType: 'go_get_availability_request',
         title: 'Ready for pickup?',
         body: `${session.requesterName} wants to Go Get "${itemTitle}" — are you available now?`,
-        url: listingUrl(session.itemId),
+        url: sessionUrl(session.id),
         listingId: session.itemId,
         recipientUserIds: [transition.recipientUserId],
         tag: transition.tag,
@@ -94,7 +100,7 @@ function buildPayloadForTransition(
         eventType: 'go_get_available_now',
         title: `${session.fulfillerName} is available now`,
         body: `Tap Go Get to start heading to "${itemTitle}"`,
-        url: listingUrl(session.itemId),
+        url: sessionUrl(session.id),
         listingId: session.itemId,
         recipientUserIds: [transition.recipientUserId],
         tag: transition.tag,
@@ -105,7 +111,7 @@ function buildPayloadForTransition(
         eventType: 'go_get_schedule_confirmed',
         title: 'Pickup time confirmed',
         body: `${session.requesterName} will Go Get "${itemTitle}" ${whenLabel}`,
-        url: listingUrl(session.itemId),
+        url: sessionUrl(session.id),
         listingId: session.itemId,
         recipientUserIds: [transition.recipientUserId],
         tag: transition.tag,
@@ -116,7 +122,7 @@ function buildPayloadForTransition(
         eventType: 'go_get_fulfiller_ready',
         title: `${session.fulfillerName} is ready`,
         body: `Tap Go Get to start heading to "${itemTitle}"`,
-        url: listingUrl(session.itemId),
+        url: sessionUrl(session.id),
         listingId: session.itemId,
         recipientUserIds: [transition.recipientUserId],
         tag: transition.tag,
@@ -127,7 +133,7 @@ function buildPayloadForTransition(
         eventType: 'go_get_started',
         title: `${session.requesterName} is on the way`,
         body: `Heading to pick up "${itemTitle}" now`,
-        url: listingUrl(session.itemId),
+        url: sessionUrl(session.id),
         listingId: session.itemId,
         recipientUserIds: [transition.recipientUserId],
         tag: transition.tag,
@@ -138,7 +144,7 @@ function buildPayloadForTransition(
         eventType: 'go_get_arrived',
         title: `${session.requesterName} has arrived`,
         body: `Confirm the pickup for "${itemTitle}" once it's handed off`,
-        url: listingUrl(session.itemId),
+        url: sessionUrl(session.id),
         listingId: session.itemId,
         recipientUserIds: [transition.recipientUserId],
         tag: transition.tag,
@@ -149,7 +155,40 @@ function buildPayloadForTransition(
         eventType: 'go_get_completed',
         title: 'Pickup confirmed',
         body: `"${itemTitle}" pickup is complete — thanks for using Go Get!`,
-        url: listingUrl(session.itemId),
+        url: sessionUrl(session.id),
+        listingId: session.itemId,
+        recipientUserIds: [transition.recipientUserId],
+        tag: transition.tag,
+        data: sessionData(session),
+      };
+    case 'go_get_schedule_changed':
+      return {
+        eventType: 'go_get_schedule_changed',
+        title: 'Pickup time changed',
+        body: `The pickup for "${itemTitle}" is now ${whenLabel}`,
+        url: sessionUrl(session.id),
+        listingId: session.itemId,
+        recipientUserIds: [transition.recipientUserId],
+        tag: transition.tag,
+        data: sessionData(session),
+      };
+    case 'go_get_ring_expired':
+      return {
+        eventType: 'go_get_ring_expired',
+        title: 'No response yet',
+        body: `No answer on "${itemTitle}" — you can schedule a pickup time instead`,
+        url: sessionUrl(session.id),
+        listingId: session.itemId,
+        recipientUserIds: [transition.recipientUserId],
+        tag: transition.tag,
+        data: sessionData(session),
+      };
+    case 'go_get_disputed':
+      return {
+        eventType: 'go_get_disputed',
+        title: 'Pickup issue reported',
+        body: `A pickup issue was reported for "${itemTitle}" — staff may follow up`,
+        url: sessionUrl(session.id),
         listingId: session.itemId,
         recipientUserIds: [transition.recipientUserId],
         tag: transition.tag,
@@ -160,7 +199,7 @@ function buildPayloadForTransition(
         eventType: 'go_get_cancelled',
         title: 'Go Get cancelled',
         body: `${cancelledByName} cancelled the pickup for "${itemTitle}"`,
-        url: listingUrl(session.itemId),
+        url: sessionUrl(session.id),
         listingId: session.itemId,
         recipientUserIds: [transition.recipientUserId],
         tag: transition.tag,
@@ -194,7 +233,7 @@ export async function runGoGetSessionWebhook(
     return dispatchGoGetPush(callerId, payload);
   }
 
-  const transitions: ReturnType<typeof goGetTransitionFromStatusChange>[] = [];
+  const transitions: GoGetTransition[] = [];
 
   const statusTransition = goGetTransitionFromStatusChange(session, previous);
   if (statusTransition) transitions.push(statusTransition);
@@ -203,6 +242,47 @@ export async function runGoGetSessionWebhook(
     !previous.fulfillerReadyAt && session.fulfillerReadyAt && session.status === 'scheduled';
   if (fulfillerJustReady) {
     transitions.push(goGetFulfillerReadyTransition(session));
+  }
+
+  const prevScheduled = previous.scheduledAt ? String(previous.scheduledAt) : '';
+  const nextScheduled = session.scheduledAt ? String(session.scheduledAt) : '';
+  if (
+    prevScheduled &&
+    nextScheduled &&
+    prevScheduled !== nextScheduled &&
+    session.status === 'scheduled'
+  ) {
+    const recipients = [session.fulfillerUserId, session.requesterUserId].filter(Boolean);
+    for (const recipientUserId of recipients) {
+      transitions.push({
+        eventType: 'go_get_schedule_changed',
+        recipientUserId,
+        tag: `go-get-schedule-changed-${session.id}`,
+      });
+    }
+  }
+
+  const prevStatus = previous.status;
+  const nextStatus = session.status;
+
+  if (nextStatus === 'expired' && prevStatus === 'awaiting_availability') {
+    transitions.push({
+      eventType: 'go_get_ring_expired',
+      recipientUserId: session.requesterUserId,
+      tag: `go-get-ring-expired-${session.id}`,
+    });
+  }
+
+  if (nextStatus === 'disputed') {
+    const recipient =
+      session.cancelledByUserId === session.requesterUserId
+        ? session.fulfillerUserId
+        : session.requesterUserId;
+    transitions.push({
+      eventType: 'go_get_disputed',
+      recipientUserId: recipient,
+      tag: `go-get-disputed-${session.id}`,
+    });
   }
 
   if (!transitions.length) {
@@ -219,7 +299,7 @@ export async function runGoGetSessionWebhook(
   return { status: 200, body: { ok: true, sent, handlers: results.map((r) => r.body) } };
 }
 
-type ReminderWindow = 'tomorrow' | 'one_hour' | 'ready';
+type ReminderWindow = 'tomorrow' | 'one_hour' | 'thirty_min' | 'ready';
 
 function reminderWindowBounds(window: ReminderWindow, now: Date): { minMs: number; maxMs: number } {
   const ms = now.getTime();
@@ -230,6 +310,10 @@ function reminderWindowBounds(window: ReminderWindow, now: Date): { minMs: numbe
   if (window === 'one_hour') {
     const target = ms + 60 * 60 * 1000;
     return { minMs: target - 10 * 60 * 1000, maxMs: target + 10 * 60 * 1000 };
+  }
+  if (window === 'thirty_min') {
+    const target = ms + 30 * 60 * 1000;
+    return { minMs: target - 5 * 60 * 1000, maxMs: target + 5 * 60 * 1000 };
   }
   return { minMs: ms - 5 * 60 * 1000, maxMs: ms + 5 * 60 * 1000 };
 }
@@ -249,7 +333,7 @@ function buildScheduledReminderPayload(
       eventType: 'go_get_pickup_tomorrow',
       title: 'Pickup tomorrow',
       body: `Your Go Get pickup for "${itemTitle}" with ${partnerName} is scheduled for ${whenLabel}`,
-      url: listingUrl(session.itemId),
+      url: sessionUrl(session.id),
       listingId: session.itemId,
       recipientUserIds: [recipientUserId],
       tag: `go-get-tomorrow-${session.id}`,
@@ -262,7 +346,7 @@ function buildScheduledReminderPayload(
       eventType: 'go_get_pickup_in_one_hour',
       title: 'Pickup in 1 hour',
       body: `Your Go Get pickup for "${itemTitle}" with ${partnerName} is at ${whenLabel}`,
-      url: listingUrl(session.itemId),
+      url: sessionUrl(session.id),
       listingId: session.itemId,
       recipientUserIds: [recipientUserId],
       tag: `go-get-one-hour-${session.id}`,
@@ -270,11 +354,24 @@ function buildScheduledReminderPayload(
     };
   }
 
+  if (window === 'thirty_min') {
+    return {
+      eventType: 'go_get_pickup_thirty_min',
+      title: 'Pickup coming up',
+      body: `Your Go Get pickup for "${itemTitle}" with ${partnerName} is at ${whenLabel}`,
+      url: sessionUrl(session.id),
+      listingId: session.itemId,
+      recipientUserIds: [recipientUserId],
+      tag: `go-get-thirty-min-${session.id}`,
+      data: sessionData(session, { reminderWindow: 'thirty_min' }),
+    };
+  }
+
   return {
     eventType: 'go_get_ready_reminder',
     title: 'Pickup time is here',
     body: `Tap Ready when you're set for "${itemTitle}" — ${session.requesterName} is waiting on you.`,
-    url: listingUrl(session.itemId),
+    url: sessionUrl(session.id),
     listingId: session.itemId,
     recipientUserIds: [recipientUserId],
     tag: `go-get-ready-reminder-${session.id}`,
@@ -295,6 +392,7 @@ export async function runGoGetReminderCron(): Promise<{ status: number; body: Re
 
   let tomorrowSent = 0;
   let oneHourSent = 0;
+  let thirtyMinSent = 0;
   let readySent = 0;
 
   for (const row of sessions || []) {
@@ -306,7 +404,7 @@ export async function runGoGetReminderCron(): Promise<{ status: number; body: Re
     const itemTitle = await fetchItemTitle(session.itemId);
     const recipients = [session.fulfillerUserId, session.requesterUserId].filter(Boolean);
 
-    const windows: ReminderWindow[] = ['tomorrow', 'one_hour', 'ready'];
+    const windows: ReminderWindow[] = ['tomorrow', 'one_hour', 'thirty_min', 'ready'];
     for (const window of windows) {
       const { minMs, maxMs } = reminderWindowBounds(window, now);
       if (scheduledMs < minMs || scheduledMs > maxMs) continue;
@@ -319,6 +417,7 @@ export async function runGoGetReminderCron(): Promise<{ status: number; body: Re
         if (result.status === 200 && Number(result.body.sent || 0) > 0) {
           if (window === 'tomorrow') tomorrowSent += 1;
           else if (window === 'one_hour') oneHourSent += 1;
+          else if (window === 'thirty_min') thirtyMinSent += 1;
           else readySent += 1;
         }
       }
@@ -331,6 +430,7 @@ export async function runGoGetReminderCron(): Promise<{ status: number; body: Re
       ok: true,
       tomorrowSent,
       oneHourSent,
+      thirtyMinSent,
       readySent,
       checked: (sessions || []).length,
     },

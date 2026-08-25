@@ -211,13 +211,15 @@ const YOUR_POSTS_SECTIONS: {
     items: [
       {
         key: 'goGetAlerts',
-        label: 'Go Get handoff',
-        description: 'Ring alerts, schedule proposals, on-the-way, and Go Get milestones (Android app)',
+        label: 'Go Get requests & live trip',
+        description:
+          'Availability rings, schedule proposals, fulfiller ready, on-the-way, approaching, and arrival (Android app only)',
       },
       {
         key: 'pickupCoordination',
-        label: 'Pickup coordination',
-        description: 'Scheduled pickup, reminders, on-the-way, and contactless handoff (Android app)',
+        label: 'Pickup reminders & schedule',
+        description:
+          'Scheduled pickup, 30-minute and 1-hour reminders, pickup tomorrow, cancellations, and contactless handoff (Android app only)',
       },
     ],
   },

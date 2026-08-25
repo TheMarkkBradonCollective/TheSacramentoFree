@@ -449,14 +449,20 @@ export async function validateClientPush(
     case 'go_get_available_now':
     case 'go_get_schedule_proposed':
     case 'go_get_schedule_confirmed':
+    case 'go_get_schedule_changed':
     case 'go_get_pickup_tomorrow':
     case 'go_get_pickup_in_one_hour':
+    case 'go_get_pickup_thirty_min':
     case 'go_get_ready_reminder':
     case 'go_get_fulfiller_ready':
     case 'go_get_started':
+    case 'go_get_approaching':
+    case 'on_the_way':
     case 'go_get_arrived':
     case 'go_get_completed':
     case 'go_get_cancelled':
+    case 'go_get_ring_expired':
+    case 'go_get_disputed':
       return resolveGoGetSessionRecipient(callerId, body);
 
     case 'violation_filed': {

@@ -92,6 +92,9 @@ function normalizeGoGetSession(row: Record<string, unknown>): GoGetSession {
     fulfillerSharingLocation: row.fulfillerSharingLocation === true,
     ringExpiresAt: nullableStr(row.ringExpiresAt),
     ringDurationSeconds: nullableNum(row.ringDurationSeconds),
+    onTheWayNotifiedAt: nullableStr(row.onTheWayNotifiedAt),
+    approachingNotifiedAt: nullableStr(row.approachingNotifiedAt),
+    ringExpiredNotifiedAt: nullableStr(row.ringExpiredNotifiedAt),
     createdAt: str(row.createdAt, new Date().toISOString()),
     updatedAt: str(row.updatedAt, new Date().toISOString()),
   };
@@ -422,6 +425,23 @@ export async function expireGoGetRing(
   }
   const result = await updateSession(session.id, { status: 'awaiting_schedule' });
   if (!result.ok || !result.session) return result;
+
+  if (!session.ringExpiredNotifiedAt) {
+    const item = await staffGetListingById(session.itemId);
+    if (item) {
+      await runGoGetPushTask(() =>
+        import('./pushEvents').then((m) =>
+          m.notifyGoGetRingExpired({
+            item,
+            requesterUserId: session.requesterUserId,
+            sessionId: session.id,
+          }),
+        ),
+      );
+      await updateSession(session.id, { ringExpiredNotifiedAt: new Date().toISOString() });
+    }
+  }
+
   return { ok: true, session: result.session };
 }
 

@@ -487,6 +487,9 @@ export interface GoGetSession {
   ringExpiresAt?: string | null;
   /** Snapshot of poster ring duration when the session was created. */
   ringDurationSeconds?: number | null;
+  onTheWayNotifiedAt?: string | null;
+  approachingNotifiedAt?: string | null;
+  ringExpiredNotifiedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }
