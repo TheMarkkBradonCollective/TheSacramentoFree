@@ -74,7 +74,7 @@ export default function NavTravelModeSwitcher({
   }
 
   return (
-    <div className="grid grid-cols-3 gap-1" role="radiogroup" aria-label="Travel mode">
+    <div className="sbn-map-mode-row" role="radiogroup" aria-label="Travel mode">
       {NAV_TRAVEL_MODES.map((mode) => {
         const Icon = MODE_ICONS[mode];
         const selected = value === mode;
@@ -85,12 +85,11 @@ export default function NavTravelModeSwitcher({
             role="radio"
             aria-checked={selected}
             onClick={() => onChange(mode)}
-            className={`inline-flex items-center justify-center gap-1 rounded-lg font-bold transition-colors py-1.5 px-1.5 text-[9px] uppercase tracking-wide border ${
-              selected ? 'bg-accent text-on-accent border-accent' : 'bg-inset text-muted border-app'
-            }`}
+            className={`sbn-map-mode ${selected ? 'is-selected' : ''}`}
+            title={NAV_TRAVEL_MODE_LABELS[mode]}
+            aria-label={NAV_TRAVEL_MODE_LABELS[mode]}
           >
-            <Icon className="w-3 h-3" />
-            {NAV_TRAVEL_MODE_LABELS[mode]}
+            <Icon className="w-3.5 h-3.5" />
           </button>
         );
       })}

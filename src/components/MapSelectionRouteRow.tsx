@@ -43,48 +43,33 @@ export default function MapSelectionRouteRow({
   const [travelMode, setTravelMode] = useState<NavTravelMode>(() => readNavigationSettings().travelMode);
   useEffect(() => subscribeNavigationSettings((settings) => setTravelMode(settings.travelMode)), []);
 
-  const etaLabel =
+  const eta =
     distanceMeters != null && durationSeconds != null && durationSeconds > 0
-      ? formatRouteDuration(durationSeconds)
+      ? `${formatRouteDistance(distanceMeters)} · ${formatRouteDuration(durationSeconds)}`
       : distanceMeters != null
         ? formatRouteDistance(distanceMeters)
         : null;
-  const distanceLabel =
-    distanceMeters != null && durationSeconds != null && durationSeconds > 0
-      ? formatRouteDistance(distanceMeters)
-      : null;
 
   return (
-    <div className="sbn-gps-trip">
+    <div className="sbn-map-trip">
       <NavTravelModeSwitcher
-        variant="gps"
         value={travelMode}
         onChange={(mode) => writeNavigationSettings({ travelMode: mode })}
       />
-
       {!routeEndpoints ? (
-        <p className="sbn-gps-trip-hint">Enable GPS to see distance and turn-by-turn navigation.</p>
+        <p className="sbn-map-trip-hint">Enable GPS to see distance and turn-by-turn.</p>
       ) : (
-        <div className="sbn-gps-trip-row">
-          <div className="sbn-gps-trip-copy">
-            {etaLabel ? (
+        <div className="sbn-map-trip-row">
+          <div className="sbn-map-trip-copy">
+            {eta ? (
               <>
-                <p className="sbn-gps-trip-eta">
-                  {etaLabel}
-                  {distanceLabel ? <span className="sbn-gps-trip-dist"> ({distanceLabel})</span> : null}
-                </p>
-                <p className="sbn-gps-trip-hint">{locationHint}</p>
-                {!hasLiveGps && (
-                  <p className="sbn-gps-trip-hint">Enable GPS for distance from you</p>
-                )}
-                {!routeOnMap && (
-                  <p className="sbn-gps-trip-hint">Road route loading…</p>
-                )}
+                <p className="sbn-map-trip-eta">{eta}</p>
+                <p className="sbn-map-trip-hint">{routeOnMap ? locationHint : 'Road route loading…'}</p>
               </>
             ) : routeLoading ? (
-              <p className="sbn-gps-trip-hint animate-pulse">Calculating route…</p>
+              <p className="sbn-map-trip-hint animate-pulse">Calculating route…</p>
             ) : (
-              <p className="sbn-gps-trip-hint">{locationHint}</p>
+              <p className="sbn-map-trip-hint">{locationHint}</p>
             )}
           </div>
           {showNavigateButton && (
@@ -92,10 +77,10 @@ export default function MapSelectionRouteRow({
               type="button"
               onClick={() => onStartNavigation?.()}
               disabled={!canNavigate || !onStartNavigation}
-              className="sbn-gps-start-btn is-inline"
+              className="sbn-btn sbn-btn-primary sbn-btn-sm disabled:opacity-40 shrink-0"
               title={canNavigate ? `Start: ${navigateLabel}` : `Enable GPS to ${navigateLabel.toLowerCase()}`}
             >
-              <Navigation className="w-4 h-4" />
+              <Navigation className="w-3.5 h-3.5" />
               {navigateLabel}
             </button>
           )}
@@ -103,7 +88,7 @@ export default function MapSelectionRouteRow({
             <button
               type="button"
               onClick={onOpenExternalMaps}
-              className="sbn-gps-icon-btn"
+              className="sbn-btn sbn-btn-secondary sbn-btn-sm shrink-0"
               title="Open directions in Google or Apple Maps"
               aria-label="Open directions in Google or Apple Maps"
             >

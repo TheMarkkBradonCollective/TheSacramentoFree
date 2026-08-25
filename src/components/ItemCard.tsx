@@ -122,7 +122,7 @@ export default function ItemCard({
     ) : null;
 
   const actionButtons = isOwner ? (
-    <div className="flex flex-wrap gap-1 justify-end">
+    <div className="contents">
       <button type="button" onClick={onViewDetail} aria-label="View listing" className="sbn-btn sbn-btn-sm sbn-btn-secondary shrink-0">
         <Eye className="w-3.5 h-3.5 sm:mr-0" />
         <span className="hidden sm:inline ml-1">View</span>
@@ -207,7 +207,7 @@ export default function ItemCard({
       ) : null}
     </div>
   ) : item.status !== 'withdrawn' ? (
-    <div className="flex flex-wrap gap-1 justify-end">
+    <div className="contents">
       <button type="button" onClick={onViewDetail} aria-label="View listing" className="sbn-btn sbn-btn-secondary sbn-btn-sm shrink-0">
         <Eye className="w-3.5 h-3.5" />
         <span className="hidden sm:inline ml-1">View</span>
@@ -325,132 +325,129 @@ export default function ItemCard({
   return (
     <article
       id={`item_card_${item.id}`}
-      className={`item-feed-card item-feed-card--responsive item-feed-card--list flex flex-row sm:flex-row ${inactive ? 'opacity-75' : ''}`}
+      className={`item-feed-card item-feed-card--responsive item-feed-card--list ${inactive ? 'opacity-75' : ''}`}
     >
-      <button
-        type="button"
-        onClick={onViewDetail}
-        aria-label={`View ${item.title || 'listing'}`}
-        className={`relative shrink-0 overflow-hidden bg-inset text-left cursor-pointer
-          w-[5.25rem] h-[5.25rem] sm:w-28 sm:h-28
-          ${!showCoverPhoto ? 'flex items-center justify-center border-r border-app' : ''}`}
-      >
-        {showCoverPhoto ? (
-          <>
-            <ListingImage
-              src={coverPhoto}
-              alt={item.title}
-              width={480}
-              className="h-full w-full object-cover"
-              onLoadError={() => setCoverFailed(true)}
-            />
-            {photos.length > 1 && (
-              <span className="absolute bottom-1 right-1 sm:bottom-2 sm:right-2 text-[8px] sm:text-[10px] font-bold bg-black/70 text-white px-1.5 py-0.5 rounded-full">
-                +{photos.length - 1}
-              </span>
-            )}
-          </>
-        ) : (
-          <Tag className="w-6 h-6 text-subtle" aria-hidden />
-        )}
-      </button>
-
-      <div className="flex-1 min-w-0 flex flex-col p-2.5 sm:p-4">
-        <button type="button" onClick={onViewDetail} className="text-left w-full cursor-pointer">
-          <h3 className="font-display text-sm sm:text-lg font-bold text-app leading-snug hover:text-accent transition-colors line-clamp-2 sm:line-clamp-none">
-            {item.title}
-          </h3>
+      <div className="item-feed-card__main">
+        <button
+          type="button"
+          onClick={onViewDetail}
+          aria-label={`View ${item.title || 'listing'}`}
+          className={`item-feed-card__media${showCoverPhoto ? '' : ' item-feed-card__media--empty'}`}
+        >
+          {showCoverPhoto ? (
+            <>
+              <ListingImage
+                src={coverPhoto}
+                alt={item.title}
+                width={480}
+                className="h-full w-full object-cover"
+                onLoadError={() => setCoverFailed(true)}
+              />
+              {photos.length > 1 && (
+                <span className="absolute bottom-1 right-1 sm:bottom-2 sm:right-2 text-[8px] sm:text-[10px] font-bold bg-black/70 text-white px-1.5 py-0.5 rounded-full">
+                  +{photos.length - 1}
+                </span>
+              )}
+            </>
+          ) : (
+            <Tag className="w-6 h-6 text-subtle" aria-hidden />
+          )}
         </button>
 
-        <p className="text-[10px] sm:text-xs font-medium text-muted flex items-center gap-1 mt-0.5 sm:mt-1 truncate">
-          <Tag className="w-3 h-3 text-accent shrink-0" />
-          <span className="truncate">{item.category}</span>
-        </p>
-
-        {tradeSeeking && (
-          <p className="text-[10px] sm:text-xs text-purple-400 mt-0.5 sm:mt-1 line-clamp-1">
-            Seeking: {tradeSeeking}
-          </p>
-        )}
-
-        <p className="hidden text-sm text-muted mt-2 leading-relaxed line-clamp-3">{previewText}</p>
-
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1 sm:mt-3 text-[10px] sm:text-xs text-muted">
-          <span className="inline-flex items-center gap-0.5 min-w-0 truncate">
-            <MapPin className="w-3 h-3 text-accent shrink-0" />
-            <span className="truncate">{item.neighborhood}</span>
-          </span>
-          {distanceMeters != null && (
-            <span className="inline-flex items-center gap-0.5 shrink-0 font-semibold text-accent">
-              <Navigation className="w-3 h-3 shrink-0" />
-              {formatRouteDistance(distanceMeters)}
-            </span>
-          )}
-          <span className="inline-flex items-center gap-0.5 shrink-0">
-            <Calendar className="w-3 h-3 shrink-0" />
-            {dateLabel}
-          </span>
-        </div>
-
-        <ListingEngagement
-          posterUserId={item.userId}
-          currentUserId={currentUserId}
-          voteState={voteState}
-          comments={comments}
-          commentsExpanded={commentsExpanded}
-          onVote={onVote}
-          onAddComment={onAddComment}
-          onDeleteComment={onDeleteComment}
-          userProfile={userProfile}
-          onViewProfile={onViewProfile}
-          variant="card"
-        />
-
-        <div className="flex flex-wrap items-center gap-1.5 mt-2" id={`item_type_row_${item.id}`}>
-          <span className={`sbn-badge text-[10px] py-1 ${getPostTypeBadgeClass(item.type)}`}>
-            {typeBadgeLabel}
-          </span>
-          {statusDetailBadge}
-        </div>
-
-        <div className="mt-2 sm:mt-4 pt-2 sm:pt-4 border-t border-app flex items-center justify-between gap-2">
-          <button
-            type="button"
-            onClick={() => onViewProfile(item.userId)}
-            className="flex items-center gap-1.5 sm:gap-2 min-w-0 text-left hover:opacity-90 cursor-pointer"
-          >
-            <UserAvatar
-              uid={item.userId}
-              src={item.userPhotoURL}
-              name={item.userDisplayName}
-              size="sm"
-              lastActiveAt={authorLastActive ?? undefined}
-              imgClassName="sm:w-10 sm:h-10"
-            />
-            <div className="min-w-0">
-              <p className="text-xs sm:text-sm font-semibold text-app truncate">{item.userDisplayName}</p>
-              <p className="text-[9px] sm:text-[10px] text-muted hidden sm:block">View profile</p>
-            </div>
+        <div className="item-feed-card__copy">
+          <button type="button" onClick={onViewDetail} className="text-left w-full cursor-pointer">
+            <h3 className="font-display text-sm sm:text-lg font-bold text-app leading-snug hover:text-accent transition-colors line-clamp-2 sm:line-clamp-none">
+              {item.title}
+            </h3>
           </button>
 
-          <div className="flex items-center gap-1">
-            {onSave && (
-              <button
-                type="button"
-                onClick={() => onSave(item.id)}
-                title={isSaved ? 'Remove from saved' : 'Save this listing'}
-                className={`p-1.5 rounded-full transition-colors ${
-                  isSaved
-                    ? 'text-accent bg-accent-soft'
-                    : 'text-muted hover:text-accent hover:bg-accent-soft'
-                }`}
-                aria-label={isSaved ? 'Remove from saved' : 'Save listing'}
-              >
-                <Bookmark className={`w-3.5 h-3.5 ${isSaved ? 'fill-current' : ''}`} />
-              </button>
+          <p className="text-[10px] sm:text-xs font-medium text-muted flex items-center gap-1 mt-0.5 sm:mt-1 truncate">
+            <Tag className="w-3 h-3 text-accent shrink-0" />
+            <span className="truncate">{item.category}</span>
+          </p>
+
+          {tradeSeeking && (
+            <p className="text-[10px] sm:text-xs text-purple-400 mt-0.5 sm:mt-1 line-clamp-1">
+              Seeking: {tradeSeeking}
+            </p>
+          )}
+
+          <p className="hidden text-sm text-muted mt-2 leading-relaxed line-clamp-3">{previewText}</p>
+
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1 sm:mt-3 text-[10px] sm:text-xs text-muted">
+            <span className="inline-flex items-center gap-0.5 min-w-0 truncate">
+              <MapPin className="w-3 h-3 text-accent shrink-0" />
+              <span className="truncate">{item.neighborhood}</span>
+            </span>
+            {distanceMeters != null && (
+              <span className="inline-flex items-center gap-0.5 shrink-0 font-semibold text-accent">
+                <Navigation className="w-3 h-3 shrink-0" />
+                {formatRouteDistance(distanceMeters)}
+              </span>
             )}
-            {actionButtons}
+            <span className="inline-flex items-center gap-0.5 shrink-0">
+              <Calendar className="w-3 h-3 shrink-0" />
+              {dateLabel}
+            </span>
           </div>
+
+          <ListingEngagement
+            posterUserId={item.userId}
+            currentUserId={currentUserId}
+            voteState={voteState}
+            comments={comments}
+            commentsExpanded={commentsExpanded}
+            onVote={onVote}
+            onAddComment={onAddComment}
+            onDeleteComment={onDeleteComment}
+            userProfile={userProfile}
+            onViewProfile={onViewProfile}
+            variant="card"
+          />
+
+          <div className="flex flex-wrap items-center gap-1.5 mt-2" id={`item_type_row_${item.id}`}>
+            <span className={`sbn-badge text-[10px] py-1 ${getPostTypeBadgeClass(item.type)}`}>
+              {typeBadgeLabel}
+            </span>
+            {statusDetailBadge}
+          </div>
+        </div>
+      </div>
+
+      <div className="item-feed-card__footer">
+        <button
+          type="button"
+          onClick={() => onViewProfile(item.userId)}
+          className="item-feed-card__poster"
+        >
+          <UserAvatar
+            uid={item.userId}
+            src={item.userPhotoURL}
+            name={item.userDisplayName}
+            size="sm"
+            lastActiveAt={authorLastActive ?? undefined}
+            imgClassName="sm:w-10 sm:h-10"
+          />
+          <div className="item-feed-card__poster-copy">
+            <p className="item-feed-card__poster-name">{item.userDisplayName}</p>
+            <p className="text-[9px] sm:text-[10px] text-muted hidden sm:block">View profile</p>
+          </div>
+        </button>
+
+        <div className="item-feed-card__actions">
+          {onSave && (
+            <button
+              type="button"
+              onClick={() => onSave(item.id)}
+              title={isSaved ? 'Remove from saved' : 'Save this listing'}
+              className={`sbn-btn sbn-btn-sm shrink-0 ${isSaved ? 'sbn-btn-primary' : 'sbn-btn-secondary'}`}
+              aria-label={isSaved ? 'Remove from saved' : 'Save listing'}
+            >
+              <Bookmark className={`w-3.5 h-3.5 ${isSaved ? 'fill-current' : ''}`} />
+              <span className="hidden sm:inline ml-1">{isSaved ? 'Saved' : 'Save'}</span>
+            </button>
+          )}
+          {actionButtons}
         </div>
       </div>
     </article>

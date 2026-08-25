@@ -119,7 +119,7 @@ export default function EventEngagement({
         </h3>
       )}
 
-      <div className={`flex flex-wrap items-center gap-1.5 sm:gap-2 ${variant === 'card' ? 'mt-2' : ''}`}>
+      <div className={`flex flex-wrap items-center gap-1.5 sm:gap-2 ${variant === 'card' ? 'mt-1' : ''}`}>
         {!rsvpDisabled && !hideRsvp &&
           rsvpOptions.map(({ status, label, icon: Icon }) => {
           const count = countForStatus(status);

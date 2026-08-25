@@ -40,15 +40,13 @@ import MapNavigationView from './MapNavigationView';
 import { unlockNavigationSpeech } from '../lib/navigationVoice';
 import { SBN_MAP_TILE_OPTIONS, SBN_MAP_TILE_URL } from '../lib/mapTiles';
 import MapSelectionRouteRow from './MapSelectionRouteRow';
-import { MapPin, MessageSquare, LifeBuoy, X, Tag, Eye, Compass, ChevronLeft, ChevronRight, Plus, Minus, Pencil, Navigation, CalendarDays, Map as MapIcon, Bookmark } from 'lucide-react';
+import { MapPin, MessageSquare, LifeBuoy, X, Tag, Eye, Compass, ChevronLeft, ChevronRight, Plus, Minus, Pencil, Navigation, CalendarDays, Map as MapIcon } from 'lucide-react';
 import ClaimAtPickupButton from './ClaimAtPickupButton';
 import ListingImage from './ListingImage';
 import EventEngagement from './EventEngagement';
 import EventStatusBadge from './EventStatusBadge';
-import { PresenceUserAvatar } from './UserAvatar';
-import { usePresence, useTrackPresence } from '../contexts/PresenceContext';
-import { useSavedItems } from '../hooks/useSavedItems';
-import { isUserOnline } from '../lib/presence';
+import UserAvatar from './UserAvatar';
+import { usePresence } from '../contexts/PresenceContext';
 import { isEventPast, isEventUpcoming, resolveEventStatus } from '../lib/eventRsvp';
 import { EventsEngagementApi } from '../hooks/useEventsEngagement';
 import { motion, AnimatePresence } from 'motion/react';
@@ -293,10 +291,10 @@ function MapSelectedEventCard({
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: slideDirection === 'right' ? -(compact ? 70 : 80) : compact ? 70 : 80 }}
       transition={{ duration: 0.25, ease: 'easeOut' }}
-      className={`${compact ? 'pointer-events-auto sbn-card sbn-map-selection-card p-4 shadow-2xl w-full' : 'border border-app bg-surface p-4 relative font-sans text-app rounded-2xl shadow-xl'}${isCancelled ? ' opacity-60' : ''}`}
+      className={`${compact ? 'pointer-events-auto sbn-card sbn-map-selection-card' : 'border border-app bg-surface relative font-sans text-app rounded-2xl shadow-xl overflow-hidden'}${isCancelled ? ' opacity-60' : ''}`}
       id={compact ? 'mobile_map_event_detail_card' : 'map_event_detail_card'}
     >
-      <div className={`flex items-center justify-end gap-1 ${compact ? 'mb-2' : 'mb-2.5'}`}>
+      <div className={`flex items-center justify-end gap-1 px-2.5 pt-2 ${compact ? 'mb-1.5' : 'mb-2'}`}>
         <div className={`flex items-center space-x-1 pointer-events-auto bg-inset border border-app px-2 rounded-lg ${compact ? 'py-1' : 'py-0.5'}`}>
           <button
             type="button"
@@ -331,15 +329,15 @@ function MapSelectedEventCard({
         </button>
       </div>
 
-      <div className={`flex gap-3 ${compact ? '' : 'gap-4 text-left'}`}>
+      <div className="item-feed-card__main">
         <div
-          className={`shrink-0 rounded-xl border border-app flex items-center justify-center ${compact ? 'w-16 h-16' : 'w-20 h-20 sm:w-24 sm:h-24'}`}
+          className="item-feed-card__media item-feed-card__media--empty"
           style={{ backgroundColor: `${EVENT_MAP_COLOR}22` }}
         >
           <CalendarDays className={compact ? 'w-7 h-7' : 'w-9 h-9'} style={{ color: EVENT_MAP_COLOR }} />
         </div>
 
-        <div className="flex-1 min-w-0">
+        <div className="item-feed-card__copy">
           <div className="flex flex-wrap items-center gap-1.5">
             <span
               className="inline-block px-2 py-0.5 rounded-full text-[7.5px] font-bold tracking-wider text-white"
@@ -350,60 +348,75 @@ function MapSelectedEventCard({
             <EventStatusBadge status={eventStatus} />
           </div>
           <h4 className={`font-semibold text-app mt-1 truncate ${compact ? 'text-xs' : 'text-sm'}`}>{event.title}</h4>
-          <p className={`text-muted mt-0.5 line-clamp-2 ${compact ? 'text-[9.5px]' : 'text-xs'}`}>{event.description}</p>
+          {!compact && (
+            <p className="text-muted mt-0.5 text-xs line-clamp-2">{event.description}</p>
+          )}
           <p className={`text-accent font-semibold mt-1 ${compact ? 'text-[9px]' : 'text-[10px]'}`}>
             {formatEventMapDate(event.eventStartAt)}
           </p>
           <p className={`text-muted mt-0.5 truncate ${compact ? 'text-[8px]' : 'text-[9px]'}`}>
             {event.location} · {event.neighborhood}
           </p>
+
+          {!isCancelled && eventsEngagement && (
+            <EventEngagement
+              hostUserId={event.userId}
+              currentUserId={userProfile.uid}
+              rsvpState={rsvpState}
+              comments={comments}
+              onRsvp={(status) => eventsEngagement.handleRsvp(event.id, event.userId, status, isPast)}
+              onAddComment={() => {}}
+              variant="card"
+              commentsLocked={commentsLocked}
+              isPast={isPast}
+            />
+          )}
+
+          <MapSelectionRouteRow
+            locationHint={event.location?.trim() || `Event pin · ${event.neighborhood}`}
+            routeEndpoints={routeEndpoints ?? null}
+            routeLoading={routeLoading ?? false}
+            distanceMeters={distanceMeters ?? null}
+            durationSeconds={durationSeconds ?? null}
+            routeOnMap={routeOnMap ?? false}
+            hasLiveGps={hasLiveGps ?? false}
+            canNavigate={canNavigate}
+            onStartNavigation={onStartNavigation}
+            onOpenExternalMaps={onOpenExternalMaps}
+          />
         </div>
       </div>
 
-      {!isCancelled && eventsEngagement && (
-        <div className={compact ? 'mt-2 pt-2 border-t border-app' : 'mt-3 pt-3 border-t border-app'}>
-          <EventEngagement
-            hostUserId={event.userId}
-            currentUserId={userProfile.uid}
-            rsvpState={rsvpState}
-            comments={comments}
-            onRsvp={(status) => eventsEngagement.handleRsvp(event.id, event.userId, status, isPast)}
-            onAddComment={() => {}}
-            variant="card"
-            commentsLocked={commentsLocked}
-            isPast={isPast}
+      <div className="item-feed-card__footer">
+        <div className="item-feed-card__poster">
+          <UserAvatar
+            uid={event.userId}
+            src={event.userPhotoURL}
+            name={event.userDisplayName}
+            size="sm"
           />
+          <div className="item-feed-card__poster-copy">
+            <p className="item-feed-card__poster-name">{event.userDisplayName}</p>
+          </div>
         </div>
-      )}
-
-      <MapSelectionRouteRow
-        locationHint={event.location?.trim() || `Event pin · ${event.neighborhood}`}
-        routeEndpoints={routeEndpoints ?? null}
-        routeLoading={routeLoading ?? false}
-        distanceMeters={distanceMeters ?? null}
-        durationSeconds={durationSeconds ?? null}
-        routeOnMap={routeOnMap ?? false}
-        hasLiveGps={hasLiveGps ?? false}
-        canNavigate={canNavigate}
-        onStartNavigation={onStartNavigation}
-        onOpenExternalMaps={onOpenExternalMaps}
-      />
-
-      {onViewEvent && (
-        <div className="sbn-gps-action-row">
-          <button type="button" onClick={() => onViewEvent(event)} className="sbn-gps-action is-primary">
-            <span className="sbn-gps-action__icon">
-              <Eye className="w-4 h-4" />
-            </span>
-            <span className="sbn-gps-action__label">View</span>
-          </button>
-        </div>
-      )}
+        {onViewEvent && (
+          <div className="item-feed-card__actions">
+            <button
+              type="button"
+              onClick={() => onViewEvent(event)}
+              className="sbn-btn sbn-btn-primary sbn-btn-sm"
+            >
+              <Eye className="w-3.5 h-3.5" />
+              <span>View</span>
+            </button>
+          </div>
+        )}
+      </div>
     </motion.div>
   );
 }
 
-function MapListingGpsActions({
+function MapListingCardActions({
   post,
   userProfile,
   isStaffViewer,
@@ -415,8 +428,6 @@ function MapListingGpsActions({
   onStaffListingChat,
   onInitiateChat,
   usesNavigate,
-  isSaved,
-  onToggleSaved,
 }: {
   post: ItemPost;
   userProfile: UserProfile;
@@ -429,8 +440,6 @@ function MapListingGpsActions({
   onStaffListingChat?: (item: ItemPost) => void;
   onInitiateChat: SacramentoMapViewProps['onInitiateChat'];
   usesNavigate: boolean;
-  isSaved: boolean;
-  onToggleSaved: (itemId: string) => void;
 }) {
   const isOwner = post.userId === userProfile.uid;
   const showMessage = !isOwner && !(usesNavigate && !isStaffViewer);
@@ -441,18 +450,16 @@ function MapListingGpsActions({
     canOfferContactlessClaim(post, userProfile.uid, userLat, userLng);
 
   return (
-    <div className="sbn-gps-action-row">
+    <div className="item-feed-card__actions">
       {openItemDetail && (
         <button
           id="map_view_card_btn"
           type="button"
           onClick={() => openItemDetail(post)}
-          className="sbn-gps-action"
+          className="sbn-btn sbn-btn-secondary sbn-btn-sm"
         >
-          <span className="sbn-gps-action__icon">
-            <Eye className="w-4 h-4" />
-          </span>
-          <span className="sbn-gps-action__label">View</span>
+          <Eye className="w-3.5 h-3.5" />
+          <span>View</span>
         </button>
       )}
       {isOwner
@@ -461,32 +468,32 @@ function MapListingGpsActions({
               id="map_edit_card_btn"
               type="button"
               onClick={() => onEditItem(post)}
-              className="sbn-gps-action is-primary"
+              className="sbn-btn sbn-btn-primary sbn-btn-sm"
             >
-              <span className="sbn-gps-action__icon">
-                <Pencil className="w-4 h-4" />
-              </span>
-              <span className="sbn-gps-action__label">Edit</span>
+              <Pencil className="w-3.5 h-3.5" />
+              <span>Edit</span>
             </button>
           )
         : (
           <>
-            {showClaim && (
+            {showClaim && onClaimSubmitted && (
               <ClaimAtPickupButton
                 item={post}
                 user={userProfile}
                 userLat={userLat}
                 userLng={userLng}
                 onClaimSubmitted={onClaimSubmitted}
-                variant="gps"
+                compact
               />
             )}
             {isStaffViewer && onStaffListingChat && (
-              <button type="button" onClick={() => onStaffListingChat(post)} className="sbn-gps-action">
-                <span className="sbn-gps-action__icon">
-                  <LifeBuoy className="w-4 h-4" />
-                </span>
-                <span className="sbn-gps-action__label">Staff</span>
+              <button
+                type="button"
+                onClick={() => onStaffListingChat(post)}
+                className="sbn-btn sbn-btn-primary sbn-btn-sm"
+              >
+                <LifeBuoy className="w-3.5 h-3.5" />
+                <span>Staff chat</span>
               </button>
             )}
             {showMessage && (
@@ -502,28 +509,14 @@ function MapListingGpsActions({
                     isStaffViewer ? { asNeighbor: true } : undefined,
                   )
                 }
-                className="sbn-gps-action is-primary"
+                className="sbn-btn sbn-btn-primary sbn-btn-sm"
               >
-                <span className="sbn-gps-action__icon">
-                  <MessageSquare className="w-4 h-4" />
-                </span>
-                <span className="sbn-gps-action__label">{getListingContactButtonLabel(post.type)}</span>
+                <MessageSquare className="w-3.5 h-3.5" />
+                <span>{getListingContactButtonLabel(post.type)}</span>
               </button>
             )}
           </>
         )}
-      <button
-        type="button"
-        onClick={() => onToggleSaved(post.id)}
-        className={`sbn-gps-action${isSaved ? ' is-primary' : ''}`}
-        title={isSaved ? 'Remove from saved' : 'Save this listing'}
-        aria-label={isSaved ? 'Remove from saved' : 'Save listing'}
-      >
-        <span className="sbn-gps-action__icon">
-          <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-current' : ''}`} />
-        </span>
-        <span className="sbn-gps-action__label">{isSaved ? 'Saved' : 'Save'}</span>
-      </button>
     </div>
   );
 }
@@ -547,8 +540,6 @@ function MapSelectedListingCard({
   onStaffListingChat,
   onInitiateChat,
   usesNavigate,
-  isSaved,
-  onToggleSaved,
   routeEndpoints,
   routeLoading,
   distanceMeters,
@@ -578,8 +569,6 @@ function MapSelectedListingCard({
   onStaffListingChat?: (item: ItemPost) => void;
   onInitiateChat: SacramentoMapViewProps['onInitiateChat'];
   usesNavigate: boolean;
-  isSaved: boolean;
-  onToggleSaved: (itemId: string) => void;
   routeEndpoints: { start: LatLng; end: LatLng } | null;
   routeLoading: boolean;
   distanceMeters: number | null;
@@ -592,10 +581,8 @@ function MapSelectedListingCard({
   onOpenExternalMaps: () => void;
 }) {
   const authorLastActive = usePresence(post.userId);
-  useTrackPresence([post.userId]);
   const photos = post.imageUrls?.length ? post.imageUrls : extractListingImageUrls(post);
   const thumb = photos[0];
-  const online = isUserOnline(authorLastActive);
 
   return (
     <motion.div
@@ -607,11 +594,11 @@ function MapSelectedListingCard({
       id={compact ? 'mobile_map_detail_floating_card' : 'map_item_detail_card'}
       className={
         compact
-          ? 'pointer-events-auto sbn-card sbn-map-selection-card p-4 shadow-2xl w-full'
-          : 'border border-app bg-surface p-4 relative font-sans text-app rounded-2xl shadow-xl'
+          ? 'pointer-events-auto sbn-card sbn-map-selection-card'
+          : 'border border-app bg-surface relative font-sans text-app rounded-2xl shadow-xl overflow-hidden'
       }
     >
-      <div className={`flex items-center justify-end gap-1 ${compact ? 'mb-2' : 'mb-2.5'}`}>
+      <div className={`flex items-center justify-end gap-1 px-2.5 pt-2 ${compact ? 'mb-1.5' : 'mb-2'}`}>
         <div className={`flex items-center space-x-1 bg-inset border border-app px-2 rounded-lg ${compact ? 'py-1' : 'py-0.5'}`}>
           <button
             type="button"
@@ -646,44 +633,23 @@ function MapSelectedListingCard({
         </button>
       </div>
 
-      <div className="sbn-gps-poster">
-        <PresenceUserAvatar
-          uid={post.userId}
-          src={post.userPhotoURL}
-          name={post.userDisplayName}
-          size={compact ? 'sm' : 'md'}
-        />
-        <div className="sbn-gps-poster__copy">
-          <p className="sbn-gps-poster__name">{post.userDisplayName}</p>
-          <p className="sbn-gps-poster__meta">
-            {online ? 'Online · ' : ''}
-            {post.neighborhood}
-          </p>
-        </div>
-      </div>
-
-      <div className={`flex ${compact ? 'gap-3' : 'gap-4 text-left'}`}>
+      <div className="item-feed-card__main">
         {thumb ? (
-          <div className={`relative shrink-0 overflow-hidden rounded-xl border border-app ${compact ? 'w-16 h-16' : 'w-20 h-20 sm:w-24 sm:h-24'}`}>
-            <ListingImage
-              src={thumb}
-              alt={post.title}
-              width={compact ? 160 : 240}
-              className="w-full h-full object-cover"
-            />
+          <div className="item-feed-card__media">
+            <ListingImage src={thumb} alt={post.title} width={compact ? 160 : 240} className="h-full w-full object-cover" />
             {photos.length > 1 && (
-              <span className="absolute bottom-0.5 right-0.5 text-[7px] font-bold bg-black/75 text-white px-1 rounded">
+              <span className="absolute bottom-1 right-1 text-[7px] font-bold bg-black/75 text-white px-1 rounded">
                 +{photos.length - 1}
               </span>
             )}
           </div>
         ) : (
-          <div className={`bg-inset border border-app rounded-xl shrink-0 flex flex-col items-center justify-center ${compact ? 'w-16 h-16' : 'w-20 h-20 sm:w-24 sm:h-24'}`}>
-            <Tag className={compact ? 'w-4 h-4 text-muted' : 'w-5 h-5 text-subtle'} />
+          <div className="item-feed-card__media item-feed-card__media--empty">
+            <Tag className="w-4 h-4 text-muted" />
           </div>
         )}
 
-        <div className="flex-1 min-w-0">
+        <div className="item-feed-card__copy">
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className={`inline-block px-2 py-0.5 rounded-full text-[7.5px] font-bold tracking-wider shrink-0 ${
               post.type === 'giveaway'
@@ -699,41 +665,52 @@ function MapSelectedListingCard({
             </span>
           </div>
           <h4 className={`font-semibold text-app mt-1 truncate ${compact ? 'text-xs' : 'text-sm'}`}>{post.title}</h4>
-          <p className={`text-muted mt-0.5 break-words ${compact ? 'text-[9.5px] line-clamp-1' : 'text-[10.5px] line-clamp-2 leading-tight font-medium'}`}>
+          <p className={`text-muted mt-0.5 break-words ${compact ? 'text-[9.5px] line-clamp-1' : 'text-[10.5px] line-clamp-2'}`}>
             {stripListingMetadata(post.description)}
           </p>
+          <MapSelectionRouteRow
+            locationHint={listingLocationHint(post, userProfile.uid)}
+            routeEndpoints={routeEndpoints}
+            routeLoading={routeLoading}
+            distanceMeters={distanceMeters}
+            durationSeconds={durationSeconds}
+            routeOnMap={routeOnMap}
+            hasLiveGps={hasLiveGps}
+            canNavigate={canNavigate}
+            navigateLabel={navigateLabel}
+            onStartNavigation={onStartNavigation}
+            onOpenExternalMaps={onOpenExternalMaps}
+          />
         </div>
       </div>
 
-      <MapSelectionRouteRow
-        locationHint={listingLocationHint(post, userProfile.uid)}
-        routeEndpoints={routeEndpoints}
-        routeLoading={routeLoading}
-        distanceMeters={distanceMeters}
-        durationSeconds={durationSeconds}
-        routeOnMap={routeOnMap}
-        hasLiveGps={hasLiveGps}
-        canNavigate={canNavigate}
-        navigateLabel={navigateLabel}
-        onStartNavigation={onStartNavigation}
-        onOpenExternalMaps={onOpenExternalMaps}
-      />
-
-      <MapListingGpsActions
-        post={post}
-        userProfile={userProfile}
-        isStaffViewer={isStaffViewer}
-        userLat={userLat}
-        userLng={userLng}
-        openItemDetail={openItemDetail}
-        onEditItem={onEditItem}
-        onClaimSubmitted={onClaimSubmitted}
-        onStaffListingChat={onStaffListingChat}
-        onInitiateChat={onInitiateChat}
-        usesNavigate={usesNavigate}
-        isSaved={isSaved}
-        onToggleSaved={onToggleSaved}
-      />
+      <div className="item-feed-card__footer">
+        <div className="item-feed-card__poster">
+          <UserAvatar
+            uid={post.userId}
+            src={post.userPhotoURL}
+            name={post.userDisplayName}
+            size="sm"
+            lastActiveAt={authorLastActive ?? undefined}
+          />
+          <div className="item-feed-card__poster-copy">
+            <p className="item-feed-card__poster-name">{post.userDisplayName}</p>
+          </div>
+        </div>
+        <MapListingCardActions
+          post={post}
+          userProfile={userProfile}
+          isStaffViewer={isStaffViewer}
+          userLat={userLat}
+          userLng={userLng}
+          openItemDetail={openItemDetail}
+          onEditItem={onEditItem}
+          onClaimSubmitted={onClaimSubmitted}
+          onStaffListingChat={onStaffListingChat}
+          onInitiateChat={onInitiateChat}
+          usesNavigate={usesNavigate}
+        />
+      </div>
     </motion.div>
   );
 }
@@ -765,7 +742,6 @@ export default function SacramentoMapView({
   commentsLocked = false,
 }: SacramentoMapViewProps) {
   const isStaffViewer = isStaffActingOfficial(userProfile);
-  const { isSaved, toggleSaved } = useSavedItems(userProfile.uid);
   const [posterCoordByUid, setPosterCoordByUid] = useState<
     Record<string, Pick<UserProfile, 'goGetEnabled' | 'pickupAvailability'>>
   >({});
@@ -2165,11 +2141,11 @@ export default function SacramentoMapView({
             )}
             {selectedPost && (
               <MapSelectedListingCard
+                compact
                 post={selectedPost}
                 currentIndex={currentIndex}
                 total={activeItems.length}
                 slideDirection={slideDirection}
-                compact
                 onClose={() => setSelectedPost(null)}
                 onPrev={handlePrevPost}
                 onNext={handleNextPost}
@@ -2183,8 +2159,6 @@ export default function SacramentoMapView({
                 onStaffListingChat={onStaffListingChat}
                 onInitiateChat={onInitiateChat}
                 usesNavigate={neighborListingUsesNavigate(selectedPost)}
-                isSaved={isSaved(selectedPost.id)}
-                onToggleSaved={toggleSaved}
                 routeEndpoints={routeEndpoints}
                 routeLoading={routeLoading}
                 distanceMeters={liveRouteDistanceMeters}
@@ -2596,6 +2570,7 @@ export default function SacramentoMapView({
         )}
         {selectedPost && (
           <MapSelectedListingCard
+
             post={selectedPost}
             currentIndex={currentIndex}
             total={activeItems.length}
@@ -2613,8 +2588,6 @@ export default function SacramentoMapView({
             onStaffListingChat={onStaffListingChat}
             onInitiateChat={onInitiateChat}
             usesNavigate={neighborListingUsesNavigate(selectedPost)}
-            isSaved={isSaved(selectedPost.id)}
-            onToggleSaved={toggleSaved}
             routeEndpoints={routeEndpoints}
             routeLoading={routeLoading}
             distanceMeters={liveRouteDistanceMeters}
