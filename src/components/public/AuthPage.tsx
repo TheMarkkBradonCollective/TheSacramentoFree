@@ -145,7 +145,7 @@ export default function AuthPage({
         {!newspaper ? (
           <div className="relative z-10 flex items-center gap-3">
             <BrandLogo imgClassName="h-24 w-auto max-w-[220px] object-contain" showTitle={false} />
-            <span className="font-display font-bold text-lg text-white">{brandName}</span>
+            <span className="font-display font-bold text-lg text-app">{brandName}</span>
           </div>
         ) : (
           <div className="relative z-10">
@@ -154,7 +154,7 @@ export default function AuthPage({
         )}
 
         <div className="relative z-10">
-          <h2 className="font-display text-3xl font-bold leading-tight text-white">
+          <h2 className="font-display text-3xl font-bold leading-tight text-app">
             {SITE.joinCta.title}
           </h2>
           <div className="mt-5 space-y-3">
@@ -170,7 +170,7 @@ export default function AuthPage({
           </blockquote>
         </div>
 
-        <p className="relative z-10 text-xs font-semibold text-white/70">
+        <p className="relative z-10 text-xs font-semibold text-muted">
           Free forever · No ads · Sacramento-owned and operated
         </p>
       </div>
