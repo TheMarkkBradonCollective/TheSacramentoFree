@@ -23,6 +23,8 @@ export interface MapSelectionRouteRowProps {
   onOpenExternalMaps?: () => void;
   /** "Go Get" for eligible listings (giveaway/looking/trade); plain "Navigate" for events. */
   navigateLabel?: string;
+  /** Hide the primary navigate button (parent shows it in a pinned footer). */
+  showNavigateButton?: boolean;
 }
 
 export default function MapSelectionRouteRow({
@@ -37,6 +39,7 @@ export default function MapSelectionRouteRow({
   onStartNavigation,
   onOpenExternalMaps,
   navigateLabel = 'Navigate',
+  showNavigateButton = true,
 }: MapSelectionRouteRowProps) {
   const [travelMode, setTravelMode] = useState<NavTravelMode>(() => readNavigationSettings().travelMode);
   useEffect(() => subscribeNavigationSettings((settings) => setTravelMode(settings.travelMode)), []);
@@ -86,6 +89,7 @@ export default function MapSelectionRouteRow({
         ) : null}
       </div>
       <div className="flex shrink-0 gap-1">
+        {showNavigateButton && (
         <button
           type="button"
           onClick={() => onStartNavigation?.()}
@@ -96,6 +100,7 @@ export default function MapSelectionRouteRow({
           <Navigation className="w-3.5 h-3.5" />
           {navigateLabel}
         </button>
+        )}
         {onOpenExternalMaps && hasLiveGps && (
           <button
             type="button"

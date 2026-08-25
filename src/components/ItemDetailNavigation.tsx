@@ -1,6 +1,6 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { AlertTriangle, Bell, BellOff, CheckCircle, Loader2, LogOut, MessageCircle, XCircle } from 'lucide-react';
+import { AlertTriangle, Bell, BellOff, CheckCircle, Loader2, LogOut, MessageCircle, Navigation, XCircle } from 'lucide-react';
 import type { ItemPost, UserProfile } from '../types';
 import { extractGPSCoordinates } from '../types';
 import { canViewerSeeExactLocation, convertPercentToLatLng, getItemMapDestination } from '../lib/itemLocation';
@@ -70,6 +70,7 @@ import { useConfirm } from '../contexts/ConfirmContext';
 import { isStaffActingOfficial } from '../lib/staffInteractionMode';
 import { canShowAppPickupCoordination } from '../lib/goGetCoordinationGating';
 import { supportsGoGetCoordination } from '../lib/goGetEligibility';
+import type { DetailFooterButton } from './DetailActionFooter';
 
 interface ItemDetailNavigationProps {
   item: ItemPost;
@@ -81,6 +82,9 @@ interface ItemDetailNavigationProps {
   onAutoStartNavigationConsumed?: () => void;
   /** Feed + profile stats refresh after a confirmed Go Get handoff. */
   onPickupCompleted?: () => void;
+  /** Pin primary CTAs to the parent detail footer instead of inline cards. */
+  primaryActionPlacement?: 'inline' | 'footer';
+  onFooterActions?: (actions: DetailFooterButton[]) => void;
 }
 
 /** Applies the pickup completion for whichever post type this session is for, reusing the existing claim/fulfill/trade paths. */
@@ -99,6 +103,8 @@ export default function ItemDetailNavigation({
   autoStartNavigation = false,
   onAutoStartNavigationConsumed,
   onPickupCompleted,
+  primaryActionPlacement = 'footer',
+  onFooterActions,
 }: ItemDetailNavigationProps) {
   const { confirm, alert } = useConfirm();
   const goGetAvailable = supportsGoGetCoordination();
@@ -143,6 +149,7 @@ export default function ItemDetailNavigation({
 
   const isOwner = item.userId === currentUserId;
   const isStaffOfficial = isStaffActingOfficial(userProfile);
+  const pinActionsToFooter = primaryActionPlacement === 'footer' && !!onFooterActions;
 
   const coordinationGate = useMemo(() => {
     if (isOwner || !userProfile) return { ok: true as const };
@@ -528,28 +535,6 @@ export default function ItemDetailNavigation({
       : session.fulfillerName
     : item.userDisplayName;
 
-  const goGetItemLabels = useMemo(() => {
-    const available = subitems.filter((sub) => sub.status === 'available').map((sub) => sub.label);
-    if (available.length > 0) return available;
-    if (subitems.length > 0) return subitems.map((sub) => sub.label);
-    return [item.title];
-  }, [subitems, item.title]);
-
-  const goGetNavigationVoice = useMemo(
-    () => ({
-      start: buildGoGetNavigationStartPhrase({
-        meetName: meetNameForVoice,
-        itemTitle: item.title,
-        category: item.category,
-        itemLabels: goGetItemLabels,
-      }),
-      followUp: buildGoGetNavigationFollowUpMessages(item.description),
-    }),
-    [meetNameForVoice, item.title, item.category, item.description, goGetItemLabels],
-  );
-
-  if (!destination) return null;
-
   const isFulfiller = !!session && session.fulfillerUserId === currentUserId;
   const isRequester = !!session && session.requesterUserId === currentUserId;
   const otherUserId = session ? (isFulfiller ? session.requesterUserId : session.fulfillerUserId) : null;
@@ -631,6 +616,131 @@ export default function ItemDetailNavigation({
     setBusy(false);
     await alert({ title: 'Report submitted', message: 'A moderator will review this Go Get.' });
   };
+
+  useEffect(() => {
+    if (!pinActionsToFooter || !onFooterActions) return;
+
+    const actions: DetailFooterButton[] = [];
+
+    if (!sessionLoaded || !destination) {
+      onFooterActions([]);
+      return;
+    }
+
+    if (!session && coordinationGate.ok && !isOwner) {
+      actions.push({
+        id: 'listing_navigate',
+        label: isStaffOfficial || !goGetAvailable ? 'Navigate' : getListingNavigateLabel(item),
+        onClick: () => {
+          if (isOwner) openNavigation();
+          else void handleListingNavigation();
+        },
+        disabled: !userLocation || busy,
+        icon: <Navigation className="w-4 h-4" />,
+      });
+    } else if (session) {
+      if (session.status === 'scheduled' && isRequester && session.fulfillerReadyAt) {
+        actions.push({
+          id: 'go_get_start',
+          label: 'Go Get it',
+          onClick: async () => {
+            const confirmed = await confirmGoGetTripStart(confirm, otherUserName);
+            if (!confirmed) return;
+            await run(() => startGoGetTrip(session, item));
+          },
+          disabled: busy || !userLocation,
+          icon: <Navigation className="w-4 h-4" />,
+        });
+      } else if (session.status === 'scheduled' && isFulfiller && !session.fulfillerReadyAt) {
+        const timeHasArrived = session.scheduledAt
+          ? new Date(session.scheduledAt).getTime() <= Date.now()
+          : false;
+        if (timeHasArrived) {
+          actions.push({
+            id: 'fulfiller_ready',
+            label: "I'm ready",
+            onClick: () => void run(() => markFulfillerReady(session, item)),
+            disabled: busy,
+            icon: <CheckCircle className="w-4 h-4" />,
+          });
+        }
+      } else if (session.status === 'active' && isRequester) {
+        actions.push({
+          id: 'resume_nav',
+          label: 'Resume navigation',
+          onClick: openNavigation,
+          icon: <Navigation className="w-4 h-4" />,
+        });
+        actions.push({
+          id: 'arrived',
+          label: "I've arrived",
+          onClick: () => void run(() => markGoGetArrived(session, item)),
+          disabled: busy,
+          variant: 'secondary',
+        });
+      } else if (session.status === 'arrived' && isFulfiller) {
+        actions.push({
+          id: 'confirm_pickup',
+          label: 'Confirm pickup',
+          onClick: () => void handleConfirmCompletion(),
+          disabled: busy,
+          icon: <CheckCircle className="w-4 h-4" />,
+        });
+        actions.push({
+          id: 'dispute_pickup',
+          label: "Something's wrong",
+          onClick: () => void handleDisputeCompletion(),
+          disabled: busy,
+          variant: 'secondary',
+          icon: <XCircle className="w-4 h-4" />,
+        });
+      }
+    }
+
+    onFooterActions(actions);
+    return () => onFooterActions([]);
+  }, [
+    pinActionsToFooter,
+    onFooterActions,
+    sessionLoaded,
+    destination,
+    session,
+    coordinationGate.ok,
+    isOwner,
+    isStaffOfficial,
+    goGetAvailable,
+    item,
+    userLocation,
+    busy,
+    isRequester,
+    isFulfiller,
+    otherUserName,
+    openNavigation,
+    handleListingNavigation,
+    confirm,
+    handleConfirmCompletion,
+    handleDisputeCompletion,
+  ]);
+
+  const goGetItemLabels = useMemo(() => {
+    const available = subitems.filter((sub) => sub.status === 'available').map((sub) => sub.label);
+    if (available.length > 0) return available;
+    if (subitems.length > 0) return subitems.map((sub) => sub.label);
+    return [item.title];
+  }, [subitems, item.title]);
+
+  const goGetNavigationVoice = useMemo(
+    () => ({
+      start: buildGoGetNavigationStartPhrase({
+        meetName: meetNameForVoice,
+        itemTitle: item.title,
+        category: item.category,
+        itemLabels: goGetItemLabels,
+      }),
+      followUp: buildGoGetNavigationFollowUpMessages(item.description),
+    }),
+    [meetNameForVoice, item.title, item.category, item.description, goGetItemLabels],
+  );
 
   const handleReportSubmit = async (params: { category: 'no_show' | 'false_claim' | 'unsafe_behavior' | 'other'; description: string }) => {
     if (!session || !otherUserId) return;
@@ -776,6 +886,7 @@ export default function ItemDetailNavigation({
               {errorBanner}
               <p className="text-sm text-app">Pickup scheduled for <strong>{whenLabel}</strong> with {otherUserName}.</p>
               {timeHasArrived ? (
+                !pinActionsToFooter ? (
                 <button
                   type="button"
                   disabled={busy}
@@ -785,6 +896,7 @@ export default function ItemDetailNavigation({
                   <CheckCircle className="w-4 h-4" />
                   I'm ready
                 </button>
+                ) : null
               ) : (
                 <p className="text-xs text-muted">Come back at {whenLabel} to confirm you're ready.</p>
               )}
@@ -820,6 +932,7 @@ export default function ItemDetailNavigation({
         <div className="sbn-card p-4 space-y-3">
           {errorBanner}
           <p className="text-sm text-app">{otherUserName} is ready for pickup now.</p>
+          {!pinActionsToFooter && (
           <button
             type="button"
             disabled={busy || !userLocation}
@@ -832,6 +945,7 @@ export default function ItemDetailNavigation({
           >
             Go Get it
           </button>
+          )}
           {cancelLink}
         </div>
       );
@@ -844,6 +958,7 @@ export default function ItemDetailNavigation({
             {errorBanner}
             <p className="text-sm text-app">You're on the way to {otherUserName}'s pickup.</p>
             {renderPickerMeetingMap()}
+            {!pinActionsToFooter && (
             <div className="grid grid-cols-2 gap-2">
               <button type="button" onClick={openNavigation} className="sbn-btn sbn-btn-primary justify-center">
                 Resume navigation
@@ -857,6 +972,7 @@ export default function ItemDetailNavigation({
                 I've arrived
               </button>
             </div>
+            )}
             {cancelLink}
           </div>
         );
@@ -892,6 +1008,7 @@ export default function ItemDetailNavigation({
             <p className="text-sm font-semibold text-app">{session.requesterName} has arrived.</p>
             <p className="text-xs text-muted">Confirm once the handoff is complete.</p>
             {renderPosterShareToggle()}
+            {!pinActionsToFooter && (
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
@@ -912,6 +1029,7 @@ export default function ItemDetailNavigation({
                 Something's wrong
               </button>
             </div>
+            )}
           </div>
         );
       }
@@ -979,6 +1097,8 @@ export default function ItemDetailNavigation({
     setContactlessBusy(false);
   };
 
+  if (!destination) return null;
+
   return (
     <>
       {!sessionLoaded ? null : session ? (
@@ -996,6 +1116,7 @@ export default function ItemDetailNavigation({
               hasLiveGps={!!userLocation}
               canNavigate={!!userLocation}
               navigateLabel={isOwner || isStaffOfficial || !goGetAvailable ? 'Navigate' : getListingNavigateLabel(item)}
+              showNavigateButton={!pinActionsToFooter}
               onStartNavigation={() => (isOwner ? openNavigation() : void handleListingNavigation())}
               onOpenExternalMaps={() => {
                 if (!routeEndpoints) {

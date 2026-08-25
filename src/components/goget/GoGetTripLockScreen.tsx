@@ -586,34 +586,36 @@ export default function GoGetTripLockScreen({
         />
       ) : (
         <>
-          <GoGetLiveTripMap
-            destination={destination}
-            destinationLabel={session.destinationLabel}
-            traveler={
-              isFulfiller
-                ? travelerParty
-                : isRequester && session.status === 'active' && selfLocation
-                  ? { lat: selfLocation.lat, lng: selfLocation.lng, label: 'You' }
-                  : travelerParty
-            }
-            neighbor={neighborParty}
-            selfLocation={selfLocation}
-          />
-          <div className="pointer-events-none absolute inset-x-0 top-0 z-10 p-4 safe-area-pt">
-            <div className="pointer-events-auto sbn-card px-3 py-2 flex items-center gap-2 shadow-lg">
-              <Clock className="w-4 h-4 text-accent shrink-0" />
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-bold text-app truncate">{statusTitle}</p>
-                <p className="text-[11px] text-muted truncate">
-                  {item?.title || session.destinationLabel}
-                  {session.status !== 'arrived' && etaLabel ? ` · ${etaLabel}` : ''}
-                  {session.status !== 'arrived' && distanceLabel ? ` · ${distanceLabel}` : ''}
-                </p>
+          <div className="relative flex-1 min-h-0 w-full">
+            <GoGetLiveTripMap
+              destination={destination}
+              destinationLabel={session.destinationLabel}
+              traveler={
+                isFulfiller
+                  ? travelerParty
+                  : isRequester && session.status === 'active' && selfLocation
+                    ? { lat: selfLocation.lat, lng: selfLocation.lng, label: 'You' }
+                    : travelerParty
+              }
+              neighbor={neighborParty}
+              selfLocation={selfLocation}
+            />
+            <div className="pointer-events-none absolute inset-x-0 top-0 z-10 p-4 safe-area-pt">
+              <div className="pointer-events-auto sbn-card px-3 py-2 flex items-center gap-2 shadow-lg">
+                <Clock className="w-4 h-4 text-accent shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-bold text-app truncate">{statusTitle}</p>
+                  <p className="text-[11px] text-muted truncate">
+                    {item?.title || session.destinationLabel}
+                    {session.status !== 'arrived' && etaLabel ? ` · ${etaLabel}` : ''}
+                    {session.status !== 'arrived' && distanceLabel ? ` · ${distanceLabel}` : ''}
+                  </p>
+                </div>
               </div>
             </div>
           </div>
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 safe-area-pb">
-            <div className="pointer-events-auto sbn-card rounded-b-none rounded-t-3xl p-4 space-y-3 shadow-2xl">
+          <div className="shrink-0 max-h-[42vh] overflow-y-auto border-t border-app bg-[var(--sbn-nav-bg,#0b0b0c)] safe-area-pb">
+            <div className="p-4 space-y-3">
               {sheet}
               <div className={`grid gap-2 ${session.status === 'awaiting_availability' ? 'grid-cols-1' : 'grid-cols-2'}`}>
                 <button

@@ -27,6 +27,8 @@ interface EventEngagementProps {
   commentsLocked?: boolean;
   isPast?: boolean;
   commenterRoles?: Record<string, UserProfile['role']>;
+  /** Hide RSVP pills when parent pins them in a footer. */
+  hideRsvp?: boolean;
 }
 
 const UPCOMING_RSVP_OPTIONS: { status: EventRsvpStatus; label: string; icon: typeof Check }[] = [
@@ -55,6 +57,7 @@ export default function EventEngagement({
   commentsLocked = false,
   isPast = false,
   commenterRoles,
+  hideRsvp = false,
 }: EventEngagementProps) {
   const DETAIL_PREVIEW_COUNT = 5;
   const { userRsvp, going, maybe, notGoing, gone, missed } = rsvpState;
@@ -102,12 +105,22 @@ export default function EventEngagement({
     <section className={variant === 'detail' ? 'sbn-card p-4 space-y-3' : ''}>
       {variant === 'detail' && (
         <h3 className="text-xs font-semibold text-muted uppercase tracking-wide">
-          {commentsLocked ? (isPast ? 'Attendance' : 'RSVP') : isPast ? 'Attendance & discussion' : 'RSVP & discussion'}
+          {hideRsvp
+            ? commentsLocked
+              ? 'Discussion'
+              : 'Discussion'
+            : commentsLocked
+              ? isPast
+                ? 'Attendance'
+                : 'RSVP'
+              : isPast
+                ? 'Attendance & discussion'
+                : 'RSVP & discussion'}
         </h3>
       )}
 
       <div className={`flex flex-wrap items-center gap-1.5 sm:gap-2 ${variant === 'card' ? 'mt-2' : ''}`}>
-        {!rsvpDisabled &&
+        {!rsvpDisabled && !hideRsvp &&
           rsvpOptions.map(({ status, label, icon: Icon }) => {
           const count = countForStatus(status);
           return (
