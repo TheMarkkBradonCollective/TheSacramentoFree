@@ -25,12 +25,12 @@ export const PLAY_STORE_PHONE_SCREENSHOTS = [
   ['08-messages.png', 'Messages'],
   ['09-goget-listing.png', 'Go Get — listing pickup route'],
   ['10-goget-chat.png', 'Go Get — chat coordination'],
-  ['11-goget-ring.png', 'Go Get — incoming pickup ring'],
-  ['12-goget-waiting.png', 'Go Get — waiting for neighbor'],
-  ['13-goget-navigation.png', 'Go Get — turn-by-turn navigation'],
-  ['14-goget-tracking.png', 'Go Get — live ETA tracking'],
-  ['15-goget-meeting.png', 'Go Get — meetup map'],
-  ['16-goget-arrived.png', 'Go Get — arrival handoff'],
+  ['11-goget-ring.png', 'Go Get — incoming pickup ring on the map'],
+  ['12-goget-waiting.png', 'Go Get — locked waiting map'],
+  ['13-goget-navigation.png', 'Go Get — picker turn-by-turn (Uber driver)'],
+  ['14-goget-tracking.png', 'Go Get — poster live tracking map (Uber rider)'],
+  ['15-goget-meeting.png', 'Go Get — both neighbors on the meetup map'],
+  ['16-goget-arrived.png', 'Go Get — locked arrival handoff'],
 ] as const;
 
 export type PlayStoreAssetLink = {
