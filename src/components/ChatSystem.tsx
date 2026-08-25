@@ -101,6 +101,7 @@ import { getLastLiveLatLng } from '../lib/liveGeolocation';
 import { Navigation2 } from 'lucide-react';
 import RoleBadge from './RoleBadge';
 import { commentPostedAsNeighbor, shouldShowStaffBadgeOnMessage } from '../lib/staffInteractionMode';
+import { takeSafetyCooldownBlockMessage } from '../lib/safetyCooldowns';
 import { confirmStaffCoordinationChatView } from '../lib/staffChatSafety';
 import ChatListingPreview from './ChatListingPreview';
 import ChatEventPreview from './ChatEventPreview';
@@ -916,7 +917,9 @@ export default function ChatSystem({
       if (success) {
         return true;
       }
-      throw new Error('Supabase message write failed');
+      setMessages((prev) => prev.filter((m) => m.id !== messageId));
+      setErrorMsg(takeSafetyCooldownBlockMessage() || 'Failed to send message. Please try again.');
+      return false;
     } catch (err) {
       setMessages((prev) => prev.filter((m) => m.id !== messageId));
       setErrorMsg('Failed to send message. Please try again.');

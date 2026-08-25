@@ -28,9 +28,13 @@ import {
   resolveEventStatus,
 } from './lib/eventRsvp';
 import {
-  VOTE_COOLDOWN_MAX_NEW_VOTES,
-  VOTE_COOLDOWN_WINDOW_MS,
-} from './lib/voteCooldown';
+  isOverSafetyWindow,
+  noteSafetyCooldownBlock,
+  SAFETY_LIMITS,
+  staffBypassesSafetyCooldowns,
+  takeSafetyCooldownBlockMessage,
+  type SafetyCooldownKind,
+} from './lib/safetyCooldowns';
 import { normalizeUserRole, type UserRole, canDeleteChatMessage, canDeleteDirectChat, canDeleteSupportTicket, canEditAnnouncement, canEditOwnStaffMessage, canUnsendSupportTicketMessage, isDirectorRole, isEventPostChatReadOnly, isListingOpenForCoordination, isListingPostChatReadOnly, canManageAppUpdates, canPostAnnouncements, canStaffBan, canStaffDeleteAccount, canStaffEditUser, canStaffSuspend, canViewAuditLog, canViewerAccessTicket, isStaffRole, minStaffRankForTicket, roleLabel, roleRank, ROLE_RANK, STAFF_ROLE_SLOTS, staffRoleSlotMessage } from './lib/roles';
 import {
   deriveApplicantStaffApplyState,
@@ -1443,6 +1447,12 @@ export async function createSupabaseItem(
   _author?: UserProfile,
 ): Promise<{ ok: boolean; errorMessage?: string }> {
   try {
+    if (await isSafetyCooldownBlocked(item.userId, 'listing')) {
+      return {
+        ok: false,
+        errorMessage: takeSafetyCooldownBlockMessage() || SAFETY_LIMITS.listing.message,
+      };
+    }
     let payload = buildItemInsertPayload(item, true);
     let { error } = await supabase.from('items').insert(payload);
 
@@ -3704,9 +3714,12 @@ export async function createSupabaseMessage(
   text: string,
   senderId: string,
   messageId: string,
-  options?: { skipPush?: boolean; postedAsNeighbor?: boolean },
+  options?: { skipPush?: boolean; postedAsNeighbor?: boolean; skipCooldown?: boolean },
 ): Promise<boolean> {
   try {
+    if (!options?.skipCooldown && !options?.skipPush) {
+      if (await isSafetyCooldownBlocked(senderId, 'message')) return false;
+    }
     const timeIso = new Date().toISOString();
 
     // 1. Insert message
@@ -3882,6 +3895,102 @@ export type VoteWriteResult =
   | { ok: true }
   | { ok: false; reason: 'vote_cooldown' | 'error' };
 
+const STAFF_BYPASS_CACHE_MS = 15_000;
+const staffBypassCache = new Map<string, { bypass: boolean; at: number }>();
+
+async function userBypassesSafetyCooldowns(userId: string): Promise<boolean> {
+  const cached = staffBypassCache.get(userId);
+  if (cached && Date.now() - cached.at < STAFF_BYPASS_CACHE_MS) return cached.bypass;
+
+  const { data } = await supabase
+    .from('users')
+    .select('role, staffInteractionMode')
+    .eq('uid', userId)
+    .maybeSingle();
+
+  const bypass = staffBypassesSafetyCooldowns({
+    role: normalizeUserRole((data as { role?: unknown } | null)?.role),
+    staffInteractionMode:
+      (data as { staffInteractionMode?: unknown } | null)?.staffInteractionMode === 'neighbor'
+        ? 'neighbor'
+        : 'staff',
+  });
+  staffBypassCache.set(userId, { bypass, at: Date.now() });
+  return bypass;
+}
+
+async function countUserRowsSince(
+  table: string,
+  userColumn: string,
+  userId: string,
+  sinceIso: string,
+): Promise<number> {
+  const { count, error } = await supabase
+    .from(table)
+    .select('*', { count: 'exact', head: true })
+    .eq(userColumn, userId)
+    .gte('createdAt', sinceIso);
+  if (error) {
+    handleSupabaseError(error, table);
+    return 0;
+  }
+  return count ?? 0;
+}
+
+async function countSafetyActions(kind: SafetyCooldownKind, userId: string, windowMs: number): Promise<number> {
+  const sinceIso = new Date(Date.now() - windowMs).toISOString();
+  if (kind === 'vote') {
+    const [items, content] = await Promise.all([
+      countUserRowsSince('item_votes', 'userId', userId, sinceIso),
+      countUserRowsSince('community_content_votes', 'userId', userId, sinceIso),
+    ]);
+    return items + content;
+  }
+  if (kind === 'comment') {
+    const [items, events, feed, updates, news] = await Promise.all([
+      countUserRowsSince('item_comments', 'userId', userId, sinceIso),
+      countUserRowsSince('event_comments', 'userId', userId, sinceIso),
+      countUserRowsSince('feed_post_comments', 'userId', userId, sinceIso),
+      countUserRowsSince('app_update_comments', 'userId', userId, sinceIso),
+      countUserRowsSince('help_announcement_comments', 'userId', userId, sinceIso),
+    ]);
+    return items + events + feed + updates + news;
+  }
+  if (kind === 'message') {
+    return countUserRowsSince('messages', 'senderId', userId, sinceIso);
+  }
+  if (kind === 'rsvp') {
+    return countUserRowsSince('event_rsvps', 'userId', userId, sinceIso);
+  }
+  if (kind === 'report') {
+    const [reports, violations] = await Promise.all([
+      countUserRowsSince('user_reports', 'reporterUserId', userId, sinceIso),
+      countUserRowsSince('user_violations', 'reportedByUserId', userId, sinceIso),
+    ]);
+    return reports + violations;
+  }
+  if (kind === 'listing') {
+    return countUserRowsSince('items', 'userId', userId, sinceIso);
+  }
+  return countUserRowsSince('feed_posts', 'userId', userId, sinceIso);
+}
+
+/** Returns true when the write should be blocked. */
+export async function isSafetyCooldownBlocked(userId: string, kind: SafetyCooldownKind): Promise<boolean> {
+  if (!userId) return false;
+  if (await userBypassesSafetyCooldowns(userId)) return false;
+
+  const limit = SAFETY_LIMITS[kind];
+  for (const window of limit.windows) {
+    const count = await countSafetyActions(kind, userId, window.windowMs);
+    if (isOverSafetyWindow(count, window.maxActions)) {
+      noteSafetyCooldownBlock(limit.message);
+      return true;
+    }
+  }
+  return false;
+}
+
 async function userHasItemVote(itemId: string, userId: string): Promise<boolean> {
   const { data } = await supabase
     .from('item_votes')
@@ -3890,20 +3999,6 @@ async function userHasItemVote(itemId: string, userId: string): Promise<boolean>
     .eq('userId', userId)
     .maybeSingle();
   return !!data;
-}
-
-async function countRecentItemVotes(userId: string): Promise<number> {
-  const cutoff = new Date(Date.now() - VOTE_COOLDOWN_WINDOW_MS).toISOString();
-  const { count, error } = await supabase
-    .from('item_votes')
-    .select('itemId', { count: 'exact', head: true })
-    .eq('userId', userId)
-    .gte('createdAt', cutoff);
-  if (error) {
-    handleSupabaseError(error, 'item_votes');
-    return 0;
-  }
-  return count ?? 0;
 }
 
 async function userHasCommunityContentVote(
@@ -3919,20 +4014,6 @@ async function userHasCommunityContentVote(
     .eq('userId', userId)
     .maybeSingle();
   return !!data;
-}
-
-async function countRecentCommunityContentVotes(userId: string): Promise<number> {
-  const cutoff = new Date(Date.now() - VOTE_COOLDOWN_WINDOW_MS).toISOString();
-  const { count, error } = await supabase
-    .from('community_content_votes')
-    .select('id', { count: 'exact', head: true })
-    .eq('userId', userId)
-    .gte('createdAt', cutoff);
-  if (error) {
-    handleSupabaseError(error, 'community_content_votes');
-    return 0;
-  }
-  return count ?? 0;
 }
 
 export async function setSupabaseItemVote(
@@ -3957,11 +4038,8 @@ export async function setSupabaseItemVote(
     }
 
     const alreadyVoted = await userHasItemVote(itemId, userId);
-    if (!alreadyVoted) {
-      const recentVotes = await countRecentItemVotes(userId);
-      if (recentVotes >= VOTE_COOLDOWN_MAX_NEW_VOTES) {
-        return { ok: false, reason: 'vote_cooldown' };
-      }
+    if (!alreadyVoted && (await isSafetyCooldownBlocked(userId, 'vote'))) {
+      return { ok: false, reason: 'vote_cooldown' };
     }
 
     const { error } = await supabase
@@ -4017,6 +4095,7 @@ export async function getSupabaseItemComments(itemIds: string[]): Promise<ItemCo
 
 export async function createSupabaseItemComment(comment: ItemComment): Promise<boolean> {
   try {
+    if (await isSafetyCooldownBlocked(comment.userId, 'comment')) return false;
     const payload = {
       ...comment,
       createdAt: comment.createdAt ? new Date(comment.createdAt).toISOString() : new Date().toISOString()
@@ -4519,6 +4598,16 @@ export async function setSupabaseEventRsvp(
       return true;
     }
 
+    const { data: existingRsvp } = await supabase
+      .from('event_rsvps')
+      .select('eventId')
+      .eq('eventId', eventId)
+      .eq('userId', userId)
+      .maybeSingle();
+    if (!existingRsvp && (await isSafetyCooldownBlocked(userId, 'rsvp'))) {
+      return false;
+    }
+
     const { error } = await supabase.from('event_rsvps').upsert(
       {
         eventId,
@@ -4596,6 +4685,7 @@ export async function getSupabaseEventComments(eventIds: string[]): Promise<Even
 
 export async function createSupabaseEventComment(comment: EventComment): Promise<boolean> {
   try {
+    if (await isSafetyCooldownBlocked(comment.userId, 'comment')) return false;
     const payload = {
       ...comment,
       createdAt: comment.createdAt ? new Date(comment.createdAt).toISOString() : new Date().toISOString(),
@@ -5131,6 +5221,7 @@ export async function getSupabaseAppUpdateComments(updateIds: string[]): Promise
 
 export async function createSupabaseAppUpdateComment(comment: AppUpdateComment): Promise<boolean> {
   try {
+    if (await isSafetyCooldownBlocked(comment.userId, 'comment')) return false;
     const payload = {
       ...comment,
       userPhoto: sanitizePhotoUrlForDb(comment.userPhoto) ?? null,
@@ -5518,6 +5609,7 @@ export async function getSupabaseHelpAnnouncementComments(
 
 export async function createSupabaseHelpAnnouncementComment(comment: HelpAnnouncementComment): Promise<boolean> {
   try {
+    if (await isSafetyCooldownBlocked(comment.userId, 'comment')) return false;
     const payload = {
       ...comment,
       createdAt: comment.createdAt ? new Date(comment.createdAt).toISOString() : new Date().toISOString(),
@@ -5766,11 +5858,8 @@ export async function setSupabaseCommunityContentVote(
     }
 
     const alreadyVoted = await userHasCommunityContentVote(targetType, targetId, userId);
-    if (!alreadyVoted) {
-      const recentVotes = await countRecentCommunityContentVotes(userId);
-      if (recentVotes >= VOTE_COOLDOWN_MAX_NEW_VOTES) {
-        return { ok: false, reason: 'vote_cooldown' };
-      }
+    if (!alreadyVoted && (await isSafetyCooldownBlocked(userId, 'vote'))) {
+      return { ok: false, reason: 'vote_cooldown' };
     }
 
     const id = `${targetType}_${targetId}_${userId}`;
@@ -7350,6 +7439,13 @@ export async function submitUserReport(params: {
   const body = params.body.trim();
   if (!subject || !body) {
     return { ok: false, errorMessage: 'Please add a subject and description.' };
+  }
+
+  if (await isSafetyCooldownBlocked(params.reporter.uid, 'report')) {
+    return {
+      ok: false,
+      errorMessage: takeSafetyCooldownBlockMessage() || SAFETY_LIMITS.report.message,
+    };
   }
 
   const reportId = `report_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;

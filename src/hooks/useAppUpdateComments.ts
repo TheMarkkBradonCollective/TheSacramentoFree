@@ -8,6 +8,7 @@ import {
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 import { commentPostedAsNeighbor } from '../lib/staffInteractionMode';
 import { resolveProfileIdentity } from '../lib/profilePersistence';
+import { takeSafetyCooldownBlockMessage } from '../lib/safetyCooldowns';
 import { useConfirm } from '../contexts/ConfirmContext';
 
 export function useAppUpdateComments(
@@ -111,7 +112,10 @@ export function useAppUpdateComments(
     createSupabaseAppUpdateComment(newComment).then((ok) => {
       if (ok) return;
       setCommentsByUpdate((prev) => ({ ...prev, [updateId]: current }));
-      void alert({ title: 'Could not comment', message: 'Your comment was not saved. Please try again.' });
+      void alert({
+        title: 'Could not comment',
+        message: takeSafetyCooldownBlockMessage() || 'Your comment was not saved. Please try again.',
+      });
     }).catch((err) => {
       console.warn('Failed to persist update comment:', err);
       setCommentsByUpdate((prev) => ({ ...prev, [updateId]: current }));

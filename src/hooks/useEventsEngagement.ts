@@ -10,6 +10,7 @@ import {
 import { subscribePostgresChanges } from '../lib/supabaseRealtime';
 import { commentPostedAsNeighbor } from '../lib/staffInteractionMode';
 import { resolveProfileIdentity } from '../lib/profilePersistence';
+import { takeSafetyCooldownBlockMessage } from '../lib/safetyCooldowns';
 import { countPastRsvps, effectivePastRsvp } from '../lib/eventRsvp';
 import { useConfirm } from '../contexts/ConfirmContext';
 import { isStaffRole } from '../lib/roles';
@@ -244,7 +245,10 @@ export function useEventsEngagement(
     setSupabaseEventRsvp(eventId, uid, persistStatus).then((ok) => {
       if (ok) return;
       setEventRsvps((prev) => ({ ...prev, [eventId]: current }));
-      void alert({ title: 'Could not RSVP', message: 'Your RSVP was not saved. Please try again.' });
+      void alert({
+        title: 'Could not RSVP',
+        message: takeSafetyCooldownBlockMessage() || 'Your RSVP was not saved. Please try again.',
+      });
     }).catch((err) => {
       console.warn('Failed to persist RSVP:', err);
       setEventRsvps((prev) => ({ ...prev, [eventId]: current }));
@@ -277,7 +281,10 @@ export function useEventsEngagement(
     void createSupabaseEventComment(newComment).then((ok) => {
       if (ok) return;
       setEventComments((prev) => ({ ...prev, [eventId]: current }));
-      void alert({ title: 'Could not comment', message: 'Your comment was not saved. Please try again.' });
+      void alert({
+        title: 'Could not comment',
+        message: takeSafetyCooldownBlockMessage() || 'Your comment was not saved. Please try again.',
+      });
     }).catch((err) => {
       console.warn('Failed to persist event comment:', err);
       setEventComments((prev) => ({ ...prev, [eventId]: current }));

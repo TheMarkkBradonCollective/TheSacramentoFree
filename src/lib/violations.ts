@@ -1,4 +1,5 @@
-import { supabase } from '../supabase';
+import { supabase, isSafetyCooldownBlocked } from '../supabase';
+import { SAFETY_LIMITS, takeSafetyCooldownBlockMessage } from './safetyCooldowns';
 import type { GoGetSession, UserProfile, UserViolation, ViolationCategory, ViolationStatus } from '../types';
 import { isStaffRole, roleRank } from './roles';
 import { CLIENT_PUSH_DISPATCH_ENABLED } from './pushConfig';
@@ -70,6 +71,12 @@ export interface FileViolationParams {
 export async function fileGoGetViolation(params: FileViolationParams): Promise<Result & { violationId?: string }> {
   if (params.targetUserId === params.reportedByUserId) {
     return { ok: false, errorMessage: 'You cannot report yourself.' };
+  }
+  if (await isSafetyCooldownBlocked(params.reportedByUserId, 'report')) {
+    return {
+      ok: false,
+      errorMessage: takeSafetyCooldownBlockMessage() || SAFETY_LIMITS.report.message,
+    };
   }
   const id = `viol_${params.targetUserId}_${Date.now()}`;
   const { error } = await supabase.from('user_violations').insert({
