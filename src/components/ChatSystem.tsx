@@ -103,7 +103,6 @@ import { Navigation2 } from 'lucide-react';
 import RoleBadge from './RoleBadge';
 import { commentPostedAsNeighbor, shouldShowStaffBadgeOnMessage } from '../lib/staffInteractionMode';
 import { takeSafetyCooldownBlockMessage } from '../lib/safetyCooldowns';
-import { confirmStaffCoordinationChatView } from '../lib/staffChatSafety';
 import ChatListingPreview from './ChatListingPreview';
 import ChatEventPreview from './ChatEventPreview';
 import { resolveEventStatus } from '../lib/eventRsvp';
@@ -1084,18 +1083,7 @@ export default function ChatSystem({
   }, [chats, incomingRequests, userProfile.uid]);
   useTrackPresence(presenceUids);
 
-  const staffCoordinationAckRef = useRef<Set<string>>(new Set());
-
   const selectChat = async (chat: Chat) => {
-    if (
-      staffActingOfficial &&
-      (chat.itemId || chat.eventId) &&
-      !staffCoordinationAckRef.current.has(chat.id)
-    ) {
-      const ok = await confirmStaffCoordinationChatView(confirm, chat.eventTitle || chat.itemTitle);
-      if (!ok) return;
-      staffCoordinationAckRef.current.add(chat.id);
-    }
     setSelectedChat(chat);
     setSupportView(null);
     onClearInitialChat();
@@ -1987,11 +1975,6 @@ export default function ChatSystem({
                   {!isCommunity && chatGoGetSession && !isChatDisabled && (
                     <p className="text-[11px] text-muted text-center">
                       Go Get in progress — open "{linkedItem?.title}" to follow along.
-                    </p>
-                  )}
-                  {staffActingOfficial && (linkedItem || linkedEvent) && !isCommunity && (
-                    <p className="text-[11px] text-accent/90 bg-accent/10 border border-accent/20 rounded-lg px-3 py-2 text-center leading-snug">
-                      Staff oversight — neighbor chat.
                     </p>
                   )}
                   {isChatDisabled && (

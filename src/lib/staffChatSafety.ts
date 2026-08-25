@@ -33,18 +33,3 @@ export async function confirmStaffEventOutreach(
     cancelLabel: 'Cancel',
   });
 }
-
-/** Staff views a neighbor coordination chat (oversight). */
-export async function confirmStaffCoordinationChatView(
-  confirm: ConfirmFn,
-  contextTitle?: string,
-): Promise<boolean> {
-  const subject = contextTitle?.trim() ? `"${contextTitle}"` : 'this conversation';
-  return confirm({
-    title: 'View neighbor chat?',
-    message:
-      `Private neighbor chat about ${subject}. Reply only when needed.`,
-    confirmLabel: 'View chat',
-    cancelLabel: 'Cancel',
-  });
-}
