@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ArrowDown,
   ArrowUp,
@@ -30,6 +30,7 @@ import {
   markStaffApplyInviteSeen,
 } from '../lib/staffApplyInvite';
 import PublicCard from './public/PublicCard';
+import SwipeToDismissRow from './SwipeToDismissRow';
 
 function formatWhen(iso: string): string {
   const date = new Date(iso);
@@ -252,12 +253,13 @@ function targetForNotification(item: UserNotificationItem): PushDeepLinkTarget |
 interface UserNotificationsListProps {
   user: UserProfile;
   onNavigate?: (target: PushDeepLinkTarget) => void;
-  /** Called when the Notify list is shown so the hub can clear unread state. */
+  /** Called when the notifications list is shown so the hub can clear unread state. */
   onViewed?: () => void | Promise<void>;
 }
 
 export default function UserNotificationsList({ user, onNavigate, onViewed }: UserNotificationsListProps) {
-  const { items, loading, reload } = useUserNotifications(user.uid);
+  const { items, loading, reload, dismissNotification } = useUserNotifications(user.uid);
+  const [inviteDismissed, setInviteDismissed] = useState(false);
   const receivesStaffNotis = receivesStaffNotifications(user);
   const dbInvites = items.filter(isStaffApplyInviteItem);
   const otherItems = items.filter((item) => {
@@ -271,9 +273,10 @@ export default function UserNotificationsList({ user, onNavigate, onViewed }: Us
     showInvite && dbInvites.length === 0
       ? { ...STAFF_APPLY_INVITE, readAt: inviteSeen ? new Date().toISOString() : null }
       : null;
-  const inviteCards = seededInvite ? [seededInvite] : showInvite ? dbInvites : [];
+  const inviteCards =
+    inviteDismissed ? [] : seededInvite ? [seededInvite] : showInvite ? dbInvites : [];
 
-  // Mark read once the Notify list is shown, then refresh so unread styling clears.
+  // Mark read once the notifications list is shown, then refresh so unread styling clears.
   useEffect(() => {
     let cancelled = false;
     void (async () => {
@@ -299,16 +302,25 @@ export default function UserNotificationsList({ user, onNavigate, onViewed }: Us
   }
 
   return (
-    <ul className="space-y-3">
+    <div className="space-y-3">
+      <p className="text-[11px] text-muted">Swipe left on any alert to clear it from your list.</p>
+      <ul className="space-y-3">
       {inviteCards.map((inviteItem) => (
         <li key={inviteItem.id}>
-          <StaffApplyInviteCard
-            item={inviteItem}
-            onApply={() => {
+          <SwipeToDismissRow
+            onDismiss={() => {
               markStaffApplyInviteSeen(user.uid);
-              onNavigate?.({ tab: 'profile', staffApply: true });
+              setInviteDismissed(true);
             }}
-          />
+          >
+            <StaffApplyInviteCard
+              item={inviteItem}
+              onApply={() => {
+                markStaffApplyInviteSeen(user.uid);
+                onNavigate?.({ tab: 'profile', staffApply: true });
+              }}
+            />
+          </SwipeToDismissRow>
         </li>
       ))}
       {otherItems.map((item) => {
@@ -318,29 +330,32 @@ export default function UserNotificationsList({ user, onNavigate, onViewed }: Us
 
         return (
           <li key={item.id}>
-            <PublicCard
-              className={`${item.readAt ? '' : 'border-accent/25 bg-accent-soft/10'} ${
-                isInteractive ? 'cursor-pointer hover:border-accent/40 transition-colors' : ''
-              }`}
-            >
-              {isInteractive ? (
-                <button
-                  type="button"
-                  onClick={() => onNavigate?.(target!)}
-                  className="flex gap-3 w-full text-left"
-                >
-                  <NotificationBody item={item} Icon={Icon} />
-                </button>
-              ) : (
-                <div className="flex gap-3">
-                  <NotificationBody item={item} Icon={Icon} />
-                </div>
-              )}
-            </PublicCard>
+            <SwipeToDismissRow onDismiss={() => void dismissNotification(item.id)}>
+              <PublicCard
+                className={`${item.readAt ? '' : 'border-accent/25 bg-accent-soft/10'} ${
+                  isInteractive ? 'cursor-pointer hover:border-accent/40 transition-colors' : ''
+                }`}
+              >
+                {isInteractive ? (
+                  <button
+                    type="button"
+                    onClick={() => onNavigate?.(target!)}
+                    className="flex gap-3 w-full text-left"
+                  >
+                    <NotificationBody item={item} Icon={Icon} />
+                  </button>
+                ) : (
+                  <div className="flex gap-3">
+                    <NotificationBody item={item} Icon={Icon} />
+                  </div>
+                )}
+              </PublicCard>
+            </SwipeToDismissRow>
           </li>
         );
       })}
-    </ul>
+      </ul>
+    </div>
   );
 }
 

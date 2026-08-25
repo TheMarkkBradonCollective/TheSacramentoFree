@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, ChevronUp, Pencil, Plus, Trash2 } from 'lucide-react';
 import { HelpAnnouncementInput, HelpAnnouncementRecord, UserProfile } from '../types';
 import { useHelpAnnouncements } from '../hooks/useHelpAnnouncements';
@@ -12,6 +12,8 @@ import { useConfirm } from '../contexts/ConfirmContext';
 import { confirmDeleteAnnouncement } from '../lib/destructiveConfirm';
 import { REBRAND_ANNOUNCEMENT_ID, REBRAND_ANNOUNCEMENT_LETTER } from '../../shared/rebrandAnnouncement2026';
 import LinkifiedText from './LinkifiedText';
+import ChangelogSeenLabel from './ChangelogSeenLabel';
+import { recordHelpAnnouncementView } from '../supabase';
 
 interface AnnouncementsListProps {
   userProfile?: UserProfile | null;
@@ -69,17 +71,51 @@ export default function AnnouncementsList({
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editingAnnouncement, setEditingAnnouncement] = useState<HelpAnnouncementRecord | null>(null);
   const [creating, setCreating] = useState(false);
+  const [viewCounts, setViewCounts] = useState<Record<string, number>>({});
+  const recordedRef = useRef(new Set<string>());
   const { confirm } = useConfirm();
   const signedIn = Boolean(userProfile);
+
+  const displayViewCount = (announcement: HelpAnnouncementRecord) =>
+    viewCounts[announcement.id] ?? announcement.viewCount ?? 0;
+
+  const recordSeen = (announcement: HelpAnnouncementRecord) => {
+    if (!userProfile || recordedRef.current.has(announcement.id)) return;
+    recordedRef.current.add(announcement.id);
+    void recordHelpAnnouncementView(announcement.id).then((result) => {
+      if (result.ok && result.viewCount != null) {
+        setViewCounts((prev) => ({ ...prev, [announcement.id]: result.viewCount! }));
+      }
+    });
+  };
+
+  const toggleExpanded = (announcement: HelpAnnouncementRecord) => {
+    const nextExpanded = expandedId === announcement.id ? null : announcement.id;
+    setExpandedId(nextExpanded);
+    if (nextExpanded === announcement.id) {
+      recordSeen(announcement);
+    }
+  };
 
   useEffect(() => {
     if (!focusId) return;
     setExpandedId(focusId);
+    const announcement = announcements.find((row) => row.id === focusId);
+    if (announcement) recordSeen(announcement);
     const timer = window.setTimeout(() => {
       document.getElementById(`announcement-${focusId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 80);
     return () => window.clearTimeout(timer);
   }, [focusId, announcements.length]);
+
+  useEffect(() => {
+    if (!userProfile) return;
+    for (const announcement of announcements) {
+      if (announcement.id === REBRAND_ANNOUNCEMENT_ID) {
+        recordSeen(announcement);
+      }
+    }
+  }, [announcements, userProfile]);
 
   const emptyDraft = (): HelpAnnouncementInput => ({
     date: todayIsoDate(),
@@ -145,6 +181,7 @@ export default function AnnouncementsList({
                       ) : (
                         <p className="mt-1 text-[11px] text-muted italic">A personal letter — not a release note</p>
                       )}
+                      <ChangelogSeenLabel count={displayViewCount(announcement)} className="mt-1" />
                       {!isLetter ? (
                         <p className="mt-2 text-sm text-muted leading-relaxed whitespace-pre-wrap font-semibold">
                           <LinkifiedText text={summary} />
@@ -168,7 +205,7 @@ export default function AnnouncementsList({
                           {!isLetter ? (
                             <button
                               type="button"
-                              onClick={() => setExpandedId(expanded ? null : announcement.id)}
+                              onClick={() => toggleExpanded(announcement)}
                               className="mt-2 inline-flex items-center gap-1.5 text-[11px] font-semibold text-accent"
                               aria-expanded={expanded}
                             >

@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, ChevronUp, Pencil, Plus, Search, Trash2 } from 'lucide-react';
 import { AppUpdateInput, AppUpdateRecord, UserProfile } from '../types';
 import { neighborUpdateDetail } from '../../shared/changelogFilters';
 import LinkifiedText from './LinkifiedText';
+import ChangelogSeenLabel from './ChangelogSeenLabel';
 import { useAppUpdates } from '../hooks/useAppUpdates';
 import { useCommunityContentVotes } from '../hooks/useCommunityContentVotes';
 import { useAppUpdateComments } from '../hooks/useAppUpdateComments';
@@ -12,6 +13,7 @@ import PublicCard from './public/PublicCard';
 import AppUpdateEditModal from './AppUpdateEditModal';
 import { useConfirm } from '../contexts/ConfirmContext';
 import { confirmDeleteAppUpdate } from '../lib/destructiveConfirm';
+import { recordAppUpdateView } from '../supabase';
 
 interface UpdatesListProps {
   userProfile?: UserProfile | null;
@@ -62,8 +64,30 @@ export default function UpdatesList({
   const [editingUpdate, setEditingUpdate] = useState<AppUpdateRecord | null>(null);
   const [creating, setCreating] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [viewCounts, setViewCounts] = useState<Record<string, number>>({});
+  const recordedRef = useRef(new Set<string>());
   const { confirm } = useConfirm();
   const signedIn = Boolean(userProfile);
+
+  const displayViewCount = (update: AppUpdateRecord) => viewCounts[update.id] ?? update.viewCount ?? 0;
+
+  const recordSeen = (update: AppUpdateRecord) => {
+    if (!userProfile || recordedRef.current.has(update.id)) return;
+    recordedRef.current.add(update.id);
+    void recordAppUpdateView(update.id).then((result) => {
+      if (result.ok && result.viewCount != null) {
+        setViewCounts((prev) => ({ ...prev, [update.id]: result.viewCount! }));
+      }
+    });
+  };
+
+  const toggleExpanded = (update: AppUpdateRecord) => {
+    const nextExpanded = expandedId === update.id ? null : update.id;
+    setExpandedId(nextExpanded);
+    if (nextExpanded === update.id) {
+      recordSeen(update);
+    }
+  };
 
   const filteredUpdates = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -90,6 +114,8 @@ export default function UpdatesList({
     if (!focusId) return;
     setSearchQuery('');
     setExpandedId(focusId);
+    const update = updates.find((row) => row.id === focusId);
+    if (update) recordSeen(update);
     const timer = window.setTimeout(() => {
       document.getElementById(`update-${focusId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 80);
@@ -167,6 +193,7 @@ export default function UpdatesList({
                       <p className="mt-1 text-[11px] text-muted">
                         Posted by {update.directorName} · {update.directorTitle}
                       </p>
+                      <ChangelogSeenLabel count={displayViewCount(update)} className="mt-1" />
                       <p className="mt-2 text-sm text-muted leading-relaxed whitespace-pre-wrap font-semibold">
                         <LinkifiedText text={summary} />
                       </p>
@@ -179,7 +206,7 @@ export default function UpdatesList({
                           ) : null}
                           <button
                             type="button"
-                            onClick={() => setExpandedId(expanded ? null : update.id)}
+                            onClick={() => toggleExpanded(update)}
                             className="mt-2 inline-flex items-center gap-1.5 text-[11px] font-semibold text-accent"
                             aria-expanded={expanded}
                           >

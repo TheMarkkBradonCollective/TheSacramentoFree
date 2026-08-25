@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { UserNotificationItem } from '../types';
-import { getSupabaseUserNotifications } from '../supabase';
+import { dismissSupabaseNotification, getSupabaseUserNotifications } from '../supabase';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 
 export function useUserNotifications(userId?: string) {
   const [items, setItems] = useState<UserNotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hiddenIds, setHiddenIds] = useState<Set<string>>(() => new Set());
 
   const reload = useCallback(async () => {
     if (!userId) {
@@ -18,6 +19,25 @@ export function useUserNotifications(userId?: string) {
     setItems(rows);
     setLoading(false);
   }, [userId]);
+
+  const dismissNotification = useCallback(
+    async (notificationId: string) => {
+      if (!userId) return false;
+      setHiddenIds((prev) => new Set(prev).add(notificationId));
+      setItems((prev) => prev.filter((row) => row.id !== notificationId));
+      const ok = await dismissSupabaseNotification(userId, notificationId);
+      if (!ok) {
+        setHiddenIds((prev) => {
+          const next = new Set(prev);
+          next.delete(notificationId);
+          return next;
+        });
+        await reload();
+      }
+      return ok;
+    },
+    [userId, reload],
+  );
 
   useEffect(() => {
     void reload();
@@ -40,5 +60,7 @@ export function useUserNotifications(userId?: string) {
     );
   }, [userId, reload]);
 
-  return { items, loading, reload };
+  const visibleItems = items.filter((item) => !hiddenIds.has(item.id));
+
+  return { items: visibleItems, loading, reload, dismissNotification };
 }

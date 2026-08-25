@@ -13,22 +13,22 @@ import { isStaffRole } from '../lib/roles';
 import { markStaffApplyInviteSeen } from '../lib/staffApplyInvite';
 import { useNewspaperAlertBell } from '../preview/useNewspaperAlerts';
 
-export type NotificationsHubTab = 'announcements' | 'updates' | 'notifications' | 'alerts' | 'awards';
+export type NotificationsHubTab = 'announcements' | 'updates' | 'notifications' | 'alerts';
 
 export type NotificationsHubFocus = {
   announcementId?: string;
   updateId?: string;
 };
 
-const HUB_TAB_ORDER: NotificationsHubTab[] = ['notifications', 'announcements', 'updates', 'awards', 'alerts'];
+const HUB_TAB_ORDER: NotificationsHubTab[] = ['notifications', 'announcements', 'updates', 'alerts'];
 
 const HUB_TAB_META: Record<
   NotificationsHubTab,
   { label: string; mobileLabel: string; title: string; subtitle: string; intro: string }
 > = {
   notifications: {
-    label: 'Notify',
-    mobileLabel: 'Notify',
+    label: 'Notifications',
+    mobileLabel: 'Notifs',
     title: 'Notifications',
     subtitle: 'Every alert you receive — messages, listings, comments, claims, and more',
     intro: 'Your inbox mirrors push alerts: if you would get an alert for it, it appears here. Choose what sends push under Alerts (last tab).',
@@ -46,13 +46,6 @@ const HUB_TAB_META: Record<
     title: 'App updates',
     subtitle: 'Director changelog — vote and comment',
     intro: 'Technical release notes for the app. Expand any entry for the full story and discussion.',
-  },
-  awards: {
-    label: 'Badges',
-    mobileLabel: 'Badges',
-    title: 'Your badges',
-    subtitle: 'Community awards and milestones',
-    intro: 'Open your full badges panel to see earned awards and progress.',
   },
   alerts: {
     label: 'Alerts',
@@ -116,12 +109,12 @@ export function NotificationsHubButton({
     <HeaderActionButton
       onClick={() => openHub('notifications')}
       icon={Bell}
-      label="Notify"
+      label="Notifications"
       glow={shouldGlow}
       compact={compact}
       unboxed
-      title={shouldGlow ? 'You have unread notifications' : 'Notify, news, updates, and alerts'}
-      ariaLabel={shouldGlow ? 'Notifications — unread items' : 'Notify, news, updates, and alerts'}
+      title={shouldGlow ? 'You have unread notifications' : 'Notifications, news, updates, and alerts'}
+      ariaLabel={shouldGlow ? 'Notifications — unread items' : 'Notifications, news, updates, and alerts'}
       id="notifications_hub_btn"
       className={className}
     />
@@ -141,12 +134,10 @@ function tabUnreadCount(
 export function NotificationsHubProvider({
   userProfile,
   onDeepLink,
-  onOpenAwards,
   children,
 }: {
   userProfile: UserProfile | null;
   onDeepLink?: (target: PushDeepLinkTarget) => void;
-  onOpenAwards?: () => void;
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -284,18 +275,6 @@ export function NotificationsHubProvider({
                 embedded
                 scope="alerts"
               />
-            ) : null}
-            {tab === 'awards' ? (
-              <div className="sbn-card p-6 text-center space-y-4">
-                <p className="text-sm text-muted leading-relaxed">
-                  Badges celebrate giving, events, and community participation. View your full awards panel for details.
-                </p>
-                {onOpenAwards ? (
-                  <button type="button" className="sbn-btn sbn-btn-primary" onClick={onOpenAwards}>
-                    Open badges panel
-                  </button>
-                ) : null}
-              </div>
             ) : null}
           </div>
         </FullScreenPanel>
