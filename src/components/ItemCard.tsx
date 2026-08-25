@@ -295,12 +295,6 @@ export default function ItemCard({
                 </span>
               )}
             </div>
-            {distanceMeters != null && (
-              <span className="absolute bottom-1.5 left-1.5 inline-flex items-center gap-0.5 rounded-full bg-black/75 px-1.5 py-0.5 text-[10px] font-bold text-white">
-                <Navigation className="w-3 h-3 shrink-0" aria-hidden />
-                {formatRouteDistance(distanceMeters)}
-              </span>
-            )}
             {hasEngagement && (
               <span className="absolute bottom-1.5 right-1.5 inline-flex items-center gap-1 rounded-full bg-black/75 px-1.5 py-0.5 text-[10px] font-bold text-white">
                 {(voteState.upvotes > 0 || voteState.downvotes > 0) && (
@@ -320,7 +314,18 @@ export default function ItemCard({
           </div>
           <div className="item-feed-tile__body p-2">
             <h3 className="font-display text-xs font-bold text-app leading-snug line-clamp-2">{item.title}</h3>
-            <p className="mt-0.5 text-[10px] text-muted truncate">{item.neighborhood}</p>
+            <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[10px] text-muted min-w-0">
+              <span className="inline-flex items-center gap-0.5 min-w-0 truncate">
+                <MapPin className="w-2.5 h-2.5 shrink-0 text-accent" aria-hidden />
+                <span className="truncate">{item.neighborhood}</span>
+              </span>
+              {distanceMeters != null && (
+                <span className="inline-flex items-center gap-0.5 shrink-0 font-semibold text-accent">
+                  <Navigation className="w-2.5 h-2.5 shrink-0" aria-hidden />
+                  {formatRouteDistance(distanceMeters)}
+                </span>
+              )}
+            </div>
           </div>
         </button>
       </article>
