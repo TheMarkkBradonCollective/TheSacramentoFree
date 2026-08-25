@@ -43,7 +43,7 @@ import {
 import { useTrackPresence } from '../contexts/PresenceContext';
 import { subscribeLiveGeolocation } from '../lib/liveGeolocation';
 import { haversineMeters, type LatLng } from '../lib/mapRoute';
-import { getItemMapDestination } from '../lib/itemLocation';
+import { getItemMapDestination, hasNavigablePin } from '../lib/itemLocation';
 import { isNativeApp } from '../lib/nativePlatform';
 import { useConfirm } from '../contexts/ConfirmContext';
 import { confirmMarkListingCompleted, confirmWithdrawListing } from '../lib/destructiveConfirm';
@@ -853,7 +853,7 @@ export default function ItemGrid({
                   isStaffOfficial: isStaffActingOfficial(userProfile),
                 })}
                 onNavigate={
-                  item.userId !== userProfile.uid
+                  hasNavigablePin(item, userProfile.uid)
                     ? () => (onNavigateItem ?? onViewItem)(item)
                     : undefined
                 }

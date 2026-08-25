@@ -1,4 +1,4 @@
-import { ItemPost, PostType, extractGPSCoordinates, convertPercentToLatLng, NEIGHBORHOOD_LAT_LONGS } from '../types';
+import { ItemPost, PostType, extractGPSCoordinates, convertPercentToLatLng } from '../types';
 import type { LatLng } from './mapRoute';
 
 export { convertPercentToLatLng };
@@ -28,22 +28,27 @@ export function canViewerSeeExactLocation(
   return !isLocationPrivate(item.description);
 }
 
-/** Exact pickup pin when visible; otherwise neighborhood center for map/navigation fallback. */
+/** Exact pickup pin when this viewer may see it — never a neighborhood guess. */
 export function getItemMapDestination(
   item: ItemPost,
   viewerUserId: string | undefined,
 ): LatLng | null {
-  if (canViewerSeeExactLocation(item, viewerUserId)) {
-    const gps = extractGPSCoordinates(item.description);
-    if (gps) return convertPercentToLatLng(gps.x, gps.y);
-  }
-  const neighborhood = NEIGHBORHOOD_LAT_LONGS[item.neighborhood];
-  if (neighborhood) return { lat: neighborhood.lat, lng: neighborhood.lng };
-  return null;
+  if (!canViewerSeeExactLocation(item, viewerUserId)) return null;
+  const gps = extractGPSCoordinates(item.description);
+  if (!gps) return null;
+  return convertPercentToLatLng(gps.x, gps.y);
 }
 
 export function hasExactMapPin(item: ItemPost, viewerUserId: string | undefined): boolean {
-  return canViewerSeeExactLocation(item, viewerUserId) && hasStoredGps(item.description);
+  return getItemMapDestination(item, viewerUserId) != null;
+}
+
+/** Whether turn-by-turn / Go Get can target this listing for the viewer. */
+export function hasNavigablePin(item: ItemPost, viewerUserId: string | undefined): boolean {
+  if (!viewerUserId) return false;
+  const locationOwnerId =
+    item.type === 'looking' || item.type === 'trade' ? item.userId : viewerUserId;
+  return getItemMapDestination(item, locationOwnerId) != null;
 }
 
 export function stripListingMetadata(description: string): string {

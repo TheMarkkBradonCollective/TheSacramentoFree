@@ -1097,7 +1097,23 @@ export default function ItemDetailNavigation({
     setContactlessBusy(false);
   };
 
-  if (!destination) return null;
+  if (!destination) {
+    return (
+      <div className="sbn-card p-4 text-sm text-muted leading-relaxed">
+        {isOwner ? (
+          <>
+            No map pin on this listing yet. Edit the listing and set a pickup pin to appear on the map and let
+            neighbors navigate here.
+          </>
+        ) : (
+          <>
+            This listing has no public map pin. Message the poster for pickup details — it only appears in the Stuff
+            feed until they pin a location.
+          </>
+        )}
+      </div>
+    );
+  }
 
   return (
     <>

@@ -359,7 +359,11 @@ export default function ChatSystem({
       }
       const isLooking = linkedItem.type === 'looking';
       const isTrade = linkedItem.type === 'trade';
-      const dropOffDestination = getItemMapDestination(linkedItem, linkedItem.userId) ?? myLocation;
+      const dropOffDestination = getItemMapDestination(linkedItem, linkedItem.userId);
+      if (!dropOffDestination) {
+        setErrorMsg('This listing has no map pin yet. Ask the poster to add a pickup pin before coordinating.');
+        return;
+      }
       const { ensureGoGetAllowed } = await import('../lib/goGetEligibility');
       const allowed = await ensureGoGetAllowed({
         self: userProfile,
