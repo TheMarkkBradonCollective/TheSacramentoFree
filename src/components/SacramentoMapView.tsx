@@ -405,6 +405,7 @@ function MapSelectedEventCard({
               type="button"
               onClick={() => onViewEvent(event)}
               className="sbn-btn sbn-btn-primary sbn-btn-sm"
+              aria-label="View event"
             >
               <Eye className="w-3.5 h-3.5" />
               <span>View</span>
@@ -457,6 +458,7 @@ function MapListingCardActions({
           type="button"
           onClick={() => openItemDetail(post)}
           className="sbn-btn sbn-btn-secondary sbn-btn-sm"
+          aria-label="View listing"
         >
           <Eye className="w-3.5 h-3.5" />
           <span>View</span>
@@ -469,6 +471,7 @@ function MapListingCardActions({
               type="button"
               onClick={() => onEditItem(post)}
               className="sbn-btn sbn-btn-primary sbn-btn-sm"
+              aria-label="Edit listing"
             >
               <Pencil className="w-3.5 h-3.5" />
               <span>Edit</span>
@@ -491,6 +494,7 @@ function MapListingCardActions({
                 type="button"
                 onClick={() => onStaffListingChat(post)}
                 className="sbn-btn sbn-btn-primary sbn-btn-sm"
+                aria-label="Staff chat"
               >
                 <LifeBuoy className="w-3.5 h-3.5" />
                 <span>Staff chat</span>
@@ -510,6 +514,7 @@ function MapListingCardActions({
                   )
                 }
                 className="sbn-btn sbn-btn-primary sbn-btn-sm"
+                aria-label={`${getListingContactButtonLabel(post.type)} about this listing`}
               >
                 <MessageSquare className="w-3.5 h-3.5" />
                 <span>{getListingContactButtonLabel(post.type)}</span>

@@ -72,28 +72,33 @@ export default function MapSelectionRouteRow({
               <p className="sbn-map-trip-hint">{locationHint}</p>
             )}
           </div>
-          {showNavigateButton && (
-            <button
-              type="button"
-              onClick={() => onStartNavigation?.()}
-              disabled={!canNavigate || !onStartNavigation}
-              className="sbn-btn sbn-btn-primary sbn-btn-sm disabled:opacity-40 shrink-0"
-              title={canNavigate ? `Start: ${navigateLabel}` : `Enable GPS to ${navigateLabel.toLowerCase()}`}
-            >
-              <Navigation className="w-3.5 h-3.5" />
-              {navigateLabel}
-            </button>
-          )}
-          {onOpenExternalMaps && hasLiveGps && (
-            <button
-              type="button"
-              onClick={onOpenExternalMaps}
-              className="sbn-btn sbn-btn-secondary sbn-btn-sm shrink-0"
-              title="Open directions in Google or Apple Maps"
-              aria-label="Open directions in Google or Apple Maps"
-            >
-              <Compass className="w-4 h-4" />
-            </button>
+          {(showNavigateButton || (onOpenExternalMaps && hasLiveGps)) && (
+            <div className="sbn-map-trip-actions">
+              {showNavigateButton && (
+                <button
+                  type="button"
+                  onClick={() => onStartNavigation?.()}
+                  disabled={!canNavigate || !onStartNavigation}
+                  className="sbn-btn sbn-btn-primary sbn-btn-sm disabled:opacity-40"
+                  title={canNavigate ? `Start: ${navigateLabel}` : `Enable GPS to ${navigateLabel.toLowerCase()}`}
+                  aria-label={canNavigate ? `Start: ${navigateLabel}` : `Enable GPS to ${navigateLabel.toLowerCase()}`}
+                >
+                  <Navigation className="w-3.5 h-3.5" />
+                  <span>{navigateLabel}</span>
+                </button>
+              )}
+              {onOpenExternalMaps && hasLiveGps && (
+                <button
+                  type="button"
+                  onClick={onOpenExternalMaps}
+                  className="sbn-btn sbn-btn-secondary sbn-btn-sm"
+                  title="Open directions in Google or Apple Maps"
+                  aria-label="Open directions in Google or Apple Maps"
+                >
+                  <Compass className="w-4 h-4" />
+                </button>
+              )}
+            </div>
           )}
         </div>
       )}

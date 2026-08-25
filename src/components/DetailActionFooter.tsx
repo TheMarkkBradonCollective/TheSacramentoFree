@@ -36,7 +36,7 @@ export default function DetailActionFooter({
           : 'space-y-2'
       }
     >
-      <div className="max-w-2xl mx-auto flex flex-col gap-2">
+      <div className="max-w-2xl mx-auto flex flex-col gap-2 sbn-detail-actions min-w-0">
         {primary.length > 0 && (
           <div className={primary.length > 1 ? 'grid grid-cols-2 gap-2' : ''}>
             {primary.map((action) => (

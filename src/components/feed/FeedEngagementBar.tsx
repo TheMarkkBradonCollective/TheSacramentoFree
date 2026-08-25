@@ -43,7 +43,7 @@ export default function FeedEngagementBar({
 
   return (
     <div className={layout === 'detail' ? 'space-y-3' : 'space-y-2'}>
-      <div className={`flex items-center gap-1.5 sm:gap-2 ${layout === 'detail' ? 'pt-2 border-t border-app' : ''}`}>
+      <div className={`flex flex-wrap items-center gap-1.5 sm:gap-2 min-w-0 ${layout === 'detail' ? 'pt-2 border-t border-app' : ''}`}>
         <button
           type="button"
           disabled={!canVote}
@@ -81,7 +81,7 @@ export default function FeedEngagementBar({
           <button
             type="button"
             onClick={onComment}
-            className="ml-auto flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-semibold border border-app text-muted hover:border-accent transition-colors"
+            className="ml-auto flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-semibold border border-app text-muted hover:border-accent transition-colors shrink-0"
             aria-label={`Comment, ${commentCount} ${commentCount === 1 ? 'comment' : 'comments'}`}
           >
             <MessageSquare className="w-3.5 h-3.5" />
