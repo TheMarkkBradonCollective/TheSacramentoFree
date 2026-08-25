@@ -10,12 +10,7 @@ export interface DrivingRouteResult {
 }
 
 export type OsrmTravelMode = 'driving' | 'walking' | 'cycling';
-
-const OSRM_PROFILE_ENDPOINTS: Record<OsrmTravelMode, readonly string[]> = {
-  driving: ['https://router.project-osrm.org', 'https://routing.openstreetmap.de/routed-car'],
-  cycling: ['https://routing.openstreetmap.de/routed-bike'],
-  walking: ['https://routing.openstreetmap.de/routed-foot'],
-};
+import { buildOsrmRouteUrl, OSRM_MIRROR_ENDPOINTS } from './osrmProfile';
 
 function isValidCoord(lat: number, lng: number): boolean {
   return Number.isFinite(lat) && Number.isFinite(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
@@ -39,12 +34,12 @@ export async function fetchOsrmDrivingRoute(
 
   const coordPath = `${from.lng},${from.lat};${to.lng},${to.lat}`;
 
-  for (const base of OSRM_PROFILE_ENDPOINTS[travelMode]) {
+  for (const base of OSRM_MIRROR_ENDPOINTS[travelMode]) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 12_000);
 
     try {
-      const url = `${base}/route/v1/driving/${coordPath}?overview=full&geometries=geojson&steps=false`;
+      const url = buildOsrmRouteUrl(base, coordPath, travelMode, false);
       const res = await fetch(url, {
         signal: controller.signal,
         headers: { Accept: 'application/json' },

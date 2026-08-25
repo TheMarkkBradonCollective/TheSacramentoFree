@@ -21,8 +21,8 @@ import {
   X,
 } from 'lucide-react';
 import type { LatLng } from '../lib/mapRoute';
-import { haversineMeters, geolocationAgeMs, openDrivingDirections, googleMapsDirectionsUrl } from '../lib/mapRoute';
-import { followRouteLine, projectOntoRoute, splitRouteProgress, snapPositionToRoute } from '../lib/navMapGeometry';
+import { haversineMeters, openDrivingDirections, googleMapsDirectionsUrl } from '../lib/mapRoute';
+import { followRouteLine, splitRouteProgress } from '../lib/navMapGeometry';
 import NavManeuverShield from './navigation/NavManeuverShield';
 import NavigationSettingsForm from './NavigationSettingsForm';
 import NavTravelModeSwitcher from './NavTravelModeSwitcher';
@@ -32,15 +32,12 @@ import { useTheme } from '../theme/ThemeContext';
 import {
   bearingAlongRoute,
   estimateSpeedLimitMph,
-  fetchNavigationRoute,
-  findCurrentStepIndex,
   formatArrivalTime,
   formatNavDistance,
   formatNavDuration,
   formatSpeedMph,
   getDisplayedNavGuidance,
   headingDeltaDegrees,
-  remainingRouteMeters,
   shouldFireVoiceCue,
   maneuverIconKind,
   type ManeuverIconKind,
@@ -54,10 +51,15 @@ import {
   type NavLane,
 } from '../lib/navLanes';
 import {
-  resolveNavHeading,
-  requestCompassPermission,
-  subscribeDeviceCompass,
-} from '../lib/navHeading';
+  coordinatesFromLatLng,
+  createLocationManagerState,
+  createNavigationEngineState,
+  defaultRoutingService,
+  logNavigationEvent,
+  NAV_OFF_ROUTE_THRESHOLD_M,
+  processGpsFix,
+  processNavigationUpdate,
+} from '../lib/navigation';
 import {
   headingFollowHalfLifeMs,
   smoothFollowAngle,
@@ -353,9 +355,9 @@ function NavigationDetailsSheet({
                 {currentRoad}
               </p>
             ) : null}
-            {gpsAccuracy != null && gpsAccuracy > 35 && !arrived && (
+            {gpsAccuracy != null && gpsAccuracy > 50 && !arrived && (
               <p className="text-[10px] text-[var(--sbn-nav-warning)] mt-1 truncate">
-                GPS weak — ±{Math.round(gpsAccuracy)}m
+                GPS signal is weak — ±{Math.round(gpsAccuracy)}m
               </p>
             )}
           </div>
@@ -750,6 +752,8 @@ export default function MapNavigationView({
   const lastRouteDrawRef = useRef<{ lat: number; lng: number; at: number } | null>(null);
   const routeFetchedForDestRef = useRef<string | null>(null);
   const routeRequestIdRef = useRef(0);
+  const locationManagerStateRef = useRef(createLocationManagerState());
+  const navigationEngineStateRef = useRef(createNavigationEngineState());
   const compassHeadingRef = useRef<number | null>(null);
   const settingsRef = useRef<NavigationSettings>(readNavigationSettings());
   const handleGpsUpdateRef = useRef<(position: GeolocationPosition) => void>(() => undefined);
@@ -761,15 +765,6 @@ export default function MapNavigationView({
   const NAV_ROUTE_DRAW_MIN_MS = 900;
   const NAV_POS_HALF_LIFE_DRIVING_MS = 95;
   const NAV_POS_HALF_LIFE_WALK_BIKE_MS = 75;
-  const NAV_OFF_ROUTE_THRESHOLD_M = 55;
-  const NAV_OFF_ROUTE_EVAL_MS = 900;
-  const NAV_OFF_ROUTE_TICKS = 4;
-  const NAV_ARRIVE_DEST_M = 40;
-  const NAV_ARRIVE_REMAINING_M = 40;
-  /** Drop only ancient cached samples. Do not require a "fresh" fix first —
-   *  some WebViews stamp every update several seconds in the past, which used
-   *  to freeze the puck and remaining distance. */
-  const NAV_STALE_GPS_MS = 60_000;
   const NAV_INITIAL_ROUTE_FRESH_M = 50;
 
   const [loading, setLoading] = useState(!initialRoute);
@@ -915,10 +910,15 @@ export default function MapNavigationView({
 
   const loadRoute = useCallback(async (from: LatLng, to: LatLng, isReroute = false) => {
     const requestId = ++routeRequestIdRef.current;
-    const result = await fetchNavigationRoute(from, to, settingsRef.current.travelMode);
+    const result = await defaultRoutingService.getRoute(
+      coordinatesFromLatLng(from),
+      coordinatesFromLatLng(to),
+      { travelMode: settingsRef.current.travelMode },
+    );
     if (requestId !== routeRequestIdRef.current) return null;
 
     if (!result) {
+      logNavigationEvent(isReroute ? 'REROUTE_FAILED' : 'ROUTE_REQUEST_FAILED');
       if (isReroute) {
         voiceRef.current.speak(
           'Unable to recalculate route. Continue toward your destination.',
@@ -1548,35 +1548,44 @@ export default function MapNavigationView({
     (position: GeolocationPosition) => {
       setGpsError(null);
 
-      if (geolocationAgeMs(position) > NAV_STALE_GPS_MS) return;
+      const fix = processGpsFix(position, locationManagerStateRef.current);
+      if (!fix) return;
 
-      const raw: LatLng = { lat: position.coords.latitude, lng: position.coords.longitude };
+      const raw: LatLng = { lat: fix.raw.latitude, lng: fix.raw.longitude };
+      const filtered: LatLng = { lat: fix.filtered.latitude, lng: fix.filtered.longitude };
       const activeRoute = routeRef.current;
-      const projection =
-        activeRoute && !arrivedRef.current ? projectOntoRoute(activeRoute.coords, raw) : null;
-      const snapped =
-        activeRoute && !arrivedRef.current ? snapPositionToRoute(activeRoute.coords, raw) : raw;
-      const offRouteDistance = projection?.distanceMeters ?? 0;
-
-      userPosRef.current = snapped;
-      logicPosRef.current = snapped;
-      targetPosRef.current = snapped;
-
       const dest = destinationRef.current;
 
-      const nextHeading = resolveNavHeading({
-        previous: targetHeadingRef.current,
-        lastPosition: lastGpsPosRef.current,
-        currentPosition: snapped,
-        routeCoords: activeRoute?.coords,
-        offRouteMeters: offRouteDistance,
-        gpsHeading: position.coords.heading,
-        compassHeading: compassHeadingRef.current,
-        speedMps: position.coords.speed,
-        travelMode: settingsRef.current.travelMode,
-        usePhoneCompass: settingsRef.current.usePhoneCompass,
-      });
-      targetHeadingRef.current = nextHeading;
+      const navUpdate = processNavigationUpdate(
+        {
+          raw,
+          filtered,
+          route: activeRoute,
+          destination: dest,
+          previousHeading: targetHeadingRef.current,
+          lastLogicPosition: lastGpsPosRef.current,
+          compassHeading: compassHeadingRef.current,
+          gpsHeading: fix.filtered.heading ?? null,
+          speedMps: fix.filtered.speed ?? null,
+          settings: settingsRef.current,
+          movement: fix.movement,
+          accuracyTier: fix.tier,
+          arrived: arrivedRef.current,
+          stepIndex: stepIndexRef.current,
+          offRouteTicks: offRouteTicksRef.current,
+          lastOffRouteEvalAt: offRouteEvalAtRef.current,
+        },
+        navigationEngineStateRef.current,
+      );
+
+      offRouteTicksRef.current = navUpdate.offRouteTicks;
+      offRouteEvalAtRef.current = navUpdate.lastOffRouteEvalAt;
+
+      const snapped = navUpdate.logicPosition;
+      userPosRef.current = snapped;
+      logicPosRef.current = snapped;
+      targetPosRef.current = navUpdate.targetPosition;
+      targetHeadingRef.current = navUpdate.targetHeading;
       lastGpsPosRef.current = snapped;
 
       const now = Date.now();
@@ -1586,43 +1595,29 @@ export default function MapNavigationView({
         uiTickRef.current = now;
         const displayPos = renderPosRef.current ?? snapped;
         setUserPos(displayPos);
-        setGpsAccuracy(position.coords.accuracy ?? null);
-        setSpeedMph(formatSpeedMph(position.coords.speed));
+        setGpsAccuracy(fix.raw.accuracy);
+        setSpeedMph(formatSpeedMph(fix.filtered.speed));
         setHeading(renderHeadingRef.current);
-        setOffRouteMeters(offRouteDistance);
+        setOffRouteMeters(navUpdate.offRouteMeters);
         touchActiveNavSession();
       }
 
-      const distToDest = haversineMeters(snapped, dest);
-      const remainingAlongRoute = activeRoute
-        ? remainingRouteMeters(activeRoute.coords, snapped)
-        : distToDest;
-      const hasArrived =
-        distToDest < NAV_ARRIVE_DEST_M ||
-        (activeRoute != null && remainingAlongRoute < NAV_ARRIVE_REMAINING_M && distToDest < 80);
-
       if (shouldUpdateUi && onProgressUpdateRef.current) {
-        const ratio =
-          activeRoute && activeRoute.distanceMeters > 0
-            ? Math.min(1, remainingAlongRoute / activeRoute.distanceMeters)
-            : 1;
-        const etaSeconds = activeRoute
-          ? Math.max(0, Math.round(activeRoute.durationSeconds * ratio))
-          : 0;
         onProgressUpdateRef.current({
           lat: snapped.lat,
           lng: snapped.lng,
-          heading: nextHeading,
-          speedMph: position.coords.speed != null ? Number(formatSpeedMph(position.coords.speed)) || null : null,
-          etaSeconds,
-          distanceMeters: remainingAlongRoute,
-          arrived: hasArrived,
+          heading: navUpdate.targetHeading,
+          speedMph: fix.filtered.speed != null ? Number(formatSpeedMph(fix.filtered.speed)) || null : null,
+          etaSeconds: navUpdate.etaSeconds,
+          distanceMeters: navUpdate.remainingMeters,
+          arrived: navUpdate.hasArrived,
         });
       }
 
-      if (hasArrived && !arrivedRef.current) {
+      if (navUpdate.hasArrived && !arrivedRef.current) {
         arrivedRef.current = true;
         setArrived(true);
+        logNavigationEvent('ARRIVED');
         if (voiceOnRef.current) {
           speakGuidanceCard('arrival', {
             arrived: true,
@@ -1634,18 +1629,14 @@ export default function MapNavigationView({
       }
 
       if (activeRoute && !arrivedRef.current) {
-        const nextIdx = findCurrentStepIndex(activeRoute.steps, snapped, stepIndexRef.current, {
-          coords: activeRoute.coords,
-          distanceMeters: activeRoute.distanceMeters,
-        });
         let spokeStepChange = false;
-        if (nextIdx !== stepIndexRef.current) {
-          stepIndexRef.current = nextIdx;
-          setStepIndex(nextIdx);
-          if (voiceOnRef.current && activeRoute.steps[nextIdx]) {
-            speakGuidanceCard(`step-change-${nextIdx}`, {
+        if (navUpdate.stepIndexChanged) {
+          stepIndexRef.current = navUpdate.stepIndex;
+          setStepIndex(navUpdate.stepIndex);
+          if (voiceOnRef.current && activeRoute.steps[navUpdate.stepIndex]) {
+            speakGuidanceCard(`step-change-${navUpdate.stepIndex}`, {
               route: activeRoute,
-              stepIndex: nextIdx,
+              stepIndex: navUpdate.stepIndex,
               userPos: snapped,
             });
             spokeStepChange = true;
@@ -1678,36 +1669,23 @@ export default function MapNavigationView({
           }
         }
 
-        // Off-route must use RAW GPS distance — snapped position is always on-route
-        // within the snap radius and would permanently disable rerouting.
-        const shouldEvalOffRoute = now - offRouteEvalAtRef.current >= NAV_OFF_ROUTE_EVAL_MS;
-        if (shouldEvalOffRoute) {
-          offRouteEvalAtRef.current = now;
-          const currentlyOffRoute = offRouteDistance > NAV_OFF_ROUTE_THRESHOLD_M;
-
-          if (!reroutingRef.current && currentlyOffRoute) {
-            offRouteTicksRef.current += 1;
-            if (offRouteTicksRef.current >= NAV_OFF_ROUTE_TICKS) {
-              reroutingRef.current = true;
-              setRerouting(true);
-              const rerouteKey = `reroute-${Date.now()}`;
-              if (voiceOnRef.current) {
-                voiceRef.current.speak('Recalculating route.', rerouteKey);
-              }
-              void loadRoute(raw, dest, true).then((result) => {
-                if (!result) {
-                  // Keep pressure on so we retry soon; don't reset to zero.
-                  offRouteTicksRef.current = Math.max(1, NAV_OFF_ROUTE_TICKS - 1);
-                }
-              }).finally(() => {
-                reroutingRef.current = false;
-                setRerouting(false);
-                lastRouteDrawRef.current = null;
-              });
-            }
-          } else if (!currentlyOffRoute) {
-            offRouteTicksRef.current = 0;
+        if (!reroutingRef.current && navUpdate.shouldRequestReroute) {
+          reroutingRef.current = true;
+          setRerouting(true);
+          logNavigationEvent('REROUTE_STARTED');
+          const rerouteKey = `reroute-${Date.now()}`;
+          if (voiceOnRef.current) {
+            voiceRef.current.speak('Recalculating route.', rerouteKey);
           }
+          void loadRoute(raw, dest, true).then((result) => {
+            if (!result) {
+              offRouteTicksRef.current = Math.max(1, 3);
+            }
+          }).finally(() => {
+            reroutingRef.current = false;
+            setRerouting(false);
+            lastRouteDrawRef.current = null;
+          });
         }
       }
     },
