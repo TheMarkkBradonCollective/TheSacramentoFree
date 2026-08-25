@@ -242,8 +242,6 @@ function NewspaperFrontPage({
         </aside>
       </section>
 
-      <HomeAppShowcase />
-
       {onViewListing && onRequireSignIn && (
         <section id="guest_listing_preview" className="tsf-edition__section">
           <NewspaperSectionHead
@@ -262,6 +260,8 @@ function NewspaperFrontPage({
           />
         </section>
       )}
+
+      <HomeAppShowcase />
 
       <div className="tsf-front-deck">
         <section>
@@ -403,8 +403,6 @@ function OriginalHomePage({
         </div>
       </DepthSection>
 
-      <HomeAppShowcase />
-
       {onViewListing && onRequireSignIn && (
         <DepthSection depth={3} id="guest_listing_preview">
           <NewspaperSectionHead label="Classifieds" blurb="Give. Get. Share." index="Today's edition" />
@@ -417,6 +415,8 @@ function OriginalHomePage({
           />
         </DepthSection>
       )}
+
+      <HomeAppShowcase />
 
       <DepthSection depth={2} className="mt-6">
         <NewspaperSectionHead label="From the desk" blurb="Notes from the community team." />
