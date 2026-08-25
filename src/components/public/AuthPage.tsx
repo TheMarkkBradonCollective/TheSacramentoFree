@@ -185,16 +185,6 @@ export default function AuthPage({
             </div>
           ) : null}
 
-          <button
-            type="button"
-            onClick={() => navigate('home')}
-            className="sbn-back-btn"
-            aria-label="Back to home"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back
-          </button>
-
           <header className="sbn-page-header !mb-5">
             <h1>{pageTitle}</h1>
             <p>{pageSubtitle}</p>
@@ -473,6 +463,16 @@ export default function AuthPage({
             <Gift className="w-3.5 h-3.5 text-accent" />
             {SITE.name} is 100% free — no ads, no selling, ever.
           </p>
+
+          <button
+            type="button"
+            onClick={() => navigate('home')}
+            className="sbn-btn sbn-btn-secondary w-full mt-6"
+            aria-label="Back to home"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to home
+          </button>
         </div>
       </div>
     </div>
