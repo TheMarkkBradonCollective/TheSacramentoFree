@@ -2927,7 +2927,7 @@ export default function App() {
       )}
 
       {/* Floating PWA Install Helper Banner */}
-      {showInstallBanner && !isAlreadyInstalled && (
+      {showInstallBanner && !isAlreadyInstalled && isWebsiteBrowser() && (
         <div 
           id="pwa_floating_install_banner" 
           className="fixed bottom-20 left-4 right-4 sm:bottom-6 sm:left-auto sm:right-6 sm:max-w-xs md:max-w-md z-[45] bg-surface border border-app border-l-[4px] border-l-accent shadow-2xl p-4 rounded-xl transition-all duration-300 text-app font-sans animate-fade-in"

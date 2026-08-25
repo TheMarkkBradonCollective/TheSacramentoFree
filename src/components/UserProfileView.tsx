@@ -133,9 +133,11 @@ export default function UserProfileView({
   const [awardSummary, setAwardSummary] = useState<NeighborAwardSummary | null>(null);
   const [awardsLoading, setAwardsLoading] = useState(!!onOpenAwards);
   const [activeTab, setActiveTab] = useState<ProfileTab>('profile');
-  const { apkDownloadHref, latestApk, apkStatus, loading: apkVersionLoading } = useInstallVersions(userProfile);
+  const { apkDownloadHref, latestApk, apkStatus, loading: apkVersionLoading, currentApkVersionName, currentApkVersionCode } =
+    useInstallVersions(userProfile);
   const installKind = typeof window !== 'undefined' ? detectInstallKind() : 'browser';
   const usingApk = installKind === 'android-apk';
+  const usingHomeScreen = installKind === 'pwa' || installKind === 'ios-pwa';
   const canDownloadApk = canDownloadApkFromWebsite(userProfile);
   const apkAccessMessage = apkWebsiteAccessMessage(userProfile);
 
@@ -644,6 +646,98 @@ export default function UserProfileView({
             className="min-w-0 overflow-hidden mb-5 pb-5 border-b border-app"
             id="pwa_installs_section"
           >
+            {usingApk ? (
+              <>
+                <div className="flex items-center gap-2 mb-3">
+                  <Smartphone className="w-4 h-4 text-accent" />
+                  <h3 className="text-sm font-bold text-app uppercase tracking-wider">App updates</h3>
+                </div>
+                <p className="text-xs text-muted mb-4 leading-relaxed">
+                  You are on the Android app
+                  {currentApkVersionName
+                    ? ` (${currentApkVersionName}${currentApkVersionCode != null ? `, build ${currentApkVersionCode}` : ''})`
+                    : ''}
+                  . Listings and chat refresh from the live site — use Play Store or a new APK when we ship a native
+                  build.
+                </p>
+                {apkStatus === 'update-available' ? (
+                  <p className="text-xs text-accent bg-accent/10 border border-accent/20 rounded-lg px-3 py-2 mb-4 leading-relaxed">
+                    A newer APK is available
+                    {latestApk?.betaLabel ? ` — ${latestApk.betaLabel}` : ''}.
+                  </p>
+                ) : apkStatus === 'up-to-date' ? (
+                  <div className="flex items-center gap-2.5 px-4 py-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl mb-4">
+                    <div className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
+                    <span className="text-xs font-bold text-emerald-400">Native build up to date</span>
+                  </div>
+                ) : null}
+                <div className="flex flex-col gap-2 min-w-0">
+                  <a
+                    href={SITE.playStoreBetaUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex w-full sm:w-auto items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold uppercase tracking-wide transition-colors"
+                  >
+                    <Store className="w-4 h-4 shrink-0" />
+                    <span>Update on Play Store</span>
+                  </a>
+                  {apkDownloadHref ? (
+                    <TrackedDownloadLink
+                      href={apkDownloadHref}
+                      download={latestApk?.fileName || 'sac-buy-nothing.apk'}
+                      className="inline-flex w-full sm:w-auto items-center justify-center gap-2 px-4 py-2.5 bg-accent hover:bg-accent-hover text-on-accent rounded-xl text-xs font-bold uppercase tracking-wide transition-colors"
+                    >
+                      <Download className="w-4 h-4 shrink-0" />
+                      <span>
+                        {apkVersionLoading
+                          ? 'Loading APK…'
+                          : latestApk?.betaLabel
+                            ? apkStatus === 'update-available'
+                              ? `Update to ${latestApk.betaLabel}`
+                              : `Reinstall ${latestApk.betaLabel}`
+                            : 'Download latest APK'}
+                      </span>
+                    </TrackedDownloadLink>
+                  ) : null}
+                </div>
+              </>
+            ) : usingHomeScreen ? (
+              <>
+                <div className="flex items-center gap-2 mb-3">
+                  <Smartphone className="w-4 h-4 text-accent" />
+                  <h3 className="text-sm font-bold text-app uppercase tracking-wider">App updates</h3>
+                </div>
+                <p className="text-xs text-muted mb-4 leading-relaxed">
+                  You are on the home screen app. It picks up website changes when you reopen — no APK file to manage.
+                </p>
+                <div className="flex items-center gap-2.5 px-4 py-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl mb-4">
+                  <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                  <span className="text-xs font-bold text-emerald-400">Home screen app installed</span>
+                </div>
+                <div className="flex flex-col gap-2 min-w-0">
+                  <button
+                    type="button"
+                    onClick={() => window.location.reload()}
+                    className="inline-flex w-full sm:w-auto items-center justify-center gap-2 px-4 py-2.5 border border-app bg-inset hover:bg-surface text-app rounded-xl text-xs font-bold uppercase tracking-wide transition-colors cursor-pointer"
+                  >
+                    <Download className="w-4 h-4 shrink-0" />
+                    <span>Refresh now</span>
+                  </button>
+                  {installKind === 'pwa' ? (
+                    <a
+                      href={SITE.playStoreBetaUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex w-full sm:w-auto items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold uppercase tracking-wide transition-colors"
+                    >
+                      <Store className="w-4 h-4 shrink-0" />
+                      <span>Get Android app (Go Get)</span>
+                    </a>
+                  ) : null}
+                </div>
+              </>
+            ) : (
+              <>
             <div className="flex items-center gap-2 mb-3">
               <Smartphone className="w-4 h-4 text-accent" />
               <h3 className="text-sm font-bold text-app uppercase tracking-wider">Install app</h3>
@@ -687,9 +781,7 @@ export default function UserProfileView({
                     {apkVersionLoading
                       ? 'Loading APK…'
                       : latestApk?.betaLabel
-                        ? usingApk && apkStatus === 'update-available'
-                          ? `Update to ${latestApk.betaLabel}`
-                          : `Download ${latestApk.betaLabel}`
+                        ? `Download ${latestApk.betaLabel}`
                         : 'Download latest APK'}
                   </span>
                 </TrackedDownloadLink>
@@ -776,6 +868,8 @@ export default function UserProfileView({
                   )}
                 </div>
               </div>
+            )}
+              </>
             )}
           </div>
 
