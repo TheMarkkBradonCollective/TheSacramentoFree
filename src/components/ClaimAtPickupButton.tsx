@@ -156,7 +156,7 @@ export default function ClaimAtPickupButton({
       </button>
 
       {showPicker && (
-        <div className="fixed inset-0 z-[75] bg-black/60 flex items-end sm:items-center justify-center p-4">
+        <div className="fixed inset-0 z-[75] bg-black/60 flex items-center justify-center p-4">
           <div className="sbn-card w-full max-w-md p-5 space-y-4 max-h-[90vh] overflow-y-auto">
             <h4 className="font-display font-bold text-app">Which item did you take?</h4>
             <p className="text-xs text-muted leading-snug">

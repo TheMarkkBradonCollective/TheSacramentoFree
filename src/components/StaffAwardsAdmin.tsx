@@ -283,7 +283,7 @@ function AwardEditModal({ draft, busy, isEdit, onClose, onSave }: AwardEditModal
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm">
       <div className="w-full sm:max-w-lg max-h-[92dvh] overflow-y-auto bg-surface border border-app rounded-t-2xl sm:rounded-2xl shadow-2xl">
         <div className="sticky top-0 flex items-center justify-between gap-3 px-4 py-3 border-b border-app bg-surface/95">
           <h2 className="font-display font-bold text-app">{isEdit ? 'Edit award' : 'Create award'}</h2>

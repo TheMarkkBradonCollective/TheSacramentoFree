@@ -2563,7 +2563,7 @@ html:not(:has(.sbn-mobile-shell)) .sbn-app-sheet .sbn-safe-bottom {
   display: none !important;
 }
 
-.sbn-mobile-shell.sbn-immersive-nav .sbn-mobile-prompt-offset {
+.sbn-mobile-shell.sbn-immersive-nav .{
   padding-bottom: max(1rem, var(--sbn-safe-area-bottom, 0px));
 }
 
@@ -2742,7 +2742,7 @@ html.sbn-keyboard-open .sbn-mobile-nav {
   top: calc(1rem + var(--sbn-safe-area-top, var(--sbn-inset-top, 0px)));
 }
 
-/* Lift bottom sheets/dialogs above the mobile tab bar */
+/* Legacy: bottom-sheet offset above tab bar (dialogs now use centered overlay) */
 .sbn-mobile-prompt-offset {
   padding-bottom: calc(var(--sbn-mobile-nav-h) + 1rem);
 }
@@ -2751,6 +2751,16 @@ html.sbn-keyboard-open .sbn-mobile-nav {
   .sbn-mobile-prompt-offset {
     padding-bottom: 1rem;
   }
+}
+
+/* Centered dialog/popup overlay — middle of viewport on all screen sizes */
+.sbn-modal-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
 }
 
 html.sbn-keyboard-open .sbn-fixed-bottom {
