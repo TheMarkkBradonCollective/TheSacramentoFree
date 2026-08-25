@@ -17,6 +17,8 @@ export interface DedupKeyInput {
 
 const ENTITY_DATA_KEYS = [
   'messageId',
+  'goGetSessionId',
+  'sessionId',
   'claimRequestId',
   'commentId',
   'postId',

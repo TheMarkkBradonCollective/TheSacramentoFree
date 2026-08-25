@@ -41,6 +41,8 @@ export type PushEventType =
   | 'go_get_available_now'
   | 'go_get_schedule_proposed'
   | 'go_get_schedule_confirmed'
+  | 'go_get_pickup_tomorrow'
+  | 'go_get_pickup_in_one_hour'
   | 'go_get_ready_reminder'
   | 'go_get_fulfiller_ready'
   | 'go_get_started'
@@ -194,6 +196,8 @@ const EVENT_PREF_MAP: Record<PushEventType, keyof NotificationPreferencesRow | '
   go_get_available_now: 'goGetAlerts',
   go_get_schedule_proposed: 'goGetAlerts',
   go_get_schedule_confirmed: 'goGetAlerts',
+  go_get_pickup_tomorrow: 'goGetAlerts',
+  go_get_pickup_in_one_hour: 'goGetAlerts',
   go_get_ready_reminder: 'goGetAlerts',
   go_get_fulfiller_ready: 'goGetAlerts',
   go_get_started: 'goGetAlerts',

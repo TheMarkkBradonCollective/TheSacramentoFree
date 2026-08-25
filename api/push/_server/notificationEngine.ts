@@ -72,6 +72,8 @@ async function canDeliverPush(): Promise<boolean> {
 function extractEntityId(payload: PushPayload): string | undefined {
   const data = payload.data || {};
   return (
+    data.goGetSessionId ||
+    data.sessionId ||
     data.listingId ||
     data.itemId ||
     data.messageId ||

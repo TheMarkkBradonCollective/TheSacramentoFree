@@ -449,6 +449,8 @@ export async function validateClientPush(
     case 'go_get_available_now':
     case 'go_get_schedule_proposed':
     case 'go_get_schedule_confirmed':
+    case 'go_get_pickup_tomorrow':
+    case 'go_get_pickup_in_one_hour':
     case 'go_get_ready_reminder':
     case 'go_get_fulfiller_ready':
     case 'go_get_started':

@@ -63,6 +63,10 @@ function shouldRemoveFcmToken(errorCode?: string): boolean {
     || errorCode === 'messaging/invalid-registration-token';
 }
 
+function isUrgentGoGetRing(payload: PushPayload): boolean {
+  return payload.data?.urgentGoGetRing === 'true' || payload.eventType === 'go_get_availability_request';
+}
+
 export async function sendFcmToSubscription(
   endpoint: string,
   payload: PushPayload,
@@ -95,6 +99,7 @@ export async function sendFcmToSubscription(
       : 'sac_buy_nothing_alerts';
 
   try {
+    const urgentRing = isUrgentGoGetRing(payload);
     await getMessaging(app).send({
       token,
       notification: {
@@ -103,11 +108,12 @@ export async function sendFcmToSubscription(
       },
       data: buildFcmData(payload),
       android: {
-        priority: fcmAndroidPriority(priority),
+        priority: urgentRing ? 'high' : fcmAndroidPriority(priority),
         notification: {
-          channelId,
+          channelId: urgentRing ? 'sac_buy_nothing_urgent' : channelId,
           icon: 'ic_stat_notification',
           color: '#000000',
+          ...(urgentRing ? { sound: 'default', defaultVibrateTimings: true } : {}),
         },
       },
     });

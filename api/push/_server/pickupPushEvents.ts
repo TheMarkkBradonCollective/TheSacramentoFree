@@ -9,6 +9,8 @@ const NATIVE_PICKUP_PUSH_EVENT_NAMES = new Set<string>([
   'go_get_available_now',
   'go_get_schedule_proposed',
   'go_get_schedule_confirmed',
+  'go_get_pickup_tomorrow',
+  'go_get_pickup_in_one_hour',
   'go_get_ready_reminder',
   'go_get_fulfiller_ready',
   'go_get_started',

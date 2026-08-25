@@ -126,17 +126,57 @@ FCM payloads include an `androidChannel` mapped to `sac_buy_nothing_{channel}`:
 | `user_devices` | Device registry with last-seen |
 | `notification_mutes` | Per-listing/conversation/person mute |
 
-## Pickup / Go Get (future)
+## Pickup & Go Get (dedicated subsystem)
 
-Pickup coordination will move to a dedicated state machine:
+Go Get notifications are **Android native (FCM) only** — browser/PWA subscriptions are filtered out for all pickup/Go Get events.
+
+### State machine
+
+Session statuses in `go_get_sessions` drive which notification fires:
 
 ```
-PENDING → SCHEDULED → REMINDER_SENT → PICKER_ON_WAY → PICKER_ARRIVED → PICKUP_CONFIRMED → COMPLETED
+awaiting_availability → scheduled → active → arrived → completed
+         ↓                  ↓
+   awaiting_schedule    cancelled / expired / disputed
 ```
 
-Notifications attach to state transitions rather than ad-hoc events.
+| Transition | Event | Who gets it |
+|------------|-------|-------------|
+| New live ring | `go_get_availability_request` | Fulfiller (urgent ring) |
+| Fulfiller says yes now | `go_get_available_now` | Requester |
+| Schedule proposed | `go_get_schedule_proposed` | Requester |
+| Time confirmed | `go_get_schedule_confirmed` | Fulfiller |
+| **24h before pickup** | `go_get_pickup_tomorrow` | Both parties (cron) |
+| **1h before pickup** | `go_get_pickup_in_one_hour` | Both parties (cron) |
+| **At pickup time** | `go_get_ready_reminder` | Fulfiller (cron) |
+| Fulfiller taps Ready | `go_get_fulfiller_ready` | Requester |
+| Requester starts trip | `go_get_started` | Fulfiller |
+| Requester arrives | `go_get_arrived` | Fulfiller |
+| Pickup confirmed | `go_get_completed` | Requester |
+| Cancelled | `go_get_cancelled` | Other party |
 
-## Key files
+### Dual dispatch + dedup
+
+- **Client** fires pushes from `goGetSessions.ts` after state changes
+- **Webhook** on `go_get_sessions` INSERT/UPDATE is backup (`goGetNotify.ts`)
+- **Cron** (`runGoGetReminderCron`) sends advance reminders
+- All paths dedupe via `goGetSessionId` + recipient in `notification_events`
+
+### Urgent availability ring
+
+`go_get_availability_request` includes FCM data: `urgentGoGetRing`, `ringDurationSeconds`, `ringPattern`. Android uses the `sac_buy_nothing_urgent` channel with high priority.
+
+### Key files
+
+| File | Role |
+|------|------|
+| `shared/goGetNotifications.ts` | State machine → event mapping |
+| `api/push/_server/goGetNotify.ts` | Webhook + cron handlers |
+| `src/lib/goGetSessions.ts` | Client-side session transitions + push |
+| `src/lib/pushEvents.ts` | Client notify helpers |
+| `api/push/_server/pickupPushEvents.ts` | FCM-only filter |
+
+## Key files (general)
 
 | File | Role |
 |------|------|
@@ -151,6 +191,6 @@ Notifications attach to state transitions rather than ad-hoc events.
 
 ## Roadmap
 
-1. **Done (this PR):** Central engine, priority/delivery modes, deterministic dedup, quiet hours backend, vote/reaction → in-app only, Android channels
+1. **Done:** Central engine, priority/delivery modes, deterministic dedup, quiet hours backend, vote/reaction → in-app only, Android channels, Go Get state machine + cron reminders + webhook backup
 2. **Next:** Quiet hours UI, notification batching, per-device registry, delivery tracking, dead-token cleanup
-3. **Later:** Pickup state machine, per-channel prefs (in-app / push / email), mute controls, deep-link validation, notification expiration, admin analytics
+3. **Later:** Per-channel prefs (in-app / push / email), mute controls, deep-link validation, notification expiration, admin analytics

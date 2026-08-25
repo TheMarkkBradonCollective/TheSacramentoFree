@@ -54,6 +54,8 @@ export type NotificationEventType =
   | 'go_get_available_now'
   | 'go_get_schedule_proposed'
   | 'go_get_schedule_confirmed'
+  | 'go_get_pickup_tomorrow'
+  | 'go_get_pickup_in_one_hour'
   | 'go_get_ready_reminder'
   | 'go_get_fulfiller_ready'
   | 'go_get_started'
@@ -146,7 +148,9 @@ export const EVENT_METADATA: Record<NotificationEventType, EventMetadata> = {
   go_get_available_now: { priority: 'important', deliveryMode: 'push_and_in_app', androidChannel: 'pickup', bypassQuietHours: true },
   go_get_schedule_proposed: { priority: 'important', deliveryMode: 'push_and_in_app', androidChannel: 'pickup' },
   go_get_schedule_confirmed: { priority: 'important', deliveryMode: 'push_and_in_app', androidChannel: 'pickup' },
-  go_get_ready_reminder: { priority: 'important', deliveryMode: 'push_and_in_app', androidChannel: 'pickup' },
+  go_get_pickup_tomorrow: { priority: 'important', deliveryMode: 'push_and_in_app', androidChannel: 'pickup', bypassQuietHours: true },
+  go_get_pickup_in_one_hour: { priority: 'important', deliveryMode: 'push_and_in_app', androidChannel: 'pickup', bypassQuietHours: true },
+  go_get_ready_reminder: { priority: 'important', deliveryMode: 'push_and_in_app', androidChannel: 'pickup', bypassQuietHours: true },
   go_get_fulfiller_ready: { priority: 'important', deliveryMode: 'push_and_in_app', androidChannel: 'pickup' },
   go_get_started: { priority: 'urgent', deliveryMode: 'urgent_push', androidChannel: 'urgent', bypassQuietHours: true },
   go_get_arrived: { priority: 'urgent', deliveryMode: 'urgent_push', androidChannel: 'urgent', bypassQuietHours: true },

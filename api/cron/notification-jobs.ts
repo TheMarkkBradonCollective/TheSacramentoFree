@@ -21,9 +21,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { runListingExpiryCron, runPickupReminderCron } = await import('../../push-server.bundle.cjs');
+    const { runListingExpiryCron, runPickupReminderCron, runGoGetReminderCron } = await import('../../push-server.bundle.cjs');
 
-    const [expiry, pickup] = await Promise.all([runListingExpiryCron(), runPickupReminderCron()]);
+    const [expiry, pickup, goGet] = await Promise.all([
+      runListingExpiryCron(),
+      runPickupReminderCron(),
+      runGoGetReminderCron(),
+    ]);
 
     let changelog: { ok?: boolean; error?: string; updates?: number; announcements?: number } = {};
     try {
@@ -54,6 +58,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ok: true,
       expiry: expiry.body,
       pickup: pickup.body,
+      goGet: goGet.body,
       changelog,
       staffApplyInvite,
     });

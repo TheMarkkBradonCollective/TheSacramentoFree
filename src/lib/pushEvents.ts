@@ -611,6 +611,7 @@ export async function notifyGoGetAvailabilityRequest(params: {
     tag: `go-get-availability-${params.sessionId}`,
     data: {
       goGetSessionId: params.sessionId,
+      sessionId: params.sessionId,
       urgentGoGetRing: 'true',
       ringDurationSeconds: String(params.ringDurationSeconds ?? 140),
       ringPattern: params.ringPattern ?? 'ring',
@@ -632,7 +633,7 @@ export async function notifyGoGetAvailableNow(params: {
     listingId: params.item.id,
     recipientUserIds: [params.requesterUserId],
     tag: `go-get-available-${params.sessionId}`,
-    data: { goGetSessionId: params.sessionId },
+    data: { goGetSessionId: params.sessionId, sessionId: params.sessionId },
   });
 }
 
@@ -651,7 +652,7 @@ export async function notifyGoGetScheduleProposed(params: {
     listingId: params.item.id,
     recipientUserIds: [params.requesterUserId],
     tag: `go-get-schedule-${params.sessionId}`,
-    data: { goGetSessionId: params.sessionId },
+    data: { goGetSessionId: params.sessionId, sessionId: params.sessionId },
   });
 }
 
@@ -670,7 +671,7 @@ export async function notifyGoGetScheduleConfirmed(params: {
     listingId: params.item.id,
     recipientUserIds: [params.fulfillerUserId],
     tag: `go-get-confirmed-${params.sessionId}`,
-    data: { goGetSessionId: params.sessionId },
+    data: { goGetSessionId: params.sessionId, sessionId: params.sessionId },
   });
 }
 
@@ -687,7 +688,7 @@ export async function notifyGoGetReadyReminder(params: {
     listingId: params.item.id,
     recipientUserIds: [params.fulfillerUserId],
     tag: `go-get-ready-reminder-${params.sessionId}`,
-    data: { goGetSessionId: params.sessionId },
+    data: { goGetSessionId: params.sessionId, sessionId: params.sessionId },
   });
 }
 
@@ -705,7 +706,7 @@ export async function notifyGoGetFulfillerReady(params: {
     listingId: params.item.id,
     recipientUserIds: [params.requesterUserId],
     tag: `go-get-fulfiller-ready-${params.sessionId}`,
-    data: { goGetSessionId: params.sessionId },
+    data: { goGetSessionId: params.sessionId, sessionId: params.sessionId },
   });
 }
 
@@ -723,7 +724,7 @@ export async function notifyGoGetStarted(params: {
     listingId: params.item.id,
     recipientUserIds: [params.fulfillerUserId],
     tag: `go-get-started-${params.sessionId}`,
-    data: { goGetSessionId: params.sessionId },
+    data: { goGetSessionId: params.sessionId, sessionId: params.sessionId },
   });
 }
 
@@ -741,7 +742,7 @@ export async function notifyGoGetArrived(params: {
     listingId: params.item.id,
     recipientUserIds: [params.fulfillerUserId],
     tag: `go-get-arrived-${params.sessionId}`,
-    data: { goGetSessionId: params.sessionId },
+    data: { goGetSessionId: params.sessionId, sessionId: params.sessionId },
   });
 }
 
@@ -758,7 +759,7 @@ export async function notifyGoGetCompleted(params: {
     listingId: params.item.id,
     recipientUserIds: [params.requesterUserId],
     tag: `go-get-completed-${params.sessionId}`,
-    data: { goGetSessionId: params.sessionId },
+    data: { goGetSessionId: params.sessionId, sessionId: params.sessionId },
   });
 }
 
@@ -776,7 +777,7 @@ export async function notifyGoGetCancelled(params: {
     listingId: params.item.id,
     recipientUserIds: [params.recipientUserId],
     tag: `go-get-cancelled-${params.sessionId}`,
-    data: { goGetSessionId: params.sessionId },
+    data: { goGetSessionId: params.sessionId, sessionId: params.sessionId },
   });
 }
 

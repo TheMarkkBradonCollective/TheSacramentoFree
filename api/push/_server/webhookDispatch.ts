@@ -36,6 +36,7 @@ import {
   runUpdateCommentNotify,
 } from './engagementNotify';
 import { getSupabaseAdmin } from './supabaseAdmin';
+import { runGoGetSessionWebhook } from './goGetNotify';
 
 type WebhookPayload = {
   type?: string;
@@ -158,6 +159,10 @@ export async function runSupabasePushWebhook(
         return handleItemContentUpdate(record);
       }
       return { status: 200, body: { ok: true, skipped: 'item update not notifiable' } };
+    }
+
+    if (table === 'go_get_sessions' && body.record) {
+      return runGoGetSessionWebhook(body.record, body.old_record);
     }
 
     if (table === 'item_votes' && body.record) {
@@ -304,6 +309,10 @@ export async function runSupabasePushWebhook(
       itemId: String(record.itemId || ''),
       claimerUserId,
     });
+  }
+
+  if (table === 'go_get_sessions') {
+    return runGoGetSessionWebhook(record);
   }
 
   if (table === 'item_votes') {
