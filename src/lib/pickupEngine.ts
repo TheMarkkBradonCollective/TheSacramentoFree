@@ -33,7 +33,7 @@ export const PICKUP_MODE_CONFIG: Record<CoordinationMode, PickupModeConfig> = {
     liveLocation: true,
     handoff: true,
     travelerRole: 'requester',
-    bothTravel: false,
+    bothTravel: true,
   },
   curb_alert: {
     mode: 'curb_alert',
@@ -70,7 +70,7 @@ export const PICKUP_MODE_CONFIG: Record<CoordinationMode, PickupModeConfig> = {
     handoff: true,
     // Looking poster waits (fulfiller). Neighbor bringing the item travels (requester in DB).
     travelerRole: 'requester',
-    bothTravel: false,
+    bothTravel: true,
   },
   meet_up: {
     mode: 'meet_up',

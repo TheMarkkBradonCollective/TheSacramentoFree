@@ -4,6 +4,9 @@ import { AlertTriangle, Bell, BellOff, CheckCircle, Loader2, LogOut, MessageCirc
 import type { ItemPost, UserProfile } from '../types';
 import { extractGPSCoordinates } from '../types';
 import { canViewerSeeExactLocation, convertPercentToLatLng, getItemMapDestination } from '../lib/itemLocation';
+import { resolveCoordinationDestination } from '../lib/coordinationDestination';
+import { getChatMeetLocation } from '../lib/chatMeetLocation';
+import { buildDmChatId, getListingSubitems, getSupabaseProfile } from '../supabase';
 import {
   getListingNavigateLabel,
   isContactlessClaimCategory,
@@ -54,8 +57,7 @@ import { normalizeCoordinationMode, PICKUP_MODE_CONFIG } from '../lib/pickupEngi
 import GoGetScheduledCard from './goget/GoGetScheduledCard';
 import CancelPickupDialog from './goget/CancelPickupDialog';
 import { fileGoGetViolation } from '../lib/violations';
-import { getListingSubitems, getSupabaseProfile } from '../supabase';
-import type { GoGetFulfillerLiveLocation, GoGetSession, ListingSubItem } from '../types';
+import type { ChatMeetLocation, GoGetFulfillerLiveLocation, GoGetSession, ListingSubItem } from '../types';
 import MapNavigationView, { type NavProgressUpdate } from './MapNavigationView';
 import {
   buildGoGetNavigationFollowUpMessages,
@@ -126,21 +128,6 @@ export default function ItemDetailNavigation({
   const [contactlessNotifiedLeft, setContactlessNotifiedLeft] = useState(false);
   const [contactlessBusy, setContactlessBusy] = useState(false);
 
-  // Once a session exists, its own destination is authoritative. Before that:
-  // Looking/Trade navigate to the poster's pin (fulfiller) — resolve with the
-  // poster's uid so private pins still become the drop-off/meetup destination
-  // (same as ChatSystem). Giveaways use the viewer uid for privacy rules.
-  const itemPinDestination = useMemo<LatLng | null>(() => {
-    const locationOwnerId =
-      item.type === 'looking' || item.type === 'trade' ? item.userId : currentUserId;
-    return getItemMapDestination(item, locationOwnerId);
-  }, [item, currentUserId]);
-
-  const destination = useMemo<LatLng | null>(() => {
-    if (session) return { lat: session.destinationLat, lng: session.destinationLng };
-    return itemPinDestination;
-  }, [session, itemPinDestination]);
-
   const [userLocation, setUserLocation] = useState<LatLng | null>(() => getLastLiveLatLng());
   const [navigationOpen, setNavigationOpen] = useState(false);
   const [lockedOrigin, setLockedOrigin] = useState<LatLng | null>(null);
@@ -150,13 +137,42 @@ export default function ItemDetailNavigation({
   const [cancelOpen, setCancelOpen] = useState(false);
   const [fulfillerLiveLocation, setFulfillerLiveLocation] = useState<GoGetFulfillerLiveLocation | null>(null);
   const [subitems, setSubitems] = useState<ListingSubItem[]>([]);
-  const [posterProfile, setPosterProfile] = useState<UserProfile | null>(null);
   const arrivalHandledRef = useRef(false);
   const autoStartAttemptedRef = useRef(false);
 
   const isOwner = item.userId === currentUserId;
   const isStaffOfficial = isStaffActingOfficial(userProfile);
   const pinActionsToFooter = primaryActionPlacement === 'footer' && !!onFooterActions;
+
+  const [posterProfile, setPosterProfile] = useState<UserProfile | null>(null);
+  const [chatMeetLocation, setChatMeetLocation] = useState<ChatMeetLocation | null>(null);
+  const dmChatId = useMemo(() => {
+    if (!currentUserId || isOwner) return null;
+    return buildDmChatId(currentUserId, item.userId);
+  }, [currentUserId, isOwner, item.userId]);
+
+  useEffect(() => {
+    if (!dmChatId) {
+      setChatMeetLocation(null);
+      return;
+    }
+    let cancelled = false;
+    void getChatMeetLocation(dmChatId).then((loc) => {
+      if (!cancelled) setChatMeetLocation(loc);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [dmChatId]);
+
+  const itemPinDestination = useMemo<LatLng | null>(() => {
+    return resolveCoordinationDestination(item, currentUserId, chatMeetLocation);
+  }, [item, currentUserId, chatMeetLocation]);
+
+  const destination = useMemo<LatLng | null>(() => {
+    if (session) return { lat: session.destinationLat, lng: session.destinationLng };
+    return itemPinDestination;
+  }, [session, itemPinDestination]);
 
   const coordinationGate = useMemo(() => {
     if (isOwner || !userProfile) return { ok: true as const };

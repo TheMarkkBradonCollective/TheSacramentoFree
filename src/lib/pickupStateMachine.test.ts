@@ -71,12 +71,12 @@ test('two-sided completion: only fulfiller confirms handoff from arrived', () =>
   assert.equal(picker.ok, false);
 });
 
-test('requester confirms arrival; GPS cannot skip the user', () => {
+test('dual-travel Meet: both neighbors can mark arrived', () => {
   const active = session({ status: 'active' });
-  const ok = canPerformPickupAction({ session: active, action: 'mark_arrived', actorUserId: 'picker' });
-  assert.equal(ok.ok, true);
+  const picker = canPerformPickupAction({ session: active, action: 'mark_arrived', actorUserId: 'picker' });
+  assert.equal(picker.ok, true);
   const poster = canPerformPickupAction({ session: active, action: 'mark_arrived', actorUserId: 'poster' });
-  assert.equal(poster.ok, false);
+  assert.equal(poster.ok, true);
 });
 
 test('ready window blocks marking ready hours before pickup', () => {
@@ -146,7 +146,7 @@ test('trade Meet lets both neighbors start the trip and mark arrived', () => {
     action: 'start_trip',
     actorUserId: 'poster',
   });
-  assert.equal(posterBlocked.ok, false);
+  assert.equal(posterBlocked.ok, true);
 
   const tradeActive = session({ coordinationMode: 'meet_up', status: 'active' });
   const posterArrive = canPerformPickupAction({
@@ -155,6 +155,21 @@ test('trade Meet lets both neighbors start the trip and mark arrived', () => {
     actorUserId: 'poster',
   });
   assert.equal(posterArrive.ok, true);
+});
+
+test('curb alert stays single-travel', () => {
+  const curb = session({
+    coordinationMode: 'curb_alert',
+    status: 'scheduled',
+    scheduledAt: new Date().toISOString(),
+    fulfillerReadyAt: new Date().toISOString(),
+  });
+  const posterBlocked = canPerformPickupAction({
+    session: curb,
+    action: 'start_trip',
+    actorUserId: 'poster',
+  });
+  assert.equal(posterBlocked.ok, false);
 });
 
 test('drop-off traveler is the requester (neighbor bringing the item)', () => {
