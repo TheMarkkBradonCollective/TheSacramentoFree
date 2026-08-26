@@ -79,7 +79,7 @@ function NewspaperGazetteer({ items }: { items: ItemPost[] }) {
   }, []);
 
   const activeListings = items.filter((item) => item.status === 'active').length;
-  const itemsGiven = items.filter((item) => item.type === 'giveaway' && item.status === 'completed').length;
+  const itemsGiven = dbStats?.itemsGiven ?? items.filter((item) => item.type === 'giveaway' && item.status === 'completed').length;
   const rows: { label: string; value: string }[] = [
     ...(dbStats?.memberCount != null
       ? [{ label: 'Neighbors', value: dbStats.memberCount.toLocaleString() }]

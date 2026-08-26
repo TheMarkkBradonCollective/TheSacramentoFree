@@ -76,20 +76,15 @@ export default function CommunityStatsBar({ items = [], variant = 'full' }: Comm
     getCommunityStats().then(setDbStats);
   }, []);
 
-  // Prefer counts from already-loaded items when we have them; DB counts can be 0 for guests
-  // or when RLS blocks aggregate queries even though listings loaded successfully.
+  // Prefer DB aggregate counts — the feed only loads active listings for guests (RLS),
+  // so deriving "given" / "fulfilled" from items[] would stay at 0.
   const derivedActiveListings = items.filter((i) => i.status === 'active').length;
   const derivedItemsGiven = items.filter((i) => i.type === 'giveaway' && i.status === 'completed').length;
   const derivedRequestsFulfilled = items.filter((i) => i.type === 'looking' && i.status === 'completed').length;
 
-  const activeListings =
-    items.length > 0 ? derivedActiveListings : (dbStats?.activeListings ?? derivedActiveListings);
-  const itemsGiven =
-    items.length > 0 ? derivedItemsGiven : (dbStats?.itemsGiven ?? derivedItemsGiven);
-  const requestsFulfilled =
-    items.length > 0
-      ? derivedRequestsFulfilled
-      : (dbStats?.requestsFulfilled ?? derivedRequestsFulfilled);
+  const activeListings = dbStats?.activeListings ?? derivedActiveListings;
+  const itemsGiven = dbStats?.itemsGiven ?? derivedItemsGiven;
+  const requestsFulfilled = dbStats?.requestsFulfilled ?? derivedRequestsFulfilled;
   const memberCount = dbStats?.memberCount ?? null;
 
   if (variant === 'stacked') {
