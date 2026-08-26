@@ -2265,6 +2265,9 @@ CREATE INDEX IF NOT EXISTS user_awards_user_idx ON public.user_awards ("userId")
 CREATE INDEX IF NOT EXISTS user_awards_award_idx ON public.user_awards ("awardId") WHERE "revokedAt" IS NULL;
 CREATE INDEX IF NOT EXISTS award_definitions_sort_idx ON public.award_definitions ("sortOrder", title);
 
+ALTER TABLE public.award_definitions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_awards ENABLE ROW LEVEL SECURITY;
+
 
 -- Awards functions, triggers, RLS
 
@@ -2837,6 +2840,25 @@ AS $$
   SELECT COUNT(*)::INT FROM public.users;
 $$;
 
+CREATE OR REPLACE FUNCTION public.community_stats()
+RETURNS TABLE (
+  member_count INT,
+  active_listings INT,
+  items_given INT,
+  requests_fulfilled INT
+)
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT
+    (SELECT COUNT(*)::INT FROM public.users),
+    (SELECT COUNT(*)::INT FROM public.items WHERE status = 'active'),
+    (SELECT COUNT(*)::INT FROM public.items WHERE type = 'giveaway' AND status = 'completed'),
+    (SELECT COUNT(*)::INT FROM public.items WHERE type = 'looking' AND status = 'completed');
+$$;
+
 CREATE OR REPLACE FUNCTION public.events_unlocked()
 RETURNS BOOLEAN
 LANGUAGE sql
@@ -2847,7 +2869,8 @@ AS $$
   SELECT public.community_member_count() >= 500;
 $$;
 
-GRANT EXECUTE ON FUNCTION public.community_member_count() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.community_member_count() TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.community_stats() TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.events_unlocked() TO authenticated;
 GRANT EXECUTE ON FUNCTION public.awards_unlocked() TO authenticated;
 
@@ -3362,6 +3385,8 @@ STABLE
 SECURITY INVOKER
 SET search_path = public
 AS $$
+  -- Only scan the first 20k of description so leftover data:image camera dumps
+  -- cannot statement-timeout the guest/home feed (was canceling at ~5s → 0 listings).
   SELECT
     i.id,
     COALESCE(
@@ -3370,7 +3395,7 @@ AS $$
         FROM (
           SELECT trim(part) AS u
           FROM regexp_split_to_table(
-            COALESCE(substring(i.description FROM '\[PHOTOS:\s*([^\]]+)\]'), ''),
+            COALESCE(substring(left(i.description, 20000) FROM '\[PHOTOS:\s*([^\]]+)\]'), ''),
             '\|'
           ) AS part
           WHERE trim(part) LIKE 'http%'
@@ -3378,8 +3403,8 @@ AS $$
           SELECT i."imageUrl"
           WHERE i."imageUrl" LIKE 'http%'
           UNION ALL
-          SELECT (regexp_match(i.description, '\[Photo\]:\s*(\S+)', 'i'))[1]
-          WHERE (regexp_match(i.description, '\[Photo\]:\s*(\S+)', 'i'))[1] LIKE 'http%'
+          SELECT (regexp_match(left(i.description, 20000), '\[Photo\]:\s*(\S+)', 'i'))[1]
+          WHERE (regexp_match(left(i.description, 20000), '\[Photo\]:\s*(\S+)', 'i'))[1] LIKE 'http%'
         ) AS urls(u)
         WHERE u IS NOT NULL AND u <> ''
       ),
@@ -4112,6 +4137,18 @@ CREATE POLICY "Users manage own notification preferences" ON public.notification
 DROP POLICY IF EXISTS "Users manage own saved items" ON public.saved_items;
 CREATE POLICY "Users manage own saved items" ON public.saved_items
   FOR ALL USING (auth.uid()::text = "userId") WITH CHECK (auth.uid()::text = "userId");
+
+DROP POLICY IF EXISTS "award_definitions_select" ON public.award_definitions;
+DROP POLICY IF EXISTS "award_definitions_staff_write" ON public.award_definitions;
+CREATE POLICY "award_definitions_select" ON public.award_definitions
+  FOR SELECT USING (auth.uid() IS NOT NULL);
+CREATE POLICY "award_definitions_staff_write" ON public.award_definitions
+  FOR ALL USING (public.is_staff()) WITH CHECK (public.is_staff());
+
+DROP POLICY IF EXISTS "user_awards_select" ON public.user_awards;
+CREATE POLICY "user_awards_select" ON public.user_awards
+  FOR SELECT USING (auth.uid() IS NOT NULL);
+-- Grants/revokes use SECURITY DEFINER RPCs; no direct client write policy.
 
 
 -- ---------------------------------------------------------

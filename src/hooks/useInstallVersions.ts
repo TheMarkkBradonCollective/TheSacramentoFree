@@ -61,7 +61,15 @@ function compareApkVersions(currentCode: number | null, latestCode: number | nul
 async function fetchJson<T>(path: string): Promise<T | null> {
   const res = await fetch(`${path}?_=${Date.now()}`, { cache: 'no-store' });
   if (!res.ok) return null;
-  return (await res.json()) as T;
+  const text = await res.text();
+  const trimmed = text.trim();
+  // Vite/SPA fallback can serve index.html with 200 when version.json is not built yet.
+  if (!trimmed || trimmed.startsWith('<')) return null;
+  try {
+    return JSON.parse(trimmed) as T;
+  } catch {
+    return null;
+  }
 }
 
 export function useInstallVersions(userProfile?: UserProfile | null): InstallVersionsState {

@@ -89,6 +89,18 @@ const schemaMarkers = [
     markers: ['ticketSource', 'support_tickets_source_check', 'support_tickets_staff_listing_open_idx'],
     label: 'Staff outreach support tickets',
   },
+  {
+    markers: ['community_stats', 'items_given', 'requests_fulfilled'],
+    label: 'Community stats RPC',
+  },
+  {
+    markers: ['award_definitions_select', 'user_awards_select'],
+    label: 'Awards RLS',
+  },
+  {
+    markers: ['item_feed_image_url_map', 'left(i.description, 20000)'],
+    label: 'Feed photo map (skip giant description scans)',
+  },
 ];
 
 for (const { markers, label: schemaLabel } of schemaMarkers) {
