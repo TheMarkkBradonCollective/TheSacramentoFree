@@ -3385,6 +3385,8 @@ STABLE
 SECURITY INVOKER
 SET search_path = public
 AS $$
+  -- Only scan the first 20k of description so leftover data:image camera dumps
+  -- cannot statement-timeout the guest/home feed (was canceling at ~5s → 0 listings).
   SELECT
     i.id,
     COALESCE(
@@ -3393,7 +3395,7 @@ AS $$
         FROM (
           SELECT trim(part) AS u
           FROM regexp_split_to_table(
-            COALESCE(substring(i.description FROM '\[PHOTOS:\s*([^\]]+)\]'), ''),
+            COALESCE(substring(left(i.description, 20000) FROM '\[PHOTOS:\s*([^\]]+)\]'), ''),
             '\|'
           ) AS part
           WHERE trim(part) LIKE 'http%'
@@ -3401,8 +3403,8 @@ AS $$
           SELECT i."imageUrl"
           WHERE i."imageUrl" LIKE 'http%'
           UNION ALL
-          SELECT (regexp_match(i.description, '\[Photo\]:\s*(\S+)', 'i'))[1]
-          WHERE (regexp_match(i.description, '\[Photo\]:\s*(\S+)', 'i'))[1] LIKE 'http%'
+          SELECT (regexp_match(left(i.description, 20000), '\[Photo\]:\s*(\S+)', 'i'))[1]
+          WHERE (regexp_match(left(i.description, 20000), '\[Photo\]:\s*(\S+)', 'i'))[1] LIKE 'http%'
         ) AS urls(u)
         WHERE u IS NOT NULL AND u <> ''
       ),

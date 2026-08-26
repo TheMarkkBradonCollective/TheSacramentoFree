@@ -1129,7 +1129,12 @@ async function itemFeedImageUrlMap(force = false): Promise<Map<string, string[]>
   const map = new Map<string, string[]>();
   if (itemFeedImageUrlMapRpc === false && cachedPhotoUrlMap) return cachedPhotoUrlMap;
 
-  const { data, error } = await supabase.rpc('item_feed_image_url_map');
+  const rpcCall = supabase.rpc('item_feed_image_url_map');
+  const timedOut = { data: null, error: { message: 'item_feed_image_url_map timed out' } } as const;
+  const { data, error } = await Promise.race([
+    rpcCall,
+    new Promise<typeof timedOut>((resolve) => setTimeout(() => resolve(timedOut), 2_500)),
+  ]);
   if (error) {
     itemFeedImageUrlMapRpc = false;
     console.warn('Listing photo URL map RPC unavailable:', error.message);
@@ -1168,21 +1173,28 @@ async function itemFeedDescription(itemId: string): Promise<string | null> {
  * that some descriptions still store in `[PHOTOS:]`.
  */
 async function fetchItemRowsForFeed(): Promise<Record<string, unknown>[]> {
-  const { data: heads, error } = await supabase
+  const headsQuery = supabase
     .from('items')
     .select(ITEM_FEED_COLUMNS)
     .order('createdAt', { ascending: false });
+  const bodiesQuery = supabase
+    .from('items')
+    .select('id,description')
+    .not('description', 'ilike', '%data:image%');
+  const photosPromise = itemFeedImageUrlMap();
+
+  const [{ data: heads, error }, bodyResult, photoUrlsById] = await Promise.all([
+    headsQuery,
+    bodiesQuery,
+    photosPromise,
+  ]);
 
   if (error) {
     handleSupabaseError(error, 'items');
     throw error;
   }
 
-  const { data: bodies, error: bodyError } = await supabase
-    .from('items')
-    .select('id,description')
-    .not('description', 'ilike', '%data:image%');
-
+  const { data: bodies, error: bodyError } = bodyResult;
   if (bodyError) {
     console.warn('Listing descriptions fetch skipped bloated rows filter:', bodyError);
   }
@@ -1194,23 +1206,25 @@ async function fetchItemRowsForFeed(): Promise<Record<string, unknown>[]> {
     descById.set(id, plainListingDescription((row as { description?: string }).description));
   }
 
-  const missing = (heads ?? []).filter((row) => !descById.get(String((row as { id?: string }).id ?? '')));
-  if (missing.length > 0) {
-    const probeId = String((missing[0] as { id?: string }).id ?? '');
-    const probe = await itemFeedDescription(probeId);
-    if (probe != null) {
-      descById.set(probeId, plainListingDescription(probe));
-      await Promise.all(
-        missing.slice(1).map(async (row) => {
-          const id = String((row as { id?: string }).id ?? '');
-          const text = await itemFeedDescription(id);
-          if (text != null) descById.set(id, plainListingDescription(text));
-        }),
-      );
+  // Titles + imageUrl on heads are enough to render the feed. Don't N+1
+  // description RPCs when the bulk body query failed or skipped bloated rows.
+  if (!bodyError) {
+    const missing = (heads ?? []).filter((row) => !descById.get(String((row as { id?: string }).id ?? '')));
+    if (missing.length > 0 && missing.length <= 12) {
+      const probeId = String((missing[0] as { id?: string }).id ?? '');
+      const probe = await itemFeedDescription(probeId);
+      if (probe != null) {
+        descById.set(probeId, plainListingDescription(probe));
+        await Promise.all(
+          missing.slice(1).map(async (row) => {
+            const id = String((row as { id?: string }).id ?? '');
+            const text = await itemFeedDescription(id);
+            if (text != null) descById.set(id, plainListingDescription(text));
+          }),
+        );
+      }
     }
   }
-
-  const photoUrlsById = await itemFeedImageUrlMap();
 
   return (heads ?? []).map((row) => {
     const id = String((row as { id?: string }).id ?? '');

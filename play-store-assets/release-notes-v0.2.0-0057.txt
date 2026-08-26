@@ -1,0 +1,8 @@
+Android beta 0.2.0 (57)
+
+• Home listings load again — live neighborhood classifieds on the website
+• Community Given away / Fulfilled totals use real database counts
+• Live listings sit above the app screenshot tour
+• Download app is a top-level nav item on the website
+• Full transparent hands logo on splash and in-app chrome
+• Closed testing opt-in: https://play.google.com/apps/testing/org.sacramentobuynothing.app

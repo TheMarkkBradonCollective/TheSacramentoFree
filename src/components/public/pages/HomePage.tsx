@@ -78,14 +78,19 @@ function NewspaperGazetteer({ items }: { items: ItemPost[] }) {
     void getCommunityStats().then(setDbStats);
   }, []);
 
-  const activeListings = items.filter((item) => item.status === 'active').length;
-  const itemsGiven = dbStats?.itemsGiven ?? items.filter((item) => item.type === 'giveaway' && item.status === 'completed').length;
+  const activeListings = dbStats?.activeListings ?? items.filter((item) => item.status === 'active').length;
+  const itemsGiven =
+    dbStats?.itemsGiven ?? items.filter((item) => item.type === 'giveaway' && item.status === 'completed').length;
+  const requestsFulfilled =
+    dbStats?.requestsFulfilled ??
+    items.filter((item) => item.type === 'looking' && item.status === 'completed').length;
   const rows: { label: string; value: string }[] = [
     ...(dbStats?.memberCount != null
       ? [{ label: 'Neighbors', value: dbStats.memberCount.toLocaleString() }]
       : []),
     { label: 'On the porch', value: activeListings.toLocaleString() },
     { label: 'Given away', value: itemsGiven.toLocaleString() },
+    { label: 'Fulfilled', value: requestsFulfilled.toLocaleString() },
   ];
 
   return (
