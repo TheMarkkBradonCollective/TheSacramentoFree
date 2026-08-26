@@ -15,10 +15,14 @@ export default function AppBootSplash() {
       aria-busy="true"
       aria-label={`Loading ${brandName}`}
     >
-      <div className={`flex flex-col items-center gap-3 ${isNative ? 'sbn-boot-logo-glow' : ''}`}>
+      <div className="flex flex-col items-center gap-3">
         <BrandLogo
           className="flex flex-col items-center"
-          imgClassName={isNative ? 'h-16 w-16 object-cover rounded-2xl shadow-app' : 'h-11 w-11 object-cover rounded-xl'}
+          imgClassName={
+            isNative
+              ? 'h-28 w-auto max-w-[280px] object-contain bg-transparent'
+              : 'h-20 w-auto max-w-[220px] object-contain bg-transparent'
+          }
           showTitle={false}
         />
         <div className="text-center">
