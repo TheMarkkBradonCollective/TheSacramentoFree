@@ -43,15 +43,6 @@ function formatEventDate(iso: string): string {
   });
 }
 
-function formatPostedDate(createdAt: CommunityEvent['createdAt']): string {
-  if (!createdAt) return 'Recent';
-  const ms =
-    typeof createdAt === 'object' && createdAt !== null && 'seconds' in createdAt
-      ? (createdAt as { seconds: number }).seconds * 1000
-      : createdAt;
-  return new Date(ms).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-}
-
 export default function EventCard({
   event,
   currentUserId,
@@ -191,40 +182,32 @@ export default function EventCard({
             </h3>
           </button>
 
-          <p className="text-[10px] sm:text-xs font-medium text-muted flex items-center gap-1 mt-0.5 sm:mt-1 truncate">
-            <MapPin className="w-3 h-3 text-accent shrink-0" />
-            <span className="truncate">
-              {event.location} · {event.neighborhood}
-            </span>
-          </p>
-
           <p className="hidden sm:block text-sm text-muted mt-2 leading-relaxed line-clamp-3">{event.description}</p>
 
-          <div className="mt-1 sm:mt-3 space-y-0.5">
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] sm:text-xs text-muted">
-              <span className="inline-flex items-center gap-0.5 shrink-0">
-                <Calendar className="w-3 h-3 shrink-0" />
-                {formatEventDate(event.eventStartAt)}
+          <div className="item-feed-card__meta text-[10px] sm:text-xs text-muted">
+            <span className="inline-flex items-center gap-0.5 min-w-0 truncate">
+              <MapPin className="w-3 h-3 text-accent shrink-0" />
+              <span className="truncate">{event.neighborhood}</span>
+            </span>
+            {distanceMeters != null && (
+              <span className="inline-flex items-center gap-0.5 shrink-0 font-semibold text-accent">
+                <Navigation className="w-3 h-3 shrink-0" />
+                {formatRouteDistance(distanceMeters)}
               </span>
-              {distanceMeters != null && (
-                <span className="inline-flex items-center gap-0.5 shrink-0 font-semibold text-accent">
-                  <Navigation className="w-3 h-3 shrink-0" />
-                  {formatRouteDistance(distanceMeters)}
-                </span>
-              )}
-              <span className="inline-flex items-center gap-0.5 shrink-0">
-                Posted {formatPostedDate(event.createdAt)}
-              </span>
-            </div>
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] sm:text-xs text-muted">
-              <ListingCardStatsInline
-                viewCount={event.viewCount ?? 0}
-                upvotes={voteState.upvotes}
-                downvotes={voteState.downvotes}
-                commentCount={commentCount}
-                goingCount={goingCount}
-              />
-            </div>
+            )}
+            <span className="inline-flex items-center gap-0.5 shrink-0">
+              <Calendar className="w-3 h-3 shrink-0" />
+              {formatEventDate(event.eventStartAt)}
+            </span>
+          </div>
+          <div className="item-feed-card__counts text-[10px] sm:text-xs text-muted">
+            <ListingCardStatsInline
+              viewCount={event.viewCount ?? 0}
+              upvotes={voteState.upvotes}
+              downvotes={voteState.downvotes}
+              commentCount={commentCount}
+              goingCount={goingCount}
+            />
           </div>
 
           {!isCancelled && (
