@@ -70,6 +70,7 @@ function listing(
     imageUrls: partial.imageUrls ?? (partial.imageUrl ? [partial.imageUrl] : []),
     createdAt,
     updatedAt: createdAt,
+    viewCount: partial.viewCount,
     description: buildListingDescription({
       type: partial.type,
       details: partial.details,
@@ -124,6 +125,7 @@ export const PLAY_STORE_DEMO_ITEMS: ItemPost[] = [
     details: 'L-shaped sectional in good shape — no tears, pet-free home. You haul from the garage; two-person lift recommended.',
     pickupNotes: 'Message me and we can pick a porch time.',
     createdHoursAgo: 3,
+    viewCount: 24,
   }),
   listing({
     id: 'demo-item-tv',
@@ -137,6 +139,7 @@ export const PLAY_STORE_DEMO_ITEMS: ItemPost[] = [
     imageUrl: '/play-store-demo/tv.jpg',
     details: 'Works great — upgraded to a bigger screen. Includes HDMI cable and wall mount bracket if you want it.',
     createdHoursAgo: 6,
+    viewCount: 18,
   }),
   listing({
     id: 'demo-item-baby-toys',
@@ -224,6 +227,7 @@ export const PLAY_STORE_DEMO_EVENTS: CommunityEvent[] = [
     isFree: true,
     status: 'upcoming',
     imageUrl: '/play-store-demo/event-picnic.jpg',
+    viewCount: 41,
     createdAt: hoursAgo(30),
     updatedAt: hoursAgo(30),
   },
@@ -243,6 +247,7 @@ export const PLAY_STORE_DEMO_EVENTS: CommunityEvent[] = [
     locationLng: -121.483,
     isFree: true,
     status: 'upcoming',
+    viewCount: 12,
     createdAt: hoursAgo(50),
     updatedAt: hoursAgo(50),
   },
@@ -260,6 +265,7 @@ export const PLAY_STORE_DEMO_FEED_POSTS: FeedPost[] = [
     status: 'active',
     createdAt: hoursAgo(1.5),
     updatedAt: hoursAgo(1.5),
+    viewCount: 16,
   },
   {
     id: 'demo-feed-job-ask',
@@ -272,6 +278,7 @@ export const PLAY_STORE_DEMO_FEED_POSTS: FeedPost[] = [
     status: 'active',
     createdAt: hoursAgo(5),
     updatedAt: hoursAgo(5),
+    viewCount: 9,
   },
   {
     id: 'demo-feed-resume-offer',

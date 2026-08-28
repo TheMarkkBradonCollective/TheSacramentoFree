@@ -38,7 +38,8 @@ export function applyEventRealtimeChange(
     if (
       current.updatedAt === event.updatedAt &&
       current.status === event.status &&
-      current.title === event.title
+      current.title === event.title &&
+      current.viewCount === event.viewCount
     ) {
       return prev;
     }

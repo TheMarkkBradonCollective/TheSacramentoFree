@@ -6,7 +6,7 @@ import EventStatusBadge from './EventStatusBadge';
 import UserAvatar from './UserAvatar';
 import ListingImage from './ListingImage';
 import ListingViewBadge from './ListingViewBadge';
-import { EventCardEngagementOverlay, EventCardStatsInline } from './EventCardStats';
+import { ListingCardEngagementOverlay, ListingCardStatsInline } from './ListingCardStats';
 import { isEventPast, resolveEventStatus } from '../lib/eventRsvp';
 import { isSeriesEvent } from '../lib/eventSeries';
 import { formatRouteDistance } from '../lib/mapRoute';
@@ -75,6 +75,7 @@ export default function EventCard({
   const voteState = engagement.getVotesForEvent(event.id);
   const comments = engagement.getCommentsForEvent(event.id);
   const commentCount = comments.length;
+  const goingCount = rsvpState.going;
   const coverImage = event.imageUrl;
   const showSeriesBadge = isSeriesEvent(event) && (seriesUpcomingCount ?? 0) > 1;
 
@@ -107,10 +108,11 @@ export default function EventCard({
               <span className="sbn-badge sbn-badge-grid sbn-badge-give shrink min-w-0 truncate shadow-sm">Event</span>
               <ListingViewBadge count={event.viewCount ?? 0} placement="inline" compact />
             </div>
-            <EventCardEngagementOverlay
+            <ListingCardEngagementOverlay
               upvotes={voteState.upvotes}
               downvotes={voteState.downvotes}
               commentCount={commentCount}
+              goingCount={goingCount}
             />
           </div>
           <div className="item-feed-tile__body p-2">
@@ -160,6 +162,13 @@ export default function EventCard({
           ) : (
             <Calendar className="w-6 h-6 text-subtle" aria-hidden />
           )}
+          <ListingViewBadge count={event.viewCount ?? 0} placement="corner" compact />
+          <ListingCardEngagementOverlay
+            upvotes={voteState.upvotes}
+            downvotes={voteState.downvotes}
+            commentCount={commentCount}
+            goingCount={goingCount}
+          />
         </button>
 
         <div className="item-feed-card__copy">
@@ -205,11 +214,12 @@ export default function EventCard({
             <span className="inline-flex items-center gap-0.5 shrink-0">
               Posted {formatPostedDate(event.createdAt)}
             </span>
-            <EventCardStatsInline
+            <ListingCardStatsInline
               viewCount={event.viewCount ?? 0}
               upvotes={voteState.upvotes}
               downvotes={voteState.downvotes}
               commentCount={commentCount}
+              goingCount={goingCount}
             />
           </div>
 

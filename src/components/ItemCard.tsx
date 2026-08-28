@@ -344,6 +344,12 @@ export default function ItemCard({
           ) : (
             <Tag className="w-6 h-6 text-subtle" aria-hidden />
           )}
+          <ListingViewBadge count={item.viewCount ?? 0} placement="corner" compact />
+          <ListingCardEngagementOverlay
+            upvotes={voteState.upvotes}
+            downvotes={voteState.downvotes}
+            commentCount={comments.length}
+          />
         </button>
 
         <div className="item-feed-card__copy">

@@ -1,10 +1,12 @@
-import { ChevronDown, ChevronUp, Eye, MessageSquare } from 'lucide-react';
+import { Check, ChevronDown, ChevronUp, Eye, MessageSquare } from 'lucide-react';
 import { formatListingViewCount } from './ListingViewBadge';
 
 interface ListingCardEngagementProps {
   upvotes: number;
   downvotes: number;
   commentCount: number;
+  /** Event RSVP going count — omitted on Stuff cards. */
+  goingCount?: number;
 }
 
 interface ListingCardStatsProps extends ListingCardEngagementProps {
@@ -17,11 +19,12 @@ function statItemClass(variant: 'overlay' | 'inline'): string {
     : 'inline-flex items-center gap-0.5 shrink-0 tabular-nums';
 }
 
-/** Vote + comment counts on grid card thumbnails — each stat hidden at zero. */
+/** Vote + comment counts on card thumbnails — each engagement stat hidden at zero. */
 export function ListingCardEngagementOverlay({
   upvotes,
   downvotes,
   commentCount,
+  goingCount = 0,
 }: ListingCardEngagementProps) {
   const items = [
     upvotes > 0 ? (
@@ -34,6 +37,12 @@ export function ListingCardEngagementOverlay({
       <span key="down" className={statItemClass('overlay')} aria-label={`${downvotes} downvotes`} title="Downvotes">
         <ChevronDown className="h-3 w-3 shrink-0" aria-hidden />
         {downvotes}
+      </span>
+    ) : null,
+    goingCount > 0 ? (
+      <span key="going" className={statItemClass('overlay')} aria-label={`${goingCount} going`} title="Going">
+        <Check className="h-3 w-3 shrink-0" aria-hidden />
+        {goingCount}
       </span>
     ) : null,
     commentCount > 0 ? (
@@ -53,21 +62,20 @@ export function ListingCardEngagementOverlay({
   );
 }
 
-/** Listing stats on list cards — each stat hidden at zero. */
+/** Stats on list cards — view count always shown; other stats hidden at zero. */
 export function ListingCardStatsInline({
   viewCount,
   upvotes,
   downvotes,
   commentCount,
+  goingCount = 0,
 }: ListingCardStatsProps) {
   return (
     <>
-      {viewCount > 0 ? (
-        <span className={statItemClass('inline')} aria-label={`${viewCount} views`} title="Views">
-          <Eye className="h-3 w-3 shrink-0 text-muted" aria-hidden />
-          {formatListingViewCount(viewCount)}
-        </span>
-      ) : null}
+      <span className={statItemClass('inline')} aria-label={`${viewCount} views`} title="Views">
+        <Eye className="h-3 w-3 shrink-0 text-muted" aria-hidden />
+        {formatListingViewCount(viewCount)}
+      </span>
       {upvotes > 0 ? (
         <span className={statItemClass('inline')} aria-label={`${upvotes} upvotes`} title="Upvotes">
           <ChevronUp className="h-3 w-3 shrink-0 text-muted" aria-hidden />
@@ -78,6 +86,12 @@ export function ListingCardStatsInline({
         <span className={statItemClass('inline')} aria-label={`${downvotes} downvotes`} title="Downvotes">
           <ChevronDown className="h-3 w-3 shrink-0 text-muted" aria-hidden />
           {downvotes}
+        </span>
+      ) : null}
+      {goingCount > 0 ? (
+        <span className={statItemClass('inline')} aria-label={`${goingCount} going`} title="Going">
+          <Check className="h-3 w-3 shrink-0 text-muted" aria-hidden />
+          {goingCount}
         </span>
       ) : null}
       {commentCount > 0 ? (

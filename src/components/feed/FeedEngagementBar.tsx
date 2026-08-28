@@ -1,7 +1,8 @@
-import { ChevronDown, ChevronUp, MessageSquare } from 'lucide-react';
+import { ChevronDown, ChevronUp, Eye, MessageSquare } from 'lucide-react';
 import type { ContentVoteState } from '../../types';
 import type { FeedEngagementApi } from '../../hooks/useFeedEngagement';
 import { FEED_REACTION_EMOJI, type FeedReactionEmoji } from '../../lib/feedReactions';
+import { formatListingViewCount } from '../ListingViewBadge';
 
 const voteBtnClass = (active: boolean, disabled: boolean) =>
   `flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
@@ -22,6 +23,7 @@ interface FeedEngagementBarProps {
   engagement: FeedEngagementApi;
   layout?: 'compact' | 'detail';
   commentCount?: number;
+  viewCount?: number;
   onComment?: () => void;
 }
 
@@ -35,6 +37,7 @@ export default function FeedEngagementBar({
   engagement,
   layout = 'compact',
   commentCount = 0,
+  viewCount = 0,
   onComment,
 }: FeedEngagementBarProps) {
   const canVote = !isOwn;
@@ -77,6 +80,14 @@ export default function FeedEngagementBar({
           <ChevronDown className="w-4 h-4" />
           <span className="tabular-nums">{countLabel(votes.downvotes)}</span>
         </button>
+        <span
+          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-semibold border border-app text-muted"
+          aria-label={`${viewCount} views`}
+          title="Unique neighbors who opened this post"
+        >
+          <Eye className="w-3.5 h-3.5 shrink-0" aria-hidden />
+          <span className="tabular-nums">{formatListingViewCount(viewCount)}</span>
+        </span>
         {layout === 'compact' && onComment ? (
           <button
             type="button"
