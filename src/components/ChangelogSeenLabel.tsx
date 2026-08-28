@@ -6,11 +6,10 @@ interface ChangelogSeenLabelProps {
   className?: string;
 }
 
-/** Unique neighbors who opened the full update or news story. */
+/** Unique neighbors who saw this update or news story. Always shown, including zero. */
 export default function ChangelogSeenLabel({ count, className = '' }: ChangelogSeenLabelProps) {
-  if (count <= 0) return null;
-
-  const label = `Seen by ${formatListingViewCount(count)} user${count === 1 ? '' : 's'}`;
+  const safeCount = Number.isFinite(count) && count > 0 ? Math.floor(count) : 0;
+  const label = `Seen by ${formatListingViewCount(safeCount)} user${safeCount === 1 ? '' : 's'}`;
   return (
     <span
       className={`inline-flex items-center gap-1 text-[11px] text-muted tabular-nums ${className}`}
