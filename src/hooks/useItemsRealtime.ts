@@ -40,7 +40,8 @@ export function applyItemRealtimeChange(
     if (
       current.updatedAt === item.updatedAt &&
       current.status === item.status &&
-      current.title === item.title
+      current.title === item.title &&
+      current.viewCount === item.viewCount
     ) {
       return prev;
     }

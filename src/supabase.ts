@@ -5,6 +5,7 @@ import { compressImageIfNeeded, guessImageContentType } from './lib/imageUrl';
 import { formatItemClaimedChatMessage, formatItemFulfilledChatMessage, formatSelfClaimRequestMessage, formatSelfDropOffRequestMessage } from './lib/claims';
 import { blockReasonLabel } from './lib/blockReasons';
 import { normalizeItemMedia, plainListingDescription } from './lib/listingContent';
+import { coerceViewCount } from './lib/viewCount';
 import { CHANGELOG_AUTHOR_UID } from '../shared/changelogAuthor';
 import { listingExpiresAtIso } from '../shared/listingExpiry';
 import { mergeByIdNewestFirst, SEEDED_APP_UPDATES, SEEDED_HELP_ANNOUNCEMENTS } from '../shared/changelogSeed';
@@ -1537,7 +1538,10 @@ export async function uploadProfilePhoto(file: File, userId: string): Promise<st
 }
 
 export function normalizeSupabaseItem(row: ItemPost): ItemPost {
-  return normalizeItemMedia(row);
+  return {
+    ...normalizeItemMedia(row),
+    viewCount: coerceViewCount(row.viewCount),
+  };
 }
 
 function normalizeItemFromRow(row: ItemPost): ItemPost {
@@ -4348,7 +4352,7 @@ export function normalizeSupabaseEvent(row: CommunityEvent): CommunityEvent {
     ...row,
     hostedBy: row.hostedBy?.trim() || null,
     seriesId: row.seriesId?.trim() || null,
-    viewCount: typeof row.viewCount === 'number' && Number.isFinite(row.viewCount) ? row.viewCount : 0,
+    viewCount: coerceViewCount(row.viewCount),
     locationLat:
       typeof row.locationLat === 'number' && Number.isFinite(row.locationLat) ? row.locationLat : null,
     locationLng:
@@ -5308,7 +5312,7 @@ function normalizeAppUpdateRow(
     directorName,
     directorTitle: String(row.directorTitle || DIRECTOR_MESSAGE.title),
     postedByUserId,
-    viewCount: typeof row.viewCount === 'number' && Number.isFinite(row.viewCount) ? row.viewCount : 0,
+    viewCount: coerceViewCount(row.viewCount),
     createdAt: coerceToIsoDate(row.createdAt),
     updatedAt: coerceToIsoDate(row.updatedAt),
   };
@@ -5586,7 +5590,7 @@ function normalizeHelpAnnouncementRow(row: Record<string, unknown>): HelpAnnounc
     authorName: String(row.authorName || 'Staff'),
     authorTitle: String(row.authorTitle || 'Community team'),
     postedByUserId: String(row.postedByUserId || ''),
-    viewCount: typeof row.viewCount === 'number' && Number.isFinite(row.viewCount) ? row.viewCount : 0,
+    viewCount: coerceViewCount(row.viewCount),
     createdAt: coerceToIsoDate(row.createdAt),
     updatedAt: coerceToIsoDate(row.updatedAt),
   };

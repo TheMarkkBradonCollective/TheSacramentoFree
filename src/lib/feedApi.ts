@@ -6,6 +6,7 @@ import { compressImageIfNeeded, guessImageContentType } from './imageUrl';
 import { commentPostedAsNeighbor } from './staffInteractionMode';
 import { FEED_REACTION_EMOJI, type FeedReactionEmoji } from './feedReactions';
 import { getPostClientMetadata, type InstallKind } from './installContext';
+import { coerceViewCount } from './viewCount';
 
 const FEED_CLIENT_KINDS = new Set<InstallKind>(['browser', 'pwa', 'ios-pwa', 'android-apk']);
 
@@ -45,7 +46,7 @@ function normalizePollOptions(raw: unknown): FeedPollOption[] {
     .filter((option): option is FeedPollOption => option != null);
 }
 
-function normalizeFeedPost(row: Record<string, unknown>): FeedPost {
+export function normalizeFeedPost(row: Record<string, unknown>): FeedPost {
   const rawImages = row.imageUrls ?? row.image_urls;
   let imageUrls: string[] = [];
   if (Array.isArray(rawImages)) {
@@ -79,7 +80,7 @@ function normalizeFeedPost(row: Record<string, unknown>): FeedPost {
         : undefined,
     createdAt: String(row.createdAt ?? row.created_at ?? new Date().toISOString()),
     updatedAt: String(row.updatedAt ?? row.updated_at ?? new Date().toISOString()),
-    viewCount: Number(row.viewCount ?? row.view_count ?? 0) || 0,
+    viewCount: coerceViewCount(row.viewCount ?? row.view_count),
   };
 }
 

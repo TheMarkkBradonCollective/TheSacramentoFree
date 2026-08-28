@@ -23,8 +23,6 @@ interface FeedPostViewCountProps {
 }
 
 export function FeedPostViewCount({ count, className = '' }: FeedPostViewCountProps) {
-  if (count <= 0) return null;
-
   const label = `${formatListingViewCount(count)} view${count === 1 ? '' : 's'}`;
   return (
     <span

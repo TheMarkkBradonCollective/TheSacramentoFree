@@ -216,6 +216,7 @@ export default function FeedPostDetailView({
               votesLoading={engagement.votesLoading}
               engagement={engagement}
               layout="detail"
+              viewCount={post.viewCount ?? 0}
             />
 
             <FeedPostComments

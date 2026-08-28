@@ -6,7 +6,7 @@ import EventStatusBadge from './EventStatusBadge';
 import UserAvatar from './UserAvatar';
 import ListingImage from './ListingImage';
 import ListingViewBadge from './ListingViewBadge';
-import { EventCardEngagementOverlay, EventCardStatsInline } from './EventCardStats';
+import { ListingCardEngagementOverlay, ListingCardStatsInline } from './ListingCardStats';
 import { isEventPast, resolveEventStatus } from '../lib/eventRsvp';
 import { isSeriesEvent } from '../lib/eventSeries';
 import { formatRouteDistance } from '../lib/mapRoute';
@@ -43,15 +43,6 @@ function formatEventDate(iso: string): string {
   });
 }
 
-function formatPostedDate(createdAt: CommunityEvent['createdAt']): string {
-  if (!createdAt) return 'Recent';
-  const ms =
-    typeof createdAt === 'object' && createdAt !== null && 'seconds' in createdAt
-      ? (createdAt as { seconds: number }).seconds * 1000
-      : createdAt;
-  return new Date(ms).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-}
-
 export default function EventCard({
   event,
   currentUserId,
@@ -75,6 +66,7 @@ export default function EventCard({
   const voteState = engagement.getVotesForEvent(event.id);
   const comments = engagement.getCommentsForEvent(event.id);
   const commentCount = comments.length;
+  const goingCount = rsvpState.going;
   const coverImage = event.imageUrl;
   const showSeriesBadge = isSeriesEvent(event) && (seriesUpcomingCount ?? 0) > 1;
 
@@ -107,10 +99,11 @@ export default function EventCard({
               <span className="sbn-badge sbn-badge-grid sbn-badge-give shrink min-w-0 truncate shadow-sm">Event</span>
               <ListingViewBadge count={event.viewCount ?? 0} placement="inline" compact />
             </div>
-            <EventCardEngagementOverlay
+            <ListingCardEngagementOverlay
               upvotes={voteState.upvotes}
               downvotes={voteState.downvotes}
               commentCount={commentCount}
+              goingCount={goingCount}
             />
           </div>
           <div className="item-feed-tile__body p-2">
@@ -160,6 +153,13 @@ export default function EventCard({
           ) : (
             <Calendar className="w-6 h-6 text-subtle" aria-hidden />
           )}
+          <ListingViewBadge count={event.viewCount ?? 0} placement="corner" compact />
+          <ListingCardEngagementOverlay
+            upvotes={voteState.upvotes}
+            downvotes={voteState.downvotes}
+            commentCount={commentCount}
+            goingCount={goingCount}
+          />
         </button>
 
         <div className="item-feed-card__copy">
@@ -182,19 +182,12 @@ export default function EventCard({
             </h3>
           </button>
 
-          <p className="text-[10px] sm:text-xs font-medium text-muted flex items-center gap-1 mt-0.5 sm:mt-1 truncate">
-            <MapPin className="w-3 h-3 text-accent shrink-0" />
-            <span className="truncate">
-              {event.location} · {event.neighborhood}
-            </span>
-          </p>
-
           <p className="hidden sm:block text-sm text-muted mt-2 leading-relaxed line-clamp-3">{event.description}</p>
 
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1 sm:mt-3 text-[10px] sm:text-xs text-muted">
-            <span className="inline-flex items-center gap-0.5 shrink-0">
-              <Calendar className="w-3 h-3 shrink-0" />
-              {formatEventDate(event.eventStartAt)}
+          <div className="item-feed-card__meta text-[10px] sm:text-xs text-muted">
+            <span className="inline-flex items-center gap-0.5 min-w-0 truncate">
+              <MapPin className="w-3 h-3 text-accent shrink-0" />
+              <span className="truncate">{event.neighborhood}</span>
             </span>
             {distanceMeters != null && (
               <span className="inline-flex items-center gap-0.5 shrink-0 font-semibold text-accent">
@@ -203,13 +196,17 @@ export default function EventCard({
               </span>
             )}
             <span className="inline-flex items-center gap-0.5 shrink-0">
-              Posted {formatPostedDate(event.createdAt)}
+              <Calendar className="w-3 h-3 shrink-0" />
+              {formatEventDate(event.eventStartAt)}
             </span>
-            <EventCardStatsInline
+          </div>
+          <div className="item-feed-card__counts text-[10px] sm:text-xs text-muted">
+            <ListingCardStatsInline
               viewCount={event.viewCount ?? 0}
               upvotes={voteState.upvotes}
               downvotes={voteState.downvotes}
               commentCount={commentCount}
+              goingCount={goingCount}
             />
           </div>
 

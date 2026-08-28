@@ -2464,6 +2464,30 @@ html.capacitor-android .sbn-sidebar-overlay {
   padding: 0.65rem 0.75rem 0.7rem;
 }
 
+.item-feed-card__meta {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  margin-top: 0.25rem;
+}
+
+.item-feed-card__counts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  margin-top: 0.125rem;
+}
+
+@media (min-width: 640px) {
+  .item-feed-card__meta {
+    margin-top: 0.75rem;
+  }
+}
+
 .item-feed-card__footer {
   display: flex;
   flex-wrap: wrap;

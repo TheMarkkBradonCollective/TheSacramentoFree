@@ -344,6 +344,12 @@ export default function ItemCard({
           ) : (
             <Tag className="w-6 h-6 text-subtle" aria-hidden />
           )}
+          <ListingViewBadge count={item.viewCount ?? 0} placement="corner" compact />
+          <ListingCardEngagementOverlay
+            upvotes={voteState.upvotes}
+            downvotes={voteState.downvotes}
+            commentCount={comments.length}
+          />
         </button>
 
         <div className="item-feed-card__copy">
@@ -366,7 +372,7 @@ export default function ItemCard({
 
           <p className="hidden text-sm text-muted mt-2 leading-relaxed line-clamp-3">{previewText}</p>
 
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1 sm:mt-3 text-[10px] sm:text-xs text-muted">
+          <div className="item-feed-card__meta text-[10px] sm:text-xs text-muted">
             <span className="inline-flex items-center gap-0.5 min-w-0 truncate">
               <MapPin className="w-3 h-3 text-accent shrink-0" />
               <span className="truncate">{item.neighborhood}</span>
@@ -381,6 +387,8 @@ export default function ItemCard({
               <Calendar className="w-3 h-3 shrink-0" />
               {dateLabel}
             </span>
+          </div>
+          <div className="item-feed-card__counts text-[10px] sm:text-xs text-muted">
             <ListingCardStatsInline
               viewCount={item.viewCount ?? 0}
               upvotes={voteState.upvotes}

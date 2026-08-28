@@ -344,10 +344,20 @@ function MapSelectedEventCard({
 
       <div className="item-feed-card__main">
         <div
-          className="item-feed-card__media item-feed-card__media--empty"
-          style={{ backgroundColor: `${EVENT_MAP_COLOR}22` }}
+          className={`item-feed-card__media relative${event.imageUrl ? '' : ' item-feed-card__media--empty'}`}
+          style={event.imageUrl ? undefined : { backgroundColor: `${EVENT_MAP_COLOR}22` }}
         >
-          <CalendarDays className={compact ? 'w-7 h-7' : 'w-9 h-9'} style={{ color: EVENT_MAP_COLOR }} />
+          {event.imageUrl ? (
+            <ListingImage
+              src={event.imageUrl}
+              alt={event.title}
+              width={compact ? 160 : 240}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <CalendarDays className={compact ? 'w-7 h-7' : 'w-9 h-9'} style={{ color: EVENT_MAP_COLOR }} />
+          )}
+          <ListingViewBadge count={event.viewCount ?? 0} compact={compact} />
         </div>
 
         <div className="item-feed-card__copy">

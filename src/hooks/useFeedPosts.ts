@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { FeedPost } from '../types';
-import { createFeedPost, createFeedPollPost, deleteFeedPost, getFeedPosts, updateFeedPost, FEED_POST_DELETED_EVENT, notifyFeedPostDeleted } from '../lib/feedApi';
+import { createFeedPost, createFeedPollPost, deleteFeedPost, getFeedPosts, updateFeedPost, FEED_POST_DELETED_EVENT, notifyFeedPostDeleted, normalizeFeedPost } from '../lib/feedApi';
 import { subscribePostgresChanges } from '../lib/supabaseRealtime';
 import { patchDenormalizedAuthorFields } from '../lib/profilePersistence';
 import type { UserProfile } from '../types';
@@ -47,15 +47,20 @@ export function useFeedPosts(userProfile: UserProfile | null, options?: { enable
         if (!row?.id) return;
 
         if (payload.eventType === 'INSERT') {
-          const inserted = payload.new as FeedPost;
+          const inserted = normalizeFeedPost(payload.new as unknown as Record<string, unknown>);
           setPosts((prev) => [inserted, ...prev.filter((post) => post.id !== inserted.id)]);
           setLoading(false);
           return;
         }
 
         if (payload.eventType === 'UPDATE') {
-          const updated = payload.new as FeedPost;
-          setPosts((prev) => prev.map((post) => (post.id === updated.id ? { ...post, ...updated } : post)));
+          const incoming = payload.new as unknown as Record<string, unknown>;
+          setPosts((prev) =>
+            prev.map((post) => {
+              if (post.id !== String(incoming.id ?? '')) return post;
+              return normalizeFeedPost({ ...post, ...incoming });
+            }),
+          );
           return;
         }
 

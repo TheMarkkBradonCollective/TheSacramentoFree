@@ -9,6 +9,8 @@ import FeedPostClientBadge from './FeedPostClientBadge';
 import FeedPollBlock from './FeedPollBlock';
 import FeedEngagementBar from './FeedEngagementBar';
 import { FeedPostViewCount } from '../MessageReadReceiptLabel';
+import ListingViewBadge from '../ListingViewBadge';
+import { ListingCardEngagementOverlay } from '../ListingCardStats';
 import { feedPostPreview } from '../../lib/feedPostText';
 import { formatDistanceToNow } from '../../lib/timeAgo';
 
@@ -121,10 +123,21 @@ export default function FeedPostCard({
             referrerPolicy="no-referrer"
           />
           {extraPhotos > 0 && (
-            <span className="absolute top-1.5 left-1.5 text-[9px] font-bold bg-black/70 text-white px-1.5 py-0.5 rounded-full">
+            <span className="absolute top-1.5 left-1.5 z-[1] text-[9px] font-bold bg-black/70 text-white px-1.5 py-0.5 rounded-full">
               +{extraPhotos}
             </span>
           )}
+          <ListingViewBadge
+            count={post.viewCount ?? 0}
+            placement="corner"
+            compact
+            className={showOwnerActions ? '!top-auto bottom-1.5 left-1.5 right-auto' : ''}
+          />
+          <ListingCardEngagementOverlay
+            upvotes={votes.upvotes}
+            downvotes={votes.downvotes}
+            commentCount={comments.length}
+          />
         </div>
       ) : null}
 
@@ -141,7 +154,7 @@ export default function FeedPostCard({
             {isPoll ? (
               <p className="text-[10px] font-bold uppercase tracking-wider text-accent mt-0.5">Poll</p>
             ) : null}
-            <p className="text-[10px] sm:text-xs font-medium text-muted flex items-center gap-1 mt-0.5 truncate">
+            <p className="text-[10px] sm:text-xs font-medium text-muted flex flex-wrap items-center gap-x-1 gap-y-0.5 mt-0.5 min-w-0">
               <MapPin className="w-3 h-3 text-accent shrink-0" />
               <span className="truncate">{post.neighborhood}</span>
               <span className="text-subtle">·</span>
@@ -198,6 +211,7 @@ export default function FeedPostCard({
             engagement={engagement}
             layout="compact"
             commentCount={comments.length}
+            viewCount={post.viewCount ?? 0}
             onComment={openPost}
           />
 
