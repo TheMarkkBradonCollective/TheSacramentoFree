@@ -372,27 +372,31 @@ export default function ItemCard({
 
           <p className="hidden text-sm text-muted mt-2 leading-relaxed line-clamp-3">{previewText}</p>
 
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1 sm:mt-3 text-[10px] sm:text-xs text-muted">
-            <span className="inline-flex items-center gap-0.5 min-w-0 truncate">
-              <MapPin className="w-3 h-3 text-accent shrink-0" />
-              <span className="truncate">{item.neighborhood}</span>
-            </span>
-            {distanceMeters != null && (
-              <span className="inline-flex items-center gap-0.5 shrink-0 font-semibold text-accent">
-                <Navigation className="w-3 h-3 shrink-0" />
-                {formatRouteDistance(distanceMeters)}
+          <div className="mt-1 sm:mt-3 space-y-0.5">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] sm:text-xs text-muted">
+              <span className="inline-flex items-center gap-0.5 min-w-0 truncate">
+                <MapPin className="w-3 h-3 text-accent shrink-0" />
+                <span className="truncate">{item.neighborhood}</span>
               </span>
-            )}
-            <span className="inline-flex items-center gap-0.5 shrink-0">
-              <Calendar className="w-3 h-3 shrink-0" />
-              {dateLabel}
-            </span>
-            <ListingCardStatsInline
-              viewCount={item.viewCount ?? 0}
-              upvotes={voteState.upvotes}
-              downvotes={voteState.downvotes}
-              commentCount={comments.length}
-            />
+              {distanceMeters != null && (
+                <span className="inline-flex items-center gap-0.5 shrink-0 font-semibold text-accent">
+                  <Navigation className="w-3 h-3 shrink-0" />
+                  {formatRouteDistance(distanceMeters)}
+                </span>
+              )}
+              <span className="inline-flex items-center gap-0.5 shrink-0">
+                <Calendar className="w-3 h-3 shrink-0" />
+                {dateLabel}
+              </span>
+            </div>
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] sm:text-xs text-muted">
+              <ListingCardStatsInline
+                viewCount={item.viewCount ?? 0}
+                upvotes={voteState.upvotes}
+                downvotes={voteState.downvotes}
+                commentCount={comments.length}
+              />
+            </div>
           </div>
 
           <ListingEngagement

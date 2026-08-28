@@ -200,27 +200,31 @@ export default function EventCard({
 
           <p className="hidden sm:block text-sm text-muted mt-2 leading-relaxed line-clamp-3">{event.description}</p>
 
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1 sm:mt-3 text-[10px] sm:text-xs text-muted">
-            <span className="inline-flex items-center gap-0.5 shrink-0">
-              <Calendar className="w-3 h-3 shrink-0" />
-              {formatEventDate(event.eventStartAt)}
-            </span>
-            {distanceMeters != null && (
-              <span className="inline-flex items-center gap-0.5 shrink-0 font-semibold text-accent">
-                <Navigation className="w-3 h-3 shrink-0" />
-                {formatRouteDistance(distanceMeters)}
+          <div className="mt-1 sm:mt-3 space-y-0.5">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] sm:text-xs text-muted">
+              <span className="inline-flex items-center gap-0.5 shrink-0">
+                <Calendar className="w-3 h-3 shrink-0" />
+                {formatEventDate(event.eventStartAt)}
               </span>
-            )}
-            <span className="inline-flex items-center gap-0.5 shrink-0">
-              Posted {formatPostedDate(event.createdAt)}
-            </span>
-            <ListingCardStatsInline
-              viewCount={event.viewCount ?? 0}
-              upvotes={voteState.upvotes}
-              downvotes={voteState.downvotes}
-              commentCount={commentCount}
-              goingCount={goingCount}
-            />
+              {distanceMeters != null && (
+                <span className="inline-flex items-center gap-0.5 shrink-0 font-semibold text-accent">
+                  <Navigation className="w-3 h-3 shrink-0" />
+                  {formatRouteDistance(distanceMeters)}
+                </span>
+              )}
+              <span className="inline-flex items-center gap-0.5 shrink-0">
+                Posted {formatPostedDate(event.createdAt)}
+              </span>
+            </div>
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] sm:text-xs text-muted">
+              <ListingCardStatsInline
+                viewCount={event.viewCount ?? 0}
+                upvotes={voteState.upvotes}
+                downvotes={voteState.downvotes}
+                commentCount={commentCount}
+                goingCount={goingCount}
+              />
+            </div>
           </div>
 
           {!isCancelled && (
