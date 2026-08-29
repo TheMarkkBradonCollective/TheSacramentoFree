@@ -72,15 +72,18 @@ async function canDeliverPush(): Promise<boolean> {
 function extractEntityId(payload: PushPayload): string | undefined {
   const data = payload.data || {};
   return (
+    data.messageId ||
+    data.commentId ||
+    data.claimRequestId ||
     data.goGetSessionId ||
     data.sessionId ||
+    data.postId ||
+    data.feedPostId ||
+    data.requestId ||
     data.listingId ||
     data.itemId ||
-    data.messageId ||
     data.conversationId ||
-    data.requestId ||
-    data.postId ||
-    data.commentId ||
+    data.eventId ||
     undefined
   );
 }

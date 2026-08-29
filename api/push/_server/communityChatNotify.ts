@@ -47,5 +47,9 @@ export async function runCommunityChatMessageNotify(
     tag: messageId
       ? `${isStaffChat ? 'staff' : 'community'}-msg-${messageId}`
       : `${isStaffChat ? 'staff' : 'community'}-msg-${Date.now()}`,
+    data: {
+      conversationId: chatId,
+      ...(messageId ? { messageId } : {}),
+    },
   });
 }

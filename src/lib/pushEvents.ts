@@ -137,6 +137,7 @@ export async function notifyCommunityChatMessage(params: {
     url: pushUrlForConversation('community-global'),
     conversationId: 'community-global',
     tag: messageId ? `community-msg-${messageId}` : `community-msg-${Date.now()}`,
+    data: messageId ? { messageId, conversationId: 'community-global' } : { conversationId: 'community-global' },
   });
 }
 
@@ -153,6 +154,7 @@ export async function notifyStaffChatMessage(params: {
     url: pushUrlForConversation('community-staff'),
     conversationId: 'community-staff',
     tag: messageId ? `staff-msg-${messageId}` : `staff-msg-${Date.now()}`,
+    data: messageId ? { messageId, conversationId: 'community-staff' } : { conversationId: 'community-staff' },
   });
 }
 
@@ -172,6 +174,10 @@ export async function notifyNewMessage(params: {
     conversationId: params.chatId,
     recipientUserIds: [params.recipientUserId],
     tag: messageId ? `msg-${messageId}` : `msg-${params.chatId}-${Date.now()}`,
+    data: {
+      conversationId: params.chatId,
+      ...(messageId ? { messageId } : {}),
+    },
   });
 }
 
@@ -193,6 +199,7 @@ export async function notifyNewComment(params: {
     listingId: params.item.id,
     recipientUserIds: [params.item.userId],
     tag,
+    data: params.commentId ? { commentId: params.commentId, listingId: params.item.id } : { listingId: params.item.id },
   });
 }
 
@@ -212,6 +219,7 @@ export async function notifyListingCommentReply(params: {
     listingId: params.item.id,
     recipientUserIds: params.recipientUserIds,
     tag: `listing-thread-${params.commentId}`,
+    data: { commentId: params.commentId, listingId: params.item.id },
   });
 }
 
@@ -246,6 +254,7 @@ export async function notifyListingUpvote(params: {
     listingId: params.item.id,
     recipientUserIds: [params.item.userId],
     tag: `vote-up-${params.item.id}-${params.voterUserId}`,
+    data: { listingId: params.item.id, actorUserId: params.voterUserId },
   });
 }
 
@@ -261,6 +270,7 @@ export async function notifyListingDownvote(params: {
     listingId: params.item.id,
     recipientUserIds: [params.item.userId],
     tag: `vote-down-${params.item.id}-${params.voterUserId}`,
+    data: { listingId: params.item.id, actorUserId: params.voterUserId },
   });
 }
 
@@ -276,7 +286,7 @@ export async function notifyListingViewed(params: {
     listingId: params.item.id,
     recipientUserIds: [params.item.userId],
     tag: `view-${params.item.id}-${params.viewerUserId}`,
-    data: { viewerUserId: params.viewerUserId },
+    data: { viewerUserId: params.viewerUserId, listingId: params.item.id },
   });
 }
 
@@ -304,7 +314,9 @@ export async function notifyFeedComment(params: {
     tag,
     data: {
       feedPostId: params.postId,
+      postId: params.postId,
       actorName: params.commenterName,
+      ...(params.commentId ? { commentId: params.commentId } : {}),
       ...(params.parentCommentId ? { parentCommentId: params.parentCommentId } : {}),
     },
   });

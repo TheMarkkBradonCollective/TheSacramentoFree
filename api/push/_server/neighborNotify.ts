@@ -257,6 +257,12 @@ export async function runNeighborNewMessageNotify(
     conversationId: chatId,
     recipientUserIds: [recipientId],
     tag: messageId ? `msg-${messageId}` : `msg-${chatId}-${Date.now()}`,
+    data: {
+      conversationId: chatId,
+      actorUserId: senderId,
+      actorName: senderName,
+      ...(messageId ? { messageId } : {}),
+    },
   });
 }
 
@@ -344,6 +350,7 @@ export async function runNeighborItemVoteNotify(
     listingId: itemId,
     recipientUserIds: [ownerId],
     tag: `vote-${voteType}-${itemId}-${voterUserId}`,
+    data: { listingId: itemId, actorUserId: voterUserId },
   });
 }
 
@@ -387,6 +394,7 @@ export async function runNeighborListingViewNotify(
     tag: `view-${itemId}-${viewerUserId}`,
     data: {
       viewerUserId,
+      listingId: itemId,
     },
   });
 }
@@ -467,6 +475,7 @@ export async function runNeighborNewCommentNotify(
         listingId: itemId,
         recipientUserIds: [ownerId],
         tag: `comment-${commentId}`,
+        data: { commentId, listingId: itemId, actorUserId: commenterId, actorName: commenterName },
       }),
     );
   }
@@ -489,6 +498,7 @@ export async function runNeighborNewCommentNotify(
         listingId: itemId,
         recipientUserIds: threadIds,
         tag: `listing-thread-${commentId}`,
+        data: { commentId, listingId: itemId, actorUserId: commenterId, actorName: commenterName },
       }),
     );
   }
