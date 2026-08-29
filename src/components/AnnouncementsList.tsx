@@ -14,6 +14,7 @@ import { REBRAND_ANNOUNCEMENT_ID, REBRAND_ANNOUNCEMENT_LETTER } from '../../shar
 import LinkifiedText from './LinkifiedText';
 import ChangelogSeenLabel from './ChangelogSeenLabel';
 import { recordHelpAnnouncementView } from '../supabase';
+import { useRecordVisibleOnce } from '../hooks/useRecordVisibleOnce';
 
 interface AnnouncementsListProps {
   userProfile?: UserProfile | null;
@@ -117,6 +118,14 @@ export default function AnnouncementsList({
     }
   }, [announcements, userProfile]);
 
+  useRecordVisibleOnce(
+    announcements,
+    recordSeen,
+    Boolean(userProfile),
+    '[data-announcement-id]',
+    'announcementId',
+  );
+
   const emptyDraft = (): HelpAnnouncementInput => ({
     date: todayIsoDate(),
     title: '',
@@ -162,6 +171,7 @@ export default function AnnouncementsList({
               <li
                 key={announcement.id}
                 id={`announcement-${announcement.id}`}
+                data-announcement-id={announcement.id}
                 className={focusId === announcement.id ? 'scroll-mt-4 ring-2 ring-accent/60 rounded-2xl' : 'scroll-mt-4'}
               >
                 <PublicCard>

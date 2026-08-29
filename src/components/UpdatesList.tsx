@@ -14,6 +14,7 @@ import AppUpdateEditModal from './AppUpdateEditModal';
 import { useConfirm } from '../contexts/ConfirmContext';
 import { confirmDeleteAppUpdate } from '../lib/destructiveConfirm';
 import { recordAppUpdateView } from '../supabase';
+import { useRecordVisibleOnce } from '../hooks/useRecordVisibleOnce';
 
 interface UpdatesListProps {
   userProfile?: UserProfile | null;
@@ -110,6 +111,8 @@ export default function UpdatesList({
     });
   }, [updates, searchQuery]);
 
+  useRecordVisibleOnce(filteredUpdates, recordSeen, Boolean(userProfile), '[data-update-id]', 'updateId');
+
   useEffect(() => {
     if (!focusId) return;
     setSearchQuery('');
@@ -181,6 +184,7 @@ export default function UpdatesList({
               <li
                 key={update.id}
                 id={`update-${update.id}`}
+                data-update-id={update.id}
                 className={focusId === update.id ? 'scroll-mt-4 ring-2 ring-accent/60 rounded-2xl' : 'scroll-mt-4'}
               >
                 <PublicCard>
