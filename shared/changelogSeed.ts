@@ -44,7 +44,7 @@ const UPCOMING_URL_NEWS_AT = '2026-08-22T03:50:00.000Z';
 const HOSTING_OUTAGE_NEWS_AT = '2026-08-24T23:30:00.000Z';
 const PLAY_CLOSED_TESTING_URL = 'https://play.google.com/apps/testing/org.sacramentobuynothing.app';
 
-/** APK / release posts — News only (stripped from Updates by filterUpdates). */
+/** APK / release posts — kept in repo for runit only; not published to app_updates (Updates = features). */
 const APK_APP_UPDATES: SeededAppUpdate[] = [
   {
     id: '2026-08-26_apk-0057',

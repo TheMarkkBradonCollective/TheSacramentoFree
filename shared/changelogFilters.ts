@@ -1,6 +1,6 @@
 import { FEATURE_UPDATE_IDS } from './changelogFeatureUpdates';
 
-/** Release/build posts belong in News — not the Updates changelog tab. */
+/** Release/build posts — excluded from Updates tab (features only). Not News; post News manually. */
 export function isReleaseChangelogEntry(id: string, title: string): boolean {
   if (/\bapk-\d{4}\b/i.test(id)) return true;
   if (/_apk-\d/.test(id)) return true;
