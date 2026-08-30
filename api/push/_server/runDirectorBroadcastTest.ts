@@ -1,5 +1,6 @@
 import { isDirectorAccount } from './directorIdentity';
-import { sendToSubscription } from './pushDelivery';
+import { isFcmConfigured } from './fcmDelivery';
+import { sendPushToUsers } from './pushDelivery';
 import { getSupabaseAdmin } from './supabaseAdmin';
 import { configureVapidAsync } from './webPushLoader';
 
@@ -10,12 +11,12 @@ export async function runDirectorBroadcastTest(
   callerId: string,
   message?: { title?: string; body?: string },
 ): Promise<{ status: number; body: Record<string, unknown> }> {
-  if (!(await configureVapidAsync())) {
+  if (!(await configureVapidAsync()) && !isFcmConfigured()) {
     return {
       status: 503,
       body: {
         error:
-          'VAPID keys are not configured. Set VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY in Vercel, then redeploy.',
+          'Push delivery is not configured. Set VAPID keys or FIREBASE_SERVICE_ACCOUNT_JSON on the server, then redeploy.',
       },
     };
   }
@@ -31,7 +32,7 @@ export async function runDirectorBroadcastTest(
     return { status: 403, body: { error: 'Director access required' } };
   }
 
-  const { data: subscriptions, error } = await supabaseAdmin.from('push_subscriptions').select('*');
+  const { data: subscriptions, error } = await supabaseAdmin.from('push_subscriptions').select('userId');
   if (error) {
     return { status: 500, body: { error: error.message || 'Could not load push subscriptions' } };
   }
@@ -46,40 +47,49 @@ export async function runDirectorBroadcastTest(
 
   const title = String(message?.title || '').trim() || DEFAULT_BROADCAST_TITLE;
   const body = String(message?.body || '').trim() || DEFAULT_BROADCAST_BODY;
+  const tag = `sbn-director-broadcast-${Date.now()}`;
 
-  const payload = {
-    title: title.slice(0, 120),
-    body: body.slice(0, 240),
-    url: '/map',
-    tag: `sbn-director-broadcast-${Date.now()}`,
-    eventType: 'account_update' as const,
-    data: { test: 'director_broadcast' },
-  };
+  const recipientUserIds = [
+    ...new Set(
+      rows
+        .map((row) => String((row as { userId?: string }).userId || ''))
+        .filter((uid) => uid && uid !== callerId),
+    ),
+  ];
 
-  const uniqueUsers = new Set(rows.map((row) => String((row as { userId?: string }).userId || '')));
-  let sent = 0;
-  let failed = 0;
-  let removed = 0;
-
-  for (const sub of rows) {
-    const result = await sendToSubscription(sub as Parameters<typeof sendToSubscription>[0], payload);
-    if (result.ok) sent += 1;
-    else {
-      failed += 1;
-      if (result.removed) removed += 1;
-    }
+  if (!recipientUserIds.length) {
+    return {
+      status: 400,
+      body: { error: 'No subscribed neighbors found (excluding director).', sent: 0 },
+    };
   }
 
-  if (sent === 0) {
+  const result = await sendPushToUsers(
+    recipientUserIds,
+    {
+      title: title.slice(0, 120),
+      body: body.slice(0, 240),
+      url: '/map',
+      tag,
+      eventType: 'account_update',
+      data: { systemBroadcast: 'director_broadcast' },
+    },
+    {
+      skipPreferenceCheck: true,
+      skipDedup: true,
+      source: 'internal',
+      actorId: callerId,
+    },
+  );
+
+  if (result.sent === 0 && result.inboxWritten === 0) {
     return {
       status: 502,
       body: {
-        error: 'Broadcast reached zero devices. Check VAPID keys and subscription health.',
-        sent,
-        failed,
-        removed,
+        error: 'Broadcast reached zero devices. Check push credentials and subscription health.',
+        ...result,
         subscriptionCount: rows.length,
-        userCount: uniqueUsers.size,
+        userCount: recipientUserIds.length,
       },
     };
   }
@@ -88,11 +98,9 @@ export async function runDirectorBroadcastTest(
     status: 200,
     body: {
       ok: true,
-      sent,
-      failed,
-      removed,
-      subscriptionCount: rows.length,
-      userCount: uniqueUsers.size,
+      ...result,
+      subscriptionCount: result.subscriptionCount ?? rows.length,
+      userCount: recipientUserIds.length,
     },
   };
 }
