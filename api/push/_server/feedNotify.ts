@@ -156,6 +156,8 @@ export async function runFeedCommentNotify(
         tag: alert.tag,
         data: {
           feedPostId: postId,
+          postId,
+          commentId,
           actorName: commenterName,
           actorUserId: commenterId,
           ...(parentCommentId ? { parentCommentId } : {}),

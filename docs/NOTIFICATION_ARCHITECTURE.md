@@ -76,8 +76,14 @@ Legacy: global `push_dispatch_log` tag with a 90-second window (still used for o
 
 Examples:
 - `item_claimed:item_abc:user_poster`
-- `new_message:msg_123:user_recipient`
+- `new_message:msg_123:user_recipient` — **message id**, never the conversation id
 - `feed_comment:post_1:comment_9:user_author`
+- `listing_viewed:item_abc:viewer_9:user_owner` — listing + viewer, not listing alone
+- `community_chat:msg_123:user_neighbor` — each chat message, not `community-global`
+
+Unique constraint on `(recipientId, dedupKey)` means client + webhook paths cannot double-notify.
+
+**Repeatable events** (messages, comments, votes, views, community chat) must use an occurrence id. Using a parent listing or conversation id as the only key permanently suppresses every later notification of that type.
 
 Unique constraint on `(recipientId, dedupKey)` means client + webhook paths cannot double-notify.
 

@@ -238,6 +238,33 @@ async function resolveRecipients(body: PushSendBody, callerId: string): Promise<
   return [];
 }
 
+function enrichOccurrenceData(body: PushSendBody): Record<string, string> {
+  const data: Record<string, string> = {
+    listingId: body.listingId || '',
+    conversationId: body.conversationId || '',
+    requestId: body.requestId || '',
+    ...(body.data || {}),
+  };
+
+  const tag = String(body.tag || '').trim();
+  if (tag && !data.messageId) {
+    const messageMatch = /^(?:msg|community-msg|staff-msg|pickup-msg)-(.+)$/.exec(tag);
+    if (messageMatch?.[1]) data.messageId = messageMatch[1];
+  }
+  if (tag && !data.commentId) {
+    const commentMatch = /^(?:comment|listing-thread|saved-comment)-(.+)$/.exec(tag);
+    if (commentMatch?.[1]) data.commentId = commentMatch[1];
+    const feedMatch = /^feed-comment-(.+?)-(?:owner|reply|thread)$/.exec(tag);
+    if (feedMatch?.[1]) data.commentId = feedMatch[1];
+  }
+  if (tag && !data.claimRequestId) {
+    const claimMatch = /^claim-req-(.+)$/.exec(tag);
+    if (claimMatch?.[1]) data.claimRequestId = claimMatch[1];
+  }
+
+  return data;
+}
+
 export async function runPushSend(
   callerId: string,
   body: PushSendBody,
@@ -300,12 +327,7 @@ export async function runPushSend(
     url: safeBody.url,
     tag: safeBody.tag,
     eventType: safeBody.eventType,
-    data: {
-      listingId: safeBody.listingId || '',
-      conversationId: safeBody.conversationId || '',
-      requestId: safeBody.requestId || '',
-      ...(safeBody.data || {}),
-    },
+    data: enrichOccurrenceData(safeBody),
   };
 
   const result = await sendPushToUsers(recipients, payload, {
