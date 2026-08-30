@@ -31,6 +31,7 @@
     "export:user-emails": "node scripts/export-user-emails.mjs",
     "export:play-testers": "node scripts/export-user-emails.mjs --play-testers",
     "export:play-testers:internal": "node scripts/export-user-emails.mjs --play-testers --limit=100",
+    "broadcast:send": "node --import tsx scripts/send-broadcast-notification.mjs",
     "convert:play-testers": "node scripts/convert-to-play-testers-csv.mjs",
     "start": "NODE_ENV=production tsx server/index.ts",
     "preview": "vite preview",
