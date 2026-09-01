@@ -1,26 +1,30 @@
 #!/usr/bin/env node
 /**
- * Build a Facebook video ad for TheSacramentoFree — live demo-app footage
- * with branded intro/outro. Screenshots in the zip are the Play Console PNGs.
+ * Build the 30-second Sacramento Free Facebook video ad.
+ * Lifestyle stills + Play Console app UI + voiceover.
+ * Zip screenshots stay the same Play Console PNGs.
  *
  *   npm run facebook:promo
  */
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, rmSync, writeFileSync, readdirSync, unlinkSync } from 'node:fs';
 import { dirname, join, extname } from 'node:path';
+import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { packFacebookPromoZip } from './pack-facebook-promo.mjs';
-import { recordFacebookAdDemo } from './record-facebook-ad-demo.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const iconSrc = join(root, 'play-store-assets', 'icon-512.png');
+const lockupSrc = join(root, 'public', 'TheSacramentoFree.png');
+const shotDir = join(root, 'play-store-assets', 'screenshots');
+const stillDir = join(root, 'facebook-promo-assets', 'stills');
+const audioDir = join(root, 'facebook-promo-assets', 'audio');
 const outDir = join(root, 'facebook-promo-assets');
 const workDir = join(outDir, '.work');
 
 const GREEN = '0x00845A';
 const CREAM = '0xF6F3EA';
 const INK = '0x0B0B0C';
-const MUTED = '0x52525B';
 const WHITE = '0xFFFFFF';
 
 const FONT_BOLD = fontPath([
@@ -37,12 +41,25 @@ const FONT_MED = fontPath([
   '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
 ]);
 
+const EDGE_TTS = join(homedir(), '.local', 'bin', 'edge-tts');
+
+const VO_LINES = [
+  ['vo1.mp3', "There's probably someone in Sacramento who could use it."],
+  ['vo2.mp3', 'Sacramento Free makes it easy to give away the things you no longer need.'],
+  ['vo3.mp3', "And find useful stuff that's being given away by people right here in our community."],
+  ['vo4.mp3', 'Stop throwing good stuff away. Join Sacramento Free.'],
+];
+
 function fontPath(candidates) {
   return candidates.find((p) => existsSync(p)) || candidates[candidates.length - 1];
 }
 
 function ffText(s) {
-  return String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/:/g, '\\:');
+  return String(s)
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, '\u2019')
+    .replace(/%/g, '\\%')
+    .replace(/:/g, '\\:');
 }
 
 function runFfmpeg(args, label) {
@@ -55,48 +72,146 @@ function runFfmpeg(args, label) {
   }
 }
 
-function probeDuration(file) {
-  const out = spawnSync(
-    'ffprobe',
-    ['-v', 'error', '-show_entries', 'format=duration', '-of', 'default=nw=1:nk=1', file],
-    { encoding: 'utf8' },
-  );
-  const n = Number.parseFloat(out.stdout.trim());
-  if (!Number.isFinite(n) || n <= 0) throw new Error(`Could not read duration for ${file}`);
-  return n;
+function scale(height, n) {
+  return Math.round(n * (height / 1350));
 }
 
-function drawtext({ font, text, size, color, x, y, enable }) {
-  const extra = enable ? `:enable='${enable}'` : '';
-  return `drawtext=fontfile=${font}:text='${ffText(text)}':fontsize=${size}:fontcolor=${color}:x=${x}:y=${y}${extra}`;
+function drawtext({ font, text, size, color, x, y, enable, border = 0, bordercolor = 'black', box = 0 }) {
+  const extra = [
+    enable ? `:enable='${enable}'` : '',
+    border ? `:borderw=${border}:bordercolor=${bordercolor}` : '',
+    box ? `:box=1:boxcolor=black@0.35:boxborderw=18` : '',
+  ].join('');
+  return `drawtext=fontfile=${font}:text='${ffText(text)}':fontsize=${size}:fontcolor=${color}:x=${x}:y=${y}:expansion=none${extra}`;
 }
 
-function cardClip({ dest, width, height, seconds, logoSize, lines }) {
-  const filters = [
-    `[0:v]format=yuv420p[base]`,
-    `[1:v]scale=${logoSize}:${logoSize}:flags=lanczos,format=rgba[logo]`,
-    `color=c=${GREEN}:s=${width}x12,format=yuv420p[bar]`,
-    `[base][bar]overlay=0:0[b1]`,
-    `[b1][logo]overlay=(W-w)/2:${Math.round(height * 0.2)}[b2]`,
+function ensureVoiceover() {
+  mkdirSync(audioDir, { recursive: true });
+  for (const [file, text] of VO_LINES) {
+    const dest = join(audioDir, file);
+    if (existsSync(dest)) continue;
+    const bin = existsSync(EDGE_TTS) ? EDGE_TTS : 'edge-tts';
+    const result = spawnSync(bin, ['--voice', 'en-US-AvaNeural', '--rate', '+8%', '--text', text, '--write-media', dest], {
+      encoding: 'utf8',
+    });
+    if (result.status !== 0 || !existsSync(dest)) {
+      throw new Error(`Could not synthesize ${file}. Install edge-tts or restore facebook-promo-assets/audio/. ${result.stderr || ''}`);
+    }
+    console.log(`wrote ${dest}`);
+  }
+}
+
+function stillClip({
+  src,
+  dest,
+  width,
+  height,
+  seconds,
+  zoomFrom = 1.0,
+  zoomTo = 1.08,
+  focusX = 0.5,
+  focusY = 0.42,
+  fromTop = false,
+  shade = false,
+  texts = [],
+}) {
+  if (!existsSync(src)) throw new Error(`Missing still ${src}`);
+  const frames = Math.round(seconds * 30);
+  const zoomDelta = (zoomTo - zoomFrom) / Math.max(frames - 1, 1);
+  const cropY = fromTop ? '0' : '(ih-oh)/2';
+  const parts = [
+    `scale=${width * 2}:${height * 2}:force_original_aspect_ratio=increase:flags=lanczos`,
+    `crop=${width * 2}:${height * 2}:(iw-ow)/2:${cropY}`,
+    `zoompan=z='${zoomFrom}+${zoomDelta}*on':x='(iw-iw/zoom)*${focusX}':y='(ih-ih/zoom)*${focusY}':d=${frames}:s=${width}x${height}:fps=30`,
+    'setsar=1',
+    'format=yuv420p',
   ];
-  let last = '[b2]';
-  for (const [i, line] of lines.entries()) {
-    const label = i === lines.length - 1 ? 'out' : `t${i}`;
-    filters.push(`${last}${drawtext(line)}[${label}]`);
-    last = `[${label}]`;
+  if (shade) {
+    parts.push(`drawbox=x=0:y=ih*0.72:w=iw:h=ih*0.28:color=black@0.52:t=fill`);
+  }
+  let vf = parts.join(',');
+  for (const line of texts) {
+    vf += `,${drawtext(line)}`;
   }
   runFfmpeg(
     [
-      '-f',
-      'lavfi',
+      '-loop',
+      '1',
+      '-framerate',
+      '30',
+      '-t',
+      String(seconds),
       '-i',
-      `color=c=${CREAM}:s=${width}x${height}:d=${seconds}:r=30`,
+      src,
+      '-vf',
+      vf,
+      '-t',
+      String(seconds),
+      '-r',
+      '30',
+      '-an',
+      '-c:v',
+      'libx264',
+      '-preset',
+      'medium',
+      '-crf',
+      '18',
+      '-pix_fmt',
+      'yuv420p',
+      dest,
+    ],
+    dest,
+  );
+}
+
+function brandClip({ dest, width, height, seconds }) {
+  const frames = Math.round(seconds * 30);
+  const logo = scale(height, 200);
+  const title = scale(height, 52);
+  const sub = scale(height, 30);
+  const yTitle = Math.round(height * 0.56);
+  const ySub = Math.round(height * 0.66);
+  const fc = [
+    `[0:v]scale=${width * 2}:${height * 2}:force_original_aspect_ratio=increase:flags=lanczos,crop=${width * 2}:${height * 2}:(iw-ow)/2:(ih-oh)/2,zoompan=z='1.0+0.0012*on':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=${frames}:s=${width}x${height}:fps=30,setsar=1,format=yuv420p,drawbox=x=0:y=0:w=iw:h=ih:color=black@0.28:t=fill[bg]`,
+    `[1:v]scale=${logo}:${logo}:flags=lanczos,format=rgba[logo]`,
+    `[bg][logo]overlay=(W-w)/2:${Math.round(height * 0.18)}[marked]`,
+    `[marked]${drawtext({
+      font: FONT_BOLD,
+      text: 'GIVE. FIND. REUSE.',
+      size: title,
+      color: WHITE,
+      x: '(w-text_w)/2',
+      y: yTitle,
+      border: 2,
+      bordercolor: 'black@0.65',
+    })}[t1]`,
+    `[t1]${drawtext({
+      font: FONT_SEMI,
+      text: '100% Free. Keep it Local.',
+      size: sub,
+      color: WHITE,
+      x: '(w-text_w)/2',
+      y: ySub,
+      border: 2,
+      bordercolor: 'black@0.65',
+    })}[out]`,
+  ].join(';');
+  runFfmpeg(
+    [
+      '-loop',
+      '1',
+      '-framerate',
+      '30',
+      '-t',
+      String(seconds),
+      '-i',
+      join(stillDir, 'sac-bridge.png'),
       '-loop',
       '1',
       '-i',
       iconSrc,
       '-filter_complex',
-      filters.join(';'),
+      fc,
       '-map',
       '[out]',
       '-t',
@@ -118,54 +233,135 @@ function cardClip({ dest, width, height, seconds, logoSize, lines }) {
   );
 }
 
-function productClip({ demo, dest, width, height, phoneH, captions }) {
-  const duration = probeDuration(demo);
-  const captionH = 118;
-  const phoneY = Math.max(36, Math.round((height - captionH - phoneH) / 2.4));
-  const filters = [
-    `[0:v]scale=-1:${phoneH}:flags=lanczos,format=yuv420p,setsar=1[phone]`,
-    `[1:v]format=yuv420p[bg]`,
-    `color=c=${GREEN}:s=${width}x${captionH},format=yuv420p[cap]`,
-    `[bg][phone]overlay=(W-w)/2:${phoneY}[withphone]`,
-    `[withphone][cap]overlay=0:${height - captionH}[bar]`,
-    `[bar]${drawtext({
+function ctaClip({ dest, width, height, seconds }) {
+  const phoneW = scale(height, 400);
+  const title = scale(height, 46);
+  const sub = scale(height, 28);
+  const url = scale(height, 26);
+  const phoneY = Math.round(height * 0.06);
+  const text0 = Math.round(height * 0.66);
+  const fc = [
+    `[1:v]scale=${phoneW}:-1:flags=lanczos,format=yuv420p,setsar=1[phone]`,
+    `[0:v][phone]overlay=(W-w)/2:${phoneY}[withphone]`,
+    `[withphone]${drawtext({
       font: FONT_BOLD,
-      text: 'The Sacramento Free',
-      size: 28,
-      color: WHITE,
+      text: 'SACRAMENTO FREE',
+      size: title,
+      color: INK,
       x: '(w-text_w)/2',
-      y: height - captionH + 18,
-    })}[n]`,
-  ];
-  let last = '[n]';
-  for (const [i, cap] of captions.entries()) {
-    const label = i === captions.length - 1 ? 'out' : `c${i}`;
-    filters.push(
-      `${last}${drawtext({
-        font: FONT_SEMI,
-        text: cap.text,
-        size: 22,
-        color: WHITE,
-        x: '(w-text_w)/2',
-        y: height - captionH + 56,
-        enable: cap.enable,
-      })}[${label}]`,
-    );
-    last = `[${label}]`;
-  }
-
+      y: text0,
+    })}[t1]`,
+    `[t1]${drawtext({
+      font: FONT_SEMI,
+      text: 'Give it away. Find something free.',
+      size: sub,
+      color: GREEN,
+      x: '(w-text_w)/2',
+      y: text0 + scale(height, 58),
+    })}[t2]`,
+    `[t2]${drawtext({
+      font: FONT_MED,
+      text: 'sacramentobuynothing.com',
+      size: url,
+      color: INK,
+      x: '(w-text_w)/2',
+      y: text0 + scale(height, 108),
+    })}[out]`,
+  ].join(';');
   runFfmpeg(
     [
-      '-i',
-      demo,
       '-f',
       'lavfi',
       '-i',
-      `color=c=${CREAM}:s=${width}x${height}:d=${duration}:r=30`,
+      `color=c=${CREAM}:s=${width}x${height}:d=${seconds}:r=30`,
+      '-loop',
+      '1',
+      '-i',
+      join(shotDir, '01-home.png'),
       '-filter_complex',
-      filters.join(';'),
+      fc,
       '-map',
       '[out]',
+      '-t',
+      String(seconds),
+      '-r',
+      '30',
+      '-an',
+      '-c:v',
+      'libx264',
+      '-preset',
+      'medium',
+      '-crf',
+      '18',
+      '-pix_fmt',
+      'yuv420p',
+      dest,
+    ],
+    dest,
+  );
+}
+
+function logoPopClip({ dest, width, height, seconds }) {
+  const logo = scale(height, 560);
+  const sub = scale(height, 28);
+  const fc = [
+    `[1:v]scale=${logo}:${logo}:flags=lanczos,format=rgba[logo]`,
+    `[0:v][logo]overlay=(W-w)/2:(H-h)/2-${scale(height, 36)}[marked]`,
+    `[marked]${drawtext({
+      font: FONT_SEMI,
+      text: 'Give freely. Ask kindly.',
+      size: sub,
+      color: WHITE,
+      x: '(w-text_w)/2',
+      y: Math.round(height * 0.82),
+    })}[out]`,
+  ].join(';');
+  runFfmpeg(
+    [
+      '-f',
+      'lavfi',
+      '-i',
+      `color=c=${GREEN}:s=${width}x${height}:d=${seconds}:r=30`,
+      '-loop',
+      '1',
+      '-i',
+      lockupSrc,
+      '-filter_complex',
+      fc,
+      '-map',
+      '[out]',
+      '-t',
+      String(seconds),
+      '-r',
+      '30',
+      '-an',
+      '-c:v',
+      'libx264',
+      '-preset',
+      'medium',
+      '-crf',
+      '18',
+      '-pix_fmt',
+      'yuv420p',
+      dest,
+    ],
+    dest,
+  );
+}
+
+function concatClips(files, dest, duration) {
+  const inputs = files.flatMap((f) => ['-i', f]);
+  const fadeOutStart = Math.max(0, duration - 0.35);
+  const fc =
+    files.map((_, i) => `[${i}:v]`).join('') +
+    `concat=n=${files.length}:v=1:a=0,format=yuv420p,fade=t=in:st=0:d=0.16,fade=t=out:st=${fadeOutStart}:d=0.35[v]`;
+  runFfmpeg(
+    [
+      ...inputs,
+      '-filter_complex',
+      fc,
+      '-map',
+      '[v]',
       '-t',
       String(duration),
       '-r',
@@ -185,108 +381,38 @@ function productClip({ demo, dest, width, height, phoneH, captions }) {
   );
 }
 
-function stillBeatClip({ shot, dest, width, height, phoneH, seconds, caption }) {
-  const captionH = 118;
-  const phoneY = Math.max(36, Math.round((height - captionH - phoneH) / 2.4));
-  const filters = [
-    `[0:v]scale=-1:${phoneH}:flags=lanczos,format=yuv420p,setsar=1[phone]`,
-    `[1:v]format=yuv420p[bg]`,
-    `color=c=${GREEN}:s=${width}x${captionH},format=yuv420p[cap]`,
-    `[bg][phone]overlay=(W-w)/2:${phoneY}[withphone]`,
-    `[withphone][cap]overlay=0:${height - captionH}[bar]`,
-    `[bar]${drawtext({
-      font: FONT_BOLD,
-      text: 'The Sacramento Free',
-      size: 28,
-      color: WHITE,
-      x: '(w-text_w)/2',
-      y: height - captionH + 18,
-    })}[n]`,
-    `[n]${drawtext({
-      font: FONT_SEMI,
-      text: caption,
-      size: 22,
-      color: WHITE,
-      x: '(w-text_w)/2',
-      y: height - captionH + 56,
-    })}[out]`,
+function muxVoiceover(video, dest, duration) {
+  const vos = [
+    { file: join(audioDir, 'vo1.mp3'), at: 7.05 },
+    { file: join(audioDir, 'vo2.mp3'), at: 12.05 },
+    { file: join(audioDir, 'vo3.mp3'), at: 17.05 },
+    { file: join(audioDir, 'vo4.mp3'), at: 26.05 },
   ];
-  runFfmpeg(
-    [
-      '-loop',
-      '1',
-      '-framerate',
-      '30',
-      '-t',
-      String(seconds),
-      '-i',
-      shot,
-      '-f',
-      'lavfi',
-      '-i',
-      `color=c=${CREAM}:s=${width}x${height}:d=${seconds}:r=30`,
-      '-filter_complex',
-      filters.join(';'),
-      '-map',
-      '[out]',
-      '-t',
-      String(seconds),
-      '-r',
-      '30',
-      '-an',
-      '-c:v',
-      'libx264',
-      '-preset',
-      'medium',
-      '-crf',
-      '18',
-      '-pix_fmt',
-      'yuv420p',
-      dest,
-    ],
-    dest,
-  );
-}
-
-function concatAd(clips, dest) {
-  const fade = 0.22;
-  const inputs = clips.flatMap((c) => ['-i', c.file]);
-  let filter = '';
-  let last = '[0:v]';
-  let timeline = clips[0].seconds;
-  for (let i = 1; i < clips.length; i++) {
-    const offset = timeline - fade;
-    const out = i === clips.length - 1 ? '[vout]' : `[v${i}]`;
-    filter += `${last}[${i}:v]xfade=transition=fade:duration=${fade}:offset=${offset}${out};`;
-    last = out;
-    timeline += clips[i].seconds - fade;
-  }
+  const inputs = ['-i', video, ...vos.flatMap((v) => ['-i', v.file])];
+  const delays = vos.map((v, i) => {
+    const ms = Math.round(v.at * 1000);
+    return `[${i + 1}:a]adelay=${ms}|${ms}:all=1,aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[a${i}]`;
+  });
+  const mix =
+    vos.map((_, i) => `[a${i}]`).join('') +
+    `amix=inputs=${vos.length}:duration=longest:dropout_transition=0:normalize=0,loudnorm=I=-16:TP=-1.5:LRA=11,aformat=sample_rates=44100:channel_layouts=stereo[a]`;
   runFfmpeg(
     [
       ...inputs,
-      '-f',
-      'lavfi',
-      '-i',
-      'anullsrc=channel_layout=stereo:sample_rate=44100',
       '-filter_complex',
-      filter.replace(/;$/, ''),
+      `${delays.join(';')};${mix}`,
       '-map',
-      '[vout]',
+      '0:v',
       '-map',
-      `${clips.length}:a`,
+      '[a]',
       '-c:v',
-      'libx264',
-      '-preset',
-      'medium',
-      '-crf',
-      '18',
-      '-pix_fmt',
-      'yuv420p',
+      'copy',
       '-c:a',
       'aac',
       '-b:a',
-      '96k',
-      '-shortest',
+      '160k',
+      '-t',
+      String(duration),
       '-movflags',
       '+faststart',
       dest,
@@ -300,24 +426,23 @@ function writeDocs() {
   const readme = `The Sacramento Free — Facebook ad pack
 ======================================
 
-Fictional demo neighbors only. Do not post live member names or photos.
+Fictional neighbors / demo listings only. Do not post live member names or photos.
 
 What to upload
 --------------
 1. Video (recommended): ad-portrait.mp4
-   Facebook feed 4:5 (1080×1350). Live app footage + brand open/close.
+   30-second Facebook feed ad, 1080×1350 (4:5).
 2. Square video (optional): ad-square.mp4
-   Same ad, 1080×1080.
+   Same 30-second ad, 1080×1080.
 3. Screenshots: 01-home.png through 16-goget-arrived.png
-   Same 1080×1920 phone captures as Play Console (no frames, no posters).
-   Use as extra photos on the timeline if you want.
+   Same 1080×1920 phone captures as Play Console.
 
 Caption: paste from POST-COPY.txt.
 
 Regenerate
 ----------
 npm run android:play-screenshots   # refresh Play/Facebook screenshots
-npm run facebook:promo             # rebuild the video ad + zip
+npm run facebook:promo             # rebuild the 30s video ad + zip
 `;
 
   const captions = `The Sacramento Free — Facebook ad caption
@@ -326,21 +451,24 @@ Paste this with ad-portrait.mp4 (or the square video).
 
 ---
 
-Neighbors: Sacramento has a free gifting app.
+You don't need it anymore? Don't throw it away.
 
-Give what you can. Ask for what you need. Pick it up from a porch.
+There's probably someone in Sacramento who could use it.
 
-No selling. No bidding. No flipping. No ads.
+Sacramento Free makes it easy to give away the things you no longer need — and find useful stuff from neighbors right here.
+
+Give. Find. Reuse.
+100% free. Keep it local.
 
 TheSacramentoFree — Give freely. Ask kindly.
 
-Join on the web:
+Join:
 https://www.sacramentobuynothing.com
 
 Android (closed testing — free to opt in):
 https://play.google.com/apps/testing/org.sacramentobuynothing.app
 
-#TheSacramentoFree #Sacramento #GiveFreelyAskKindly #NeighborsHelpingNeighbors
+#TheSacramentoFree #Sacramento #GiveFreelyAskKindly #KeepItLocal
 `;
 
   writeFileSync(join(outDir, 'README.txt'), readme);
@@ -358,131 +486,226 @@ function clearGenerated(dir, keep) {
   }
 }
 
-async function main() {
+function buildVersion(width, height, videoName) {
+  const s = (n) => scale(height, n);
+  const hookQ = [
+    {
+      font: FONT_BOLD,
+      text: "You don't need it anymore?",
+      size: s(42),
+      color: WHITE,
+      x: '(w-text_w)/2',
+      y: Math.round(height * 0.82),
+      border: 2,
+      bordercolor: 'black@0.7',
+    },
+  ];
+  const hookNo = [
+    {
+      font: FONT_BOLD,
+      text: "DON'T THROW IT AWAY.",
+      size: s(46),
+      color: WHITE,
+      x: '(w-text_w)/2',
+      y: Math.round(height * 0.82),
+      border: 3,
+      bordercolor: 'black@0.75',
+    },
+  ];
+
+  const clips = [
+    {
+      dest: join(workDir, `01-hook-${width}.mp4`),
+      make: () =>
+        stillClip({
+          src: join(stillDir, 'hook-unused.png'),
+          dest: join(workDir, `01-hook-${width}.mp4`),
+          width,
+          height,
+          seconds: 3.0,
+          zoomTo: 1.1,
+          shade: true,
+          texts: hookQ,
+        }),
+    },
+    {
+      dest: join(workDir, `02-phone-${width}.mp4`),
+      make: () =>
+        stillClip({
+          src: join(stillDir, 'hook-phone.png'),
+          dest: join(workDir, `02-phone-${width}.mp4`),
+          width,
+          height,
+          seconds: 4.0,
+          zoomFrom: 1.02,
+          zoomTo: 1.12,
+          shade: true,
+          texts: hookNo,
+        }),
+    },
+    {
+      dest: join(workDir, `03-furn-${width}.mp4`),
+      make: () =>
+        stillClip({
+          src: join(stillDir, 'give-furniture.png'),
+          dest: join(workDir, `03-furn-${width}.mp4`),
+          width,
+          height,
+          seconds: 1.25,
+          zoomTo: 1.14,
+          focusY: 0.4,
+        }),
+    },
+    {
+      dest: join(workDir, `04-clothes-${width}.mp4`),
+      make: () =>
+        stillClip({
+          src: join(stillDir, 'give-clothes.png'),
+          dest: join(workDir, `04-clothes-${width}.mp4`),
+          width,
+          height,
+          seconds: 1.25,
+          zoomFrom: 1.08,
+          zoomTo: 1.0,
+          focusY: 0.38,
+        }),
+    },
+    {
+      dest: join(workDir, `05-elec-${width}.mp4`),
+      make: () =>
+        stillClip({
+          src: join(stillDir, 'give-electronics.png'),
+          dest: join(workDir, `05-elec-${width}.mp4`),
+          width,
+          height,
+          seconds: 1.25,
+          zoomTo: 1.12,
+        }),
+    },
+    {
+      dest: join(workDir, `06-house-${width}.mp4`),
+      make: () =>
+        stillClip({
+          src: join(stillDir, 'give-household.png'),
+          dest: join(workDir, `06-house-${width}.mp4`),
+          width,
+          height,
+          seconds: 1.25,
+          zoomFrom: 1.1,
+          zoomTo: 1.02,
+          focusY: 0.5,
+        }),
+    },
+    {
+      dest: join(workDir, `07-stuff-${width}.mp4`),
+      make: () =>
+        stillClip({
+          src: join(shotDir, '03-stuff.png'),
+          dest: join(workDir, `07-stuff-${width}.mp4`),
+          width,
+          height,
+          seconds: 2.5,
+          zoomTo: 1.08,
+          fromTop: true,
+          focusY: 0.12,
+        }),
+    },
+    {
+      dest: join(workDir, `08-listing-${width}.mp4`),
+      make: () =>
+        stillClip({
+          src: join(shotDir, '04-listing.png'),
+          dest: join(workDir, `08-listing-${width}.mp4`),
+          width,
+          height,
+          seconds: 2.5,
+          zoomFrom: 1.0,
+          zoomTo: 1.1,
+          fromTop: true,
+          focusY: 0.18,
+        }),
+    },
+    {
+      dest: join(workDir, `09-find-${width}.mp4`),
+      make: () =>
+        stillClip({
+          src: join(stillDir, 'find-listing.png'),
+          dest: join(workDir, `09-find-${width}.mp4`),
+          width,
+          height,
+          seconds: 2.5,
+          zoomTo: 1.1,
+          focusY: 0.35,
+        }),
+    },
+    {
+      dest: join(workDir, `10-pickup-${width}.mp4`),
+      make: () =>
+        stillClip({
+          src: join(stillDir, 'pickup-happy.png'),
+          dest: join(workDir, `10-pickup-${width}.mp4`),
+          width,
+          height,
+          seconds: 2.5,
+          zoomFrom: 1.04,
+          zoomTo: 1.12,
+          focusY: 0.36,
+        }),
+    },
+    {
+      dest: join(workDir, `11-brand-${width}.mp4`),
+      make: () =>
+        brandClip({
+          dest: join(workDir, `11-brand-${width}.mp4`),
+          width,
+          height,
+          seconds: 4.0,
+        }),
+    },
+    {
+      dest: join(workDir, `12-cta-${width}.mp4`),
+      make: () =>
+        ctaClip({
+          dest: join(workDir, `12-cta-${width}.mp4`),
+          width,
+          height,
+          seconds: 2.5,
+        }),
+    },
+    {
+      dest: join(workDir, `13-logo-${width}.mp4`),
+      make: () =>
+        logoPopClip({
+          dest: join(workDir, `13-logo-${width}.mp4`),
+          width,
+          height,
+          seconds: 1.5,
+        }),
+    },
+  ];
+
+  for (const clip of clips) clip.make();
+
+  const silent = join(workDir, `silent-${width}.mp4`);
+  concatClips(
+    clips.map((c) => c.dest),
+    silent,
+    30,
+  );
+  muxVoiceover(silent, join(outDir, videoName), 30);
+}
+
+function main() {
   if (!existsSync(iconSrc)) throw new Error(`Missing ${iconSrc}`);
+  if (!existsSync(lockupSrc)) throw new Error(`Missing ${lockupSrc}`);
   mkdirSync(outDir, { recursive: true });
   mkdirSync(workDir, { recursive: true });
+  ensureVoiceover();
 
-  console.log('Recording live demo app for the ad…');
-  const demo = await recordFacebookAdDemo();
-
-  const introS = 3.0;
-  const outroS = 3.4;
-
-  function buildVersion(width, height, phoneH, videoName) {
-    const intro = join(workDir, `intro-${width}x${height}.mp4`);
-    const product = join(workDir, `product-${width}x${height}.mp4`);
-    const outro = join(workDir, `outro-${width}x${height}.mp4`);
-
-    cardClip({
-      dest: intro,
-      width,
-      height,
-      seconds: introS,
-      logoSize: width >= 1080 ? 220 : 180,
-      lines: [
-        {
-          font: FONT_BOLD,
-          text: 'The Sacramento Free',
-          size: width >= 1080 ? 46 : 38,
-          color: INK,
-          x: '(w-text_w)/2',
-          y: Math.round(height * 0.48),
-        },
-        {
-          font: FONT_SEMI,
-          text: 'Give freely. Ask kindly.',
-          size: 28,
-          color: GREEN,
-          x: '(w-text_w)/2',
-          y: Math.round(height * 0.56),
-        },
-        {
-          font: FONT_MED,
-          text: 'No selling  ·  No ads  ·  Sacramento',
-          size: 22,
-          color: MUTED,
-          x: '(w-text_w)/2',
-          y: Math.round(height * 0.78),
-        },
-      ],
-    });
-
-    const goget = join(workDir, `goget-${width}x${height}.mp4`);
-    const gogetS = 3.1;
-    const gogetShot = join(root, 'play-store-assets', 'screenshots', '13-goget-navigation.png');
-
-    productClip({
-      demo,
-      dest: product,
-      width,
-      height,
-      phoneH,
-      captions: [
-        { text: 'Free giveaways from neighbors', enable: 'lt(t,4.4)' },
-        { text: 'Give it away. Pick it up free.', enable: 'gte(t,4.4)' },
-      ],
-    });
-
-    stillBeatClip({
-      shot: gogetShot,
-      dest: goget,
-      width,
-      height,
-      phoneH,
-      seconds: gogetS,
-      caption: 'Go Get — live porch pickup',
-    });
-
-    cardClip({
-      dest: outro,
-      width,
-      height,
-      seconds: outroS,
-      logoSize: width >= 1080 ? 200 : 170,
-      lines: [
-        {
-          font: FONT_BOLD,
-          text: 'Join your neighbors',
-          size: width >= 1080 ? 44 : 36,
-          color: INK,
-          x: '(w-text_w)/2',
-          y: Math.round(height * 0.48),
-        },
-        {
-          font: FONT_SEMI,
-          text: 'sacramentobuynothing.com',
-          size: 28,
-          color: GREEN,
-          x: '(w-text_w)/2',
-          y: Math.round(height * 0.56),
-        },
-        {
-          font: FONT_MED,
-          text: 'Free to join  ·  Closed testing on Android',
-          size: 20,
-          color: MUTED,
-          x: '(w-text_w)/2',
-          y: Math.round(height * 0.78),
-        },
-      ],
-    });
-
-    concatAd(
-      [
-        { file: intro, seconds: introS },
-        { file: product, seconds: probeDuration(product) },
-        { file: goget, seconds: gogetS },
-        { file: outro, seconds: outroS },
-      ],
-      join(outDir, videoName),
-    );
-  }
-
-  console.log('Cutting portrait ad…');
-  buildVersion(1080, 1350, 1100, 'ad-portrait.mp4');
-  console.log('Cutting square ad…');
-  buildVersion(1080, 1080, 820, 'ad-square.mp4');
+  console.log('Cutting 30s portrait ad…');
+  buildVersion(1080, 1350, 'ad-portrait.mp4');
+  console.log('Cutting 30s square ad…');
+  buildVersion(1080, 1080, 'ad-square.mp4');
 
   writeDocs();
 
@@ -490,6 +713,8 @@ async function main() {
     '.gitignore',
     'README.md',
     '.work',
+    'stills',
+    'audio',
     'ad-portrait.mp4',
     'ad-square.mp4',
     'README.txt',
@@ -506,7 +731,4 @@ async function main() {
   process.exit(0);
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+main();

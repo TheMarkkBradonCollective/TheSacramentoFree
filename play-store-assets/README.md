@@ -32,7 +32,7 @@ Director download (after deploy): Staff panel / Account overview → Play Consol
 
 ## Facebook ad pack
 
-Video ad (live demo-app footage) plus the same Play Console phone screenshots:
+30-second community video ad plus the same Play Console phone screenshots:
 
 ```bash
 npm run facebook:promo

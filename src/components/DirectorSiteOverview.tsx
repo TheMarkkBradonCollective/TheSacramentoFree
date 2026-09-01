@@ -462,7 +462,7 @@ export default function DirectorSiteOverview({ scrollIntoView, onScrolled }: Dir
         <div>
           <h4 className="text-[10px] font-black uppercase tracking-widest text-muted">Facebook promo</h4>
           <p className="text-[11px] text-muted mt-1 leading-snug">
-            Video ad plus the same phone screenshots as Play Console. Fictional demo data only.
+            30-second community video ad plus the same phone screenshots as Play Console. Fictional demo data only.
           </p>
         </div>
         <div className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
@@ -499,7 +499,7 @@ export default function DirectorSiteOverview({ scrollIntoView, onScrolled }: Dir
           {fbZipError ? <p className="text-[10px] text-red-400 leading-snug">{fbZipError}</p> : null}
         </div>
         <p className="text-[10px] text-muted/80 leading-snug">
-          Post the 4:5 video on the Facebook Page timeline. Caption is in POST-COPY.txt. Screenshots are the same 1080×1920 files as Play Console.
+          Post the 4:5 30-second ad on the Facebook Page timeline. Caption is in POST-COPY.txt. Screenshots are the same 1080×1920 files as Play Console.
         </p>
       </div>
 

@@ -9,8 +9,8 @@ export const FACEBOOK_PROMO_BASE_PATH = '/downloads/facebook';
 export const FACEBOOK_PROMO_IMAGES = PLAY_STORE_PHONE_SCREENSHOTS;
 
 export const FACEBOOK_PROMO_VIDEOS = [
-  ['ad-portrait.mp4', 'Facebook feed ad 1080×1350 (4:5) — live app footage'],
-  ['ad-square.mp4', 'Facebook feed ad 1080×1080 — live app footage'],
+  ['ad-portrait.mp4', '30-second Facebook feed ad 1080×1350 (4:5)'],
+  ['ad-square.mp4', '30-second Facebook feed ad 1080×1080'],
 ] as const;
 
 export const FACEBOOK_PROMO_DOCS = [
