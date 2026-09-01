@@ -16,7 +16,6 @@ import { recordFacebookAdDemo } from './record-facebook-ad-demo.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const iconSrc = join(root, 'play-store-assets', 'icon-512.png');
-const lockupSrc = join(root, 'public', 'TheSacramentoFree.png');
 const shotDir = join(root, 'play-store-assets', 'screenshots');
 const stillDir = join(root, 'facebook-promo-assets', 'stills');
 const audioDir = join(root, 'facebook-promo-assets', 'audio');
@@ -94,7 +93,7 @@ function drawtext({ font, text, size, color, x, y, alpha, border = 0, bordercolo
   return `drawtext=fontfile=${font}:text='${ffText(text)}':fontsize=${size}:fontcolor=${color}:x='${x}':y='${y}':expansion=none${extra}`;
 }
 
-const SCRIM_TOP = 0.62;
+const SCRIM_TOP = 0.68;
 
 /** Smooth bottom gradient so captions stay legible without a hard black slab. */
 function scrimPng(width, height) {
@@ -108,7 +107,7 @@ function scrimPng(width, height) {
       '-i',
       `color=c=black:s=${width}x${scrimH}`,
       '-vf',
-      "format=rgba,geq=r=0:g=0:b=0:a='236*pow(Y/H,1.45)'",
+      "format=rgba,geq=r=0:g=0:b=0:a='212*pow(Y/H,1.8)'",
       '-frames:v',
       '1',
       dest,
@@ -125,9 +124,9 @@ function caption({ height, title, sub, delay = 0.2 }) {
   const alpha = `if(lt(t,${delay}),0,min(1,(t-${delay})/${fade}))`;
   const lift = (base) =>
     `${base}+${rise}*(1-min(1,max(0,(t-${delay})/${fade})))`;
-  const titleY = Math.round(height * (sub ? 0.755 : 0.795));
+  const titleY = Math.round(height * (sub ? 0.788 : 0.815));
   const lines = [
-    `drawbox=x=(iw-${scale(height, 84)})/2:y=${Math.round(height * 0.715)}:w=${scale(height, 84)}:h=${scale(height, 6)}:color=${GREEN}@1:t=fill`,
+    `drawbox=x=(iw-${scale(height, 84)})/2:y=${Math.round(height * 0.752)}:w=${scale(height, 84)}:h=${scale(height, 6)}:color=${GREEN}@1:t=fill`,
   ];
   lines.push(
     drawtext({
@@ -151,7 +150,7 @@ function caption({ height, title, sub, delay = 0.2 }) {
         size: scale(height, 30),
         color: '0xE9E7E0',
         x: '(w-text_w)/2',
-        y: `${Math.round(height * 0.862)}+${rise}*(1-min(1,max(0,(t-${subDelay})/${fade})))`,
+        y: `${Math.round(height * 0.885)}+${rise}*(1-min(1,max(0,(t-${subDelay})/${fade})))`,
         alpha: `if(lt(t,${subDelay}),0,min(1,(t-${subDelay})/${fade}))`,
         border: 2,
         bordercolor: 'black@0.45',
@@ -312,14 +311,14 @@ function deviceFilter({ inLabel, outLabel, height, deviceH }) {
 
 /** Live app capture inside a rounded device, over a blurred porch plate. */
 function phoneClip({ demo, dest, width, height, seconds, start, bgStill, texts = [] }) {
-  const deviceH = Math.round(height * (height >= 1300 ? 0.62 : 0.58));
-  const deviceY = Math.round(height * 0.035);
+  const deviceH = Math.round(height * (height >= 1300 ? 0.66 : 0.6));
+  const deviceY = Math.round(height * 0.025);
   const fc = [
     `[0:v]scale=${width}:${height}:force_original_aspect_ratio=increase:flags=lanczos,` +
-      `crop=${width}:${height},gblur=sigma=32,eq=brightness=-0.14:saturation=0.85,setsar=1,format=yuv420p[bg]`,
+      `crop=${width}:${height},gblur=sigma=20,eq=brightness=-0.04:saturation=0.96,setsar=1,format=yuv420p[bg]`,
     deviceFilter({ inLabel: '1:v', outLabel: 'device', height, deviceH }),
     `[bg][device]overlay=(W-w)/2:${deviceY}:format=auto,format=yuv420p,` +
-      `zoompan=z='1+${(0.05 / Math.max(Math.round(seconds * 30) - 1, 1)).toFixed(7)}*on':` +
+      `zoompan=z='1+${(0.085 / Math.max(Math.round(seconds * 30) - 1, 1)).toFixed(7)}*on':` +
       `x='iw/2-(iw/zoom/2)':y='0':d=${Math.round(seconds * 30)}:s=${width}x${height}:fps=30,setsar=1[framed]`,
     `[framed][2:v]overlay=0:${Math.round(height * SCRIM_TOP)}[scrimmed]`,
   ];
@@ -374,7 +373,7 @@ function brandClip({ dest, width, height, seconds }) {
     `[0:v]scale=${width * 2}:${height * 2}:force_original_aspect_ratio=increase:flags=lanczos,` +
       `crop=${width * 2}:${height * 2}:(iw-ow)/2:(ih-oh)/2,` +
       `zoompan=z='1.0+0.0016*on':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=${frames}:s=${width}x${height}:fps=30,` +
-      `setsar=1,format=yuv420p,drawbox=x=0:y=0:w=iw:h=ih:color=black@0.34:t=fill[bg]`,
+      `setsar=1,format=yuv420p,drawbox=x=0:y=0:w=iw:h=ih:color=black@0.2:t=fill[bg]`,
     `[1:v]scale=${logo}:${logo}:flags=lanczos,format=rgba[logo]`,
     `[bg][logo]overlay=(W-w)/2:${Math.round(height * 0.2)}[marked]`,
     `[marked]${drawtext({
@@ -518,20 +517,38 @@ function ctaClip({ dest, width, height, seconds }) {
 }
 
 function logoPopClip({ dest, width, height, seconds }) {
-  const logo = scale(height, 560);
-  const frames = Math.round(seconds * 30);
+  const rise = scale(height, 22);
   const fc = [
-    `[1:v]scale=${logo}:${logo}:flags=lanczos,format=rgba,` +
-      `zoompan=z='min(1.06,0.9+0.5*on/${frames})':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=${frames}:s=${logo}x${logo}:fps=30[logo]`,
-    `[0:v][logo]overlay=(W-w)/2:(H-h)/2-${scale(height, 40)}:format=auto[marked]`,
-    `[marked]${drawtext({
-      font: FONT_SEMI,
-      text: 'Give freely. Ask kindly.',
-      size: scale(height, 30),
+    `[0:v]${drawtext({
+      font: FONT_MED,
+      text: 'The',
+      size: scale(height, 34),
+      color: '0xBFE6D6',
+      x: '(w-text_w)/2',
+      y: `${Math.round(height * 0.37)}+${rise}*(1-min(1,t/0.35))`,
+      alpha: 'min(1,t/0.35)',
+    })}[t0]`,
+    `[t0]${drawtext({
+      font: FONT_BOLD,
+      text: 'SACRAMENTO FREE',
+      size: scale(height, 62),
       color: WHITE,
       x: '(w-text_w)/2',
-      y: Math.round(height * 0.82),
-      alpha: 'min(1,max(0,(t-0.25)/0.4))',
+      y: `${Math.round(height * 0.43)}+${rise}*(1-min(1,max(0,(t-0.12)/0.35)))`,
+      alpha: 'min(1,max(0,(t-0.12)/0.35))',
+    })}[t1]`,
+    `[t1]drawbox=x=(iw-${scale(height, 120)})/2:y=${Math.round(height * 0.53)}:w=${scale(height, 120)}:h=${scale(
+      height,
+      6,
+    )}:color=${WHITE}@0.9:t=fill[t2]`,
+    `[t2]${drawtext({
+      font: FONT_SEMI,
+      text: 'Give freely. Ask kindly.',
+      size: scale(height, 32),
+      color: WHITE,
+      x: '(w-text_w)/2',
+      y: `${Math.round(height * 0.575)}+${rise}*(1-min(1,max(0,(t-0.3)/0.35)))`,
+      alpha: 'min(1,max(0,(t-0.3)/0.35))',
     })}[out]`,
   ].join(';');
   runFfmpeg(
@@ -540,10 +557,6 @@ function logoPopClip({ dest, width, height, seconds }) {
       'lavfi',
       '-i',
       `color=c=${GREEN}:s=${width}x${height}:d=${seconds}:r=30`,
-      '-loop',
-      '1',
-      '-i',
-      lockupSrc,
       '-filter_complex',
       fc,
       '-map',
@@ -567,10 +580,18 @@ function logoPopClip({ dest, width, height, seconds }) {
   );
 }
 
-function concatClips(files, dest, duration) {
+function concatClips(clips, dest, duration) {
+  const files = clips.map((c) => c.file);
   const inputs = files.flatMap((f) => ['-i', f]);
+  const prep = clips.map((clip, i) => {
+    const steps = ['format=yuv420p'];
+    if (clip.fadeIn) steps.push(`fade=t=in:st=0:d=${clip.fadeIn}`);
+    if (clip.fadeOut) steps.push(`fade=t=out:st=${(clip.seconds - clip.fadeOut).toFixed(2)}:d=${clip.fadeOut}`);
+    return `[${i}:v]${steps.join(',')}[p${i}]`;
+  });
   const fc =
-    files.map((_, i) => `[${i}:v]`).join('') +
+    `${prep.join(';')};` +
+    clips.map((_, i) => `[p${i}]`).join('') +
     `concat=n=${files.length}:v=1:a=0,format=yuv420p,` +
     `fade=t=in:st=0:d=0.2,fade=t=out:st=${(duration - 0.4).toFixed(2)}:d=0.4[v]`;
   runFfmpeg(
@@ -814,8 +835,8 @@ function buildVersion({ width, height, videoName, demo, music }) {
           texts: cap('She takes the lamp home.', "That's the whole trade."),
         }),
     },
-    { name: 'brand', seconds: 3.6, make: (dest) => brandClip({ dest, width, height, seconds: 3.6 }) },
-    { name: 'cta', seconds: 2.4, make: (dest) => ctaClip({ dest, width, height, seconds: 2.4 }) },
+    { name: 'brand', seconds: 3.6, make: (dest) => brandClip({ dest, width, height, seconds: 3.6 }), fadeOut: 0.3 },
+    { name: 'cta', seconds: 2.4, make: (dest) => ctaClip({ dest, width, height, seconds: 2.4 }), fadeIn: 0.3 },
     { name: 'logo', seconds: 1.8, make: (dest) => logoPopClip({ dest, width, height, seconds: 1.8 }) },
   ];
 
@@ -824,14 +845,14 @@ function buildVersion({ width, height, videoName, demo, music }) {
     throw new Error(`Beats total ${total}s, expected ${TOTAL}s`);
   }
 
-  const files = beats.map((beat, i) => {
-    const dest = join(workDir, `${String(i + 1).padStart(2, '0')}-${beat.name}-${width}x${height}.mp4`);
-    beat.make(dest);
-    return dest;
+  const clips = beats.map((beat, i) => {
+    const file = join(workDir, `${String(i + 1).padStart(2, '0')}-${beat.name}-${width}x${height}.mp4`);
+    beat.make(file);
+    return { file, seconds: beat.seconds, fadeIn: beat.fadeIn, fadeOut: beat.fadeOut };
   });
 
   const silent = join(workDir, `silent-${width}x${height}.mp4`);
-  concatClips(files, silent, TOTAL);
+  concatClips(clips, silent, TOTAL);
 
   muxAudio({
     video: silent,
@@ -849,7 +870,6 @@ function buildVersion({ width, height, videoName, demo, music }) {
 
 async function main() {
   if (!existsSync(iconSrc)) throw new Error(`Missing ${iconSrc}`);
-  if (!existsSync(lockupSrc)) throw new Error(`Missing ${lockupSrc}`);
   mkdirSync(outDir, { recursive: true });
   mkdirSync(workDir, { recursive: true });
   ensureVoiceover();
