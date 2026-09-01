@@ -227,8 +227,8 @@ function stillClip({
   width,
   height,
   seconds,
-  zoomFrom = 1.0,
-  zoomTo = 1.08,
+  zoomFrom = 1.02,
+  zoomTo = 1.1,
   focusX = 0.5,
   focusY = 0.42,
   fromTop = false,
@@ -238,10 +238,14 @@ function stillClip({
   const frames = Math.round(seconds * 30);
   const zoomDelta = (zoomTo - zoomFrom) / Math.max(frames - 1, 1);
   const cropY = fromTop ? '0' : '(ih-oh)/2';
+  // A touch of handheld drift so the push-in does not read as a mechanical zoom.
+  const drift = Math.round(width * 0.009);
   const parts = [
     `scale=${width * 2}:${height * 2}:force_original_aspect_ratio=increase:flags=lanczos`,
     `crop=${width * 2}:${height * 2}:(iw-ow)/2:${cropY}`,
-    `zoompan=z='${zoomFrom}+${zoomDelta}*on':x='(iw-iw/zoom)*${focusX}':y='(ih-ih/zoom)*${focusY}':d=${frames}:s=${width}x${height}:fps=30`,
+    `zoompan=z='${zoomFrom}+${zoomDelta}*on':` +
+      `x='(iw-iw/zoom)*${focusX}+${drift}*sin(on/26)':` +
+      `y='(ih-ih/zoom)*${focusY}+${drift}*cos(on/31)':d=${frames}:s=${width}x${height}:fps=30`,
     'setsar=1',
     'format=yuv420p',
   ];
