@@ -462,7 +462,7 @@ export default function DirectorSiteOverview({ scrollIntoView, onScrolled }: Dir
         <div>
           <h4 className="text-[10px] font-black uppercase tracking-widest text-muted">Facebook promo</h4>
           <p className="text-[11px] text-muted mt-1 leading-snug">
-            Timeline images, screenshot-tour videos, captions, and phone screenshots. Fictional demo data only.
+            Video ad (live demo app) plus the two still posters. Fictional demo data only.
           </p>
         </div>
         <div className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
@@ -499,7 +499,7 @@ export default function DirectorSiteOverview({ scrollIntoView, onScrolled }: Dir
           {fbZipError ? <p className="text-[10px] text-red-400 leading-snug">{fbZipError}</p> : null}
         </div>
         <p className="text-[10px] text-muted/80 leading-snug">
-          Post on the Facebook Page timeline. Captions are in POST-COPY.txt. 4:5 portrait (1080×1350) fills more of the feed than square.
+          Post the 4:5 video on the Facebook Page timeline. Caption is in POST-COPY.txt. The two PNGs are the ad posters / thumbnails.
         </p>
       </div>
 

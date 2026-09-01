@@ -1,16 +1,16 @@
-The Sacramento Free — Facebook captions
-======================================
-Copy one block per post. Edit the greeting if you like. Do not use the
-old “Buy Nothing” product name in new posts.
+The Sacramento Free — Facebook ad caption
+========================================
+Paste this with ad-portrait.mp4 (or the square video).
 
+---
 
-POST 1 — Hero photo (use 02-timeline-portrait-hero.png or 01-timeline-square-hero.png)
---------------------------------------------------------------------------------------
-Neighbors: TheSacramentoFree is Sacramento’s free gifting community.
+Neighbors: Sacramento has a free gifting app.
 
-Give what you can. Ask for what you need. Pick it up from a porch — no money, no ads, no flipping.
+Give what you can. Ask for what you need. Pick it up from a porch.
 
-Browse giveaways, post a request, RSVP to free events, and message neighbors to set a time.
+No selling. No bidding. No flipping. No ads.
+
+TheSacramentoFree — Give freely. Ask kindly.
 
 Join on the web:
 https://www.sacramentobuynothing.com
@@ -18,66 +18,4 @@ https://www.sacramentobuynothing.com
 Android (closed testing — free to opt in):
 https://play.google.com/apps/testing/org.sacramentobuynothing.app
 
-Give freely. Ask kindly.
-
-#TheSacramentoFree #Sacramento #NeighborsHelpingNeighbors #FreeStuff #SacramentoCommunity
-
-
-POST 2 — App tour video (use timeline-portrait-app-tour.mp4)
-------------------------------------------------------------
-A quick look at TheSacramentoFree — Feed, Stuff, Map, Events, chat, and Go Get pickup.
-
-This video uses demo screens (fictional neighbors) so you can see the app without anyone’s real posts.
-
-Website: https://www.sacramentobuynothing.com
-Play closed testing: https://play.google.com/apps/testing/org.sacramentobuynothing.app
-
-#TheSacramentoFree #Sacramento #GiveFreelyAskKindly
-
-
-POST 3 — Carousel (upload carousel-01-home.png through carousel-06-goget.png)
-----------------------------------------------------------------------------
-Swipe through TheSacramentoFree:
-
-1. Home — today’s giveaways
-2. Feed — neighbor posts and check-ins
-3. Stuff — furniture, clothes, baby gear, and more
-4. Map — what’s nearby
-5. Events — free community gatherings
-6. Go Get — live pickup in the Android app (ring, GPS, handoff)
-
-No selling. No bidding. No flipping. Just neighbors helping neighbors.
-
-https://www.sacramentobuynothing.com
-
-#TheSacramentoFree #SacramentoNeighbors
-
-
-POST 4 — Go Get (use 08-timeline-portrait-goget.png or 05-timeline-square-goget.png)
------------------------------------------------------------------------------------
-Go Get is the Android-app way to pick something up.
-
-You tap Go Get on a listing. Their phone rings on a map. If they say yes, you get turn-by-turn GPS and they can watch you come over — like a ride, for a free porch pickup.
-
-Website neighbors still message and set a time the usual way. The live trip is in the app.
-
-Opt in to closed testing:
-https://play.google.com/apps/testing/org.sacramentobuynothing.app
-
-#TheSacramentoFree #GoGet #Sacramento
-
-
-POST 5 — Values (use 07-timeline-square-values.png)
----------------------------------------------------
-TheSacramentoFree house rules, in four lines:
-
-No selling.
-No bidding.
-No flipping.
-Just neighbors helping neighbors.
-
-Everything posted must be 100% free.
-
-https://www.sacramentobuynothing.com
-
-#TheSacramentoFree #GiveFreelyAskKindly
+#TheSacramentoFree #Sacramento #GiveFreelyAskKindly #NeighborsHelpingNeighbors

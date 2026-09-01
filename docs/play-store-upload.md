@@ -9,7 +9,7 @@ Everything below is pre-filled for **SacramentoBuyNothing** (`org.sacramentobuyn
 - Build command: `npm run android:aab` → `public/downloads/sac-buy-nothing-beta-v0.1.0.0030.aab` (and legacy `sac-buy-nothing.aab`)
 - Store graphics: `play-store-assets/icon-512.png`, `play-store-assets/feature-graphic-1024x500.png`
 - Phone screenshots: `play-store-assets/screenshots/` (fictional demo neighbors — not live member data)
-- Facebook timeline pack: `npm run facebook:promo` → `facebook-promo-assets/` and `public/downloads/facebook-promo.zip`
+- Facebook ad pack: `npm run facebook:promo` → `ad-portrait.mp4` + posters in `facebook-promo-assets/` and `public/downloads/facebook-promo.zip`
 - Regenerate graphics: `npm run android:play-assets`
 - Regenerate screenshots: `npm run android:play-screenshots`
 - Firebase push configured (client + server)

@@ -51,7 +51,7 @@ A community gifting PWA for Sacramento neighbors. Post free items, browse a loca
 | `npm run build` | Production build → `dist/` |
 | `npm run build:android` | Production web build for Capacitor |
 | `npm run android:play-screenshots` | Phone screenshots from fictional demo data |
-| `npm run facebook:promo` | Facebook timeline images, videos, captions, and zip |
+| `npm run facebook:promo` | Facebook video ad (live demo footage) + posters + zip |
 | `npm run android:apk` | Signed release APK → `dist/android/` and `public/downloads/` |
 | `npm run android:apk:debug` | Build a sideloadable debug APK → `dist/android/` (local testing only) |
 | `npm run cap:sync` | Copy web build into the Android project |

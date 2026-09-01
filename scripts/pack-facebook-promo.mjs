@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
- * Publish Facebook promo graphics for director downloads + zip bundle.
+ * Publish Facebook ad files for director downloads + zip bundle.
  * Writes public/downloads/facebook/* and public/downloads/facebook-promo.zip
  */
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -13,11 +13,9 @@ import {
   FACEBOOK_PROMO_IMAGES,
   FACEBOOK_PROMO_VIDEOS,
 } from '../shared/facebookPromoAssets.mjs';
-import { PLAY_STORE_PHONE_SCREENSHOTS } from '../shared/playStoreAssets.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const promoDir = join(root, 'facebook-promo-assets');
-const shotDir = join(root, 'play-store-assets', 'screenshots');
 const outDir = join(root, 'public', 'downloads');
 const assetOutDir = join(outDir, 'facebook');
 const zipPath = join(outDir, 'facebook-promo.zip');
@@ -33,15 +31,13 @@ function copyAsset(src, destFileName) {
 
 export function packFacebookPromoZip() {
   mkdirSync(outDir, { recursive: true });
+  rmSync(assetOutDir, { recursive: true, force: true });
   mkdirSync(assetOutDir, { recursive: true });
   if (existsSync(zipPath)) {
     rmSync(zipPath);
   }
 
   const staging = mkdtempSync(join(tmpdir(), 'facebook-promo-'));
-  mkdirSync(join(staging, 'promo-images'));
-  mkdirSync(join(staging, 'promo-videos'));
-  mkdirSync(join(staging, 'phone-screenshots'));
 
   const copies = [
     ...FACEBOOK_PROMO_DOCS.map(([file]) => [join(promoDir, file), file]),
@@ -51,38 +47,11 @@ export function packFacebookPromoZip() {
 
   for (const [src, fileName] of copies) {
     copyAsset(src, fileName);
+    copyFileSync(join(assetOutDir, fileName), join(staging, fileName));
   }
 
-  for (const [file] of FACEBOOK_PROMO_DOCS) {
-    copyFileSync(join(assetOutDir, file), join(staging, file));
-  }
-  for (const [file] of FACEBOOK_PROMO_IMAGES) {
-    copyFileSync(join(assetOutDir, file), join(staging, 'promo-images', file));
-  }
-  for (const [file] of FACEBOOK_PROMO_VIDEOS) {
-    copyFileSync(join(assetOutDir, file), join(staging, 'promo-videos', file));
-  }
-
-  const screenshotReadme = [
-    'Phone screenshots (1080×1920) from the fictional demo build.',
-    'Use these as extra photos, Stories, or carousel slides.',
-    '',
-    ...PLAY_STORE_PHONE_SCREENSHOTS.map(([file, label], i) => `  ${i + 1}. ${file} — ${label}`),
-    '',
-  ].join('\n');
-  writeFileSync(join(staging, 'phone-screenshots', 'README.txt'), screenshotReadme);
-
-  for (const [file] of PLAY_STORE_PHONE_SCREENSHOTS) {
-    const src = join(shotDir, file);
-    if (!existsSync(src)) {
-      throw new Error(`Missing screenshot ${src}`);
-    }
-    copyFileSync(src, join(staging, 'phone-screenshots', file));
-    copyAsset(src, `screenshot-${file}`);
-  }
-
-  const zipArgs = ['-r', '-q', zipPath, '.'];
-  let packed = spawnSync('zip', zipArgs, { encoding: 'utf8', cwd: staging });
+  const zipArgs = ['-j', '-q', zipPath, ...copies.map(([, fileName]) => join(staging, fileName))];
+  let packed = spawnSync('zip', zipArgs, { encoding: 'utf8' });
   if (packed.error || packed.status !== 0) {
     packed = spawnSync(
       'python3',
@@ -92,11 +61,10 @@ export function packFacebookPromoZip() {
 import zipfile, os
 staging = ${JSON.stringify(staging)}
 zip_path = ${JSON.stringify(zipPath)}
+names = ${JSON.stringify(copies.map(([, name]) => name))}
 with zipfile.ZipFile(zip_path, 'w', compression=zipfile.ZIP_DEFLATED) as zf:
-    for root, dirs, files in os.walk(staging):
-        for name in files:
-            full = os.path.join(root, name)
-            zf.write(full, os.path.relpath(full, staging))
+    for name in names:
+        zf.write(os.path.join(staging, name), name)
 `,
       ],
       { encoding: 'utf8' },
