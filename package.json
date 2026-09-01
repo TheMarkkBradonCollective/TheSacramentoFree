@@ -24,6 +24,8 @@
     "android:play-assets": "bash scripts/generate-play-store-assets.sh",
     "android:play-screenshots": "node scripts/capture-play-store-screenshots.mjs",
     "android:play-screenshots-zip": "node scripts/pack-play-store-screenshots.mjs",
+    "facebook:promo": "node scripts/generate-facebook-promo.mjs",
+    "facebook:promo-zip": "node scripts/pack-facebook-promo.mjs",
     "play:reviewer-account": "node scripts/create-play-reviewer-account.mjs",
     "field:test": "node scripts/field-test.mjs",
     "field:test:web": "node scripts/field-test.mjs --web",

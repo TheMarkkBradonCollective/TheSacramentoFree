@@ -8,12 +8,23 @@ export const APP_ORIGIN = 'https://www.sacramentobuynothing.com';
 export const PLAY_STORE_SCREENSHOTS_ZIP_PATH = '/downloads/play-store-screenshots.zip';
 export const PLAY_STORE_SCREENSHOTS_ZIP_NAME = 'play-store-screenshots.zip';
 
+/** Zip of Facebook timeline images, videos, captions, and phone screenshots. */
+export const FACEBOOK_PROMO_ZIP_PATH = '/downloads/facebook-promo.zip';
+export const FACEBOOK_PROMO_ZIP_NAME = 'facebook-promo.zip';
+
 /** Website URL so the native app downloads from the live site, not the APK bundle. */
 export function playStoreScreenshotsZipUrl(): string {
   if (typeof window === 'undefined' || isNativeApp()) {
     return `${APP_ORIGIN}${PLAY_STORE_SCREENSHOTS_ZIP_PATH}`;
   }
   return PLAY_STORE_SCREENSHOTS_ZIP_PATH;
+}
+
+export function facebookPromoZipUrl(): string {
+  if (typeof window === 'undefined' || isNativeApp()) {
+    return `${APP_ORIGIN}${FACEBOOK_PROMO_ZIP_PATH}`;
+  }
+  return FACEBOOK_PROMO_ZIP_PATH;
 }
 
 /** Build a cache-busted APK download URL so browsers never serve a stale file. */
