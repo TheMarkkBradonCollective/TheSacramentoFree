@@ -1,6 +1,6 @@
 # Facebook ad pack
 
-A **30-second community video ad** for the TheSacramentoFree Facebook Page, plus the **same phone screenshots** as Google Play Console (1080×1920, fictional demo neighbors).
+A **30-second community video ad** that follows one neighbor giving away a lamp on TheSacramentoFree — plus the **same phone screenshots** as Google Play Console (1080×1920, fictional demo neighbors).
 
 ## What to post
 
