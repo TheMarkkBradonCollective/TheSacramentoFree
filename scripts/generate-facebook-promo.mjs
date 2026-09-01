@@ -127,7 +127,8 @@ function stillClip({
     'format=yuv420p',
   ];
   if (shade) {
-    parts.push(`drawbox=x=0:y=ih*0.72:w=iw:h=ih*0.28:color=black@0.52:t=fill`);
+    const top = texts.length > 1 ? 0.64 : 0.72;
+    parts.push(`drawbox=x=0:y=ih*${top}:w=iw:h=ih*${(1 - top).toFixed(2)}:color=black@0.55:t=fill`);
   }
   let vf = parts.join(',');
   for (const line of texts) {
@@ -234,12 +235,12 @@ function brandClip({ dest, width, height, seconds }) {
 }
 
 function ctaClip({ dest, width, height, seconds }) {
-  const phoneW = scale(height, 400);
-  const title = scale(height, 46);
-  const sub = scale(height, 28);
-  const url = scale(height, 26);
-  const phoneY = Math.round(height * 0.06);
-  const text0 = Math.round(height * 0.66);
+  const phoneW = scale(height, 340);
+  const title = scale(height, 42);
+  const sub = scale(height, 26);
+  const url = scale(height, 24);
+  const phoneY = Math.round(height * 0.04);
+  const text0 = Math.round(height * 0.58);
   const fc = [
     `[1:v]scale=${phoneW}:-1:flags=lanczos,format=yuv420p,setsar=1[phone]`,
     `[0:v][phone]overlay=(W-w)/2:${phoneY}[withphone]`,
@@ -257,15 +258,23 @@ function ctaClip({ dest, width, height, seconds }) {
       size: sub,
       color: GREEN,
       x: '(w-text_w)/2',
-      y: text0 + scale(height, 58),
+      y: text0 + scale(height, 50),
     })}[t2]`,
     `[t2]${drawtext({
+      font: FONT_SEMI,
+      text: 'Porch pickup. Both stay on the app.',
+      size: sub,
+      color: INK,
+      x: '(w-text_w)/2',
+      y: text0 + scale(height, 92),
+    })}[t3]`,
+    `[t3]${drawtext({
       font: FONT_MED,
       text: 'sacramentobuynothing.com',
       size: url,
       color: INK,
       x: '(w-text_w)/2',
-      y: text0 + scale(height, 108),
+      y: text0 + scale(height, 140),
     })}[out]`,
   ].join(';');
   runFfmpeg(
@@ -383,10 +392,10 @@ function concatClips(files, dest, duration) {
 
 function muxVoiceover(video, dest, duration) {
   const vos = [
-    { file: join(audioDir, 'vo1.mp3'), at: 6.55 },
-    { file: join(audioDir, 'vo2.mp3'), at: 10.8 },
-    { file: join(audioDir, 'vo3.mp3'), at: 15.55 },
-    { file: join(audioDir, 'vo4.mp3'), at: 26.2 },
+    { file: join(audioDir, 'vo1.mp3'), at: 5.55 },
+    { file: join(audioDir, 'vo2.mp3'), at: 8.45 },
+    { file: join(audioDir, 'vo3.mp3'), at: 11.25 },
+    { file: join(audioDir, 'vo4.mp3'), at: 23.25 },
   ];
   const inputs = ['-i', video, ...vos.flatMap((v) => ['-i', v.file])];
   const delays = vos.map((v, i) => {
@@ -453,11 +462,12 @@ Paste this with ad-portrait.mp4 (or the square video).
 
 You don't need it anymore? Don't throw it away.
 
-There's probably someone in Sacramento who could use it.
+List it on Sacramento Free. A neighbor finds it on her phone too.
 
-Sacramento Free makes it easy to give away the things you no longer need.
+Porch pickup — both stay on the app. She takes the lamp. That's the whole trade.
 
-A neighbor picks it up from the porch. That's the whole trade.
+Give. Find. Reuse.
+100% free. Keep it local.
 
 Give. Find. Reuse.
 100% free. Keep it local.
@@ -490,43 +500,33 @@ function clearGenerated(dir, keep) {
 
 function buildVersion(width, height, videoName) {
   const s = (n) => scale(height, n);
-  const hookQ = [
-    {
-      font: FONT_BOLD,
-      text: "You don't need it anymore?",
-      size: s(42),
-      color: WHITE,
-      x: '(w-text_w)/2',
-      y: Math.round(height * 0.82),
-      border: 2,
-      bordercolor: 'black@0.7',
-    },
-  ];
-  const hookNo = [
-    {
-      font: FONT_BOLD,
-      text: "DON'T THROW IT AWAY.",
-      size: s(46),
-      color: WHITE,
-      x: '(w-text_w)/2',
-      y: Math.round(height * 0.82),
-      border: 3,
-      bordercolor: 'black@0.75',
-    },
-  ];
-
-  const doneLine = [
-    {
-      font: FONT_BOLD,
-      text: "That's the whole trade.",
-      size: s(42),
-      color: WHITE,
-      x: '(w-text_w)/2',
-      y: Math.round(height * 0.82),
-      border: 2,
-      bordercolor: 'black@0.7',
-    },
-  ];
+  const caption = (title, sub) => {
+    const lines = [
+      {
+        font: FONT_BOLD,
+        text: title,
+        size: s(sub ? 34 : 42),
+        color: WHITE,
+        x: '(w-text_w)/2',
+        y: Math.round(height * (sub ? 0.73 : 0.82)),
+        border: 2,
+        bordercolor: 'black@0.7',
+      },
+    ];
+    if (sub) {
+      lines.push({
+        font: FONT_SEMI,
+        text: sub,
+        size: s(26),
+        color: WHITE,
+        x: '(w-text_w)/2',
+        y: Math.round(height * 0.84),
+        border: 2,
+        bordercolor: 'black@0.7',
+      });
+    }
+    return lines;
+  };
 
   const clips = [
     {
@@ -537,10 +537,10 @@ function buildVersion(width, height, videoName) {
           dest: join(workDir, `01-hook-${width}.mp4`),
           width,
           height,
-          seconds: 3.0,
+          seconds: 2.8,
           zoomTo: 1.1,
           shade: true,
-          texts: hookQ,
+          texts: caption("You don't need it anymore?", 'That gold lamp can help a neighbor.'),
         }),
     },
     {
@@ -551,11 +551,11 @@ function buildVersion(width, height, videoName) {
           dest: join(workDir, `02-phone-${width}.mp4`),
           width,
           height,
-          seconds: 3.5,
+          seconds: 2.8,
           zoomFrom: 1.02,
           zoomTo: 1.12,
           shade: true,
-          texts: hookNo,
+          texts: caption("DON'T THROW IT AWAY.", 'List it on Sacramento Free.'),
         }),
     },
     {
@@ -566,82 +566,88 @@ function buildVersion(width, height, videoName) {
           dest: join(workDir, `03-list-${width}.mp4`),
           width,
           height,
-          seconds: 4.5,
+          seconds: 2.8,
           zoomTo: 1.1,
           focusY: 0.45,
+          shade: true,
+          texts: caption('She lists the gold lamp.', "She's on her phone."),
         }),
     },
     {
-      dest: join(workDir, `05-porch-${width}.mp4`),
+      dest: join(workDir, `04-find-${width}.mp4`),
       make: () =>
         stillClip({
-          src: join(stillDir, 'lamp-porch.png'),
-          dest: join(workDir, `05-porch-${width}.mp4`),
+          src: join(stillDir, 'neighbor-phone.png'),
+          dest: join(workDir, `04-find-${width}.mp4`),
           width,
           height,
-          seconds: 4.5,
+          seconds: 2.8,
+          zoomTo: 1.1,
+          focusY: 0.38,
+          shade: true,
+          texts: caption('A neighbor finds it.', "She's on her phone too."),
+        }),
+    },
+    {
+      dest: join(workDir, `05-pickup-${width}.mp4`),
+      make: () =>
+        stillClip({
+          src: join(stillDir, 'porch-pickup-phones.png'),
+          dest: join(workDir, `05-pickup-${width}.mp4`),
+          width,
+          height,
+          seconds: 4.8,
           zoomFrom: 1.02,
           zoomTo: 1.1,
           focusY: 0.42,
+          shade: true,
+          texts: caption('Porch pickup.', 'Both confirm on the app.'),
         }),
     },
     {
-      dest: join(workDir, `06-handoff-${width}.mp4`),
+      dest: join(workDir, `06-done-${width}.mp4`),
       make: () =>
         stillClip({
-          src: join(stillDir, 'lamp-handoff.png'),
-          dest: join(workDir, `06-handoff-${width}.mp4`),
+          src: join(stillDir, 'porch-picked-up.png'),
+          dest: join(workDir, `06-done-${width}.mp4`),
           width,
           height,
-          seconds: 4.0,
-          zoomTo: 1.08,
-          focusY: 0.4,
-        }),
-    },
-    {
-      dest: join(workDir, `07-done-${width}.mp4`),
-      make: () =>
-        stillClip({
-          src: join(stillDir, 'lamp-complete.png'),
-          dest: join(workDir, `07-done-${width}.mp4`),
-          width,
-          height,
-          seconds: 3.0,
+          seconds: 3.4,
           zoomFrom: 1.04,
           zoomTo: 1.12,
           focusY: 0.38,
           shade: true,
-          texts: doneLine,
+          texts: caption('She takes the lamp.', "That's the whole trade."),
         }),
     },
     {
-      dest: join(workDir, `08-brand-${width}.mp4`),
+      dest: join(workDir, `07-brand-${width}.mp4`),
       make: () =>
         brandClip({
-          dest: join(workDir, `08-brand-${width}.mp4`),
+          dest: join(workDir, `07-brand-${width}.mp4`),
           width,
           height,
-          seconds: 4.0,
+          seconds: 3.8,
         }),
     },
     {
-      dest: join(workDir, `09-cta-${width}.mp4`),
+      dest: join(workDir, `08-cta-${width}.mp4`),
       make: () =>
         ctaClip({
-          dest: join(workDir, `09-cta-${width}.mp4`),
+          dest: join(workDir, `08-cta-${width}.mp4`),
           width,
           height,
-          seconds: 2.0,
+          seconds: 4.2,
         }),
     },
     {
-      dest: join(workDir, `10-logo-${width}.mp4`),
+      dest: join(workDir, `09-logo-${width}.mp4`),
       make: () =>
         logoPopClip({
-          dest: join(workDir, `10-logo-${width}.mp4`),
+          dest: join(workDir, `09-logo-${width}.mp4`),
           width,
           height,
-          seconds: 1.5,
+          seconds: 2.6,
         }),
     },
   ];
