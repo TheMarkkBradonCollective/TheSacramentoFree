@@ -1,13 +1,12 @@
 import { apiUrl } from './appOrigin';
 import { FACEBOOK_PROMO_ZIP_NAME, facebookPromoZipUrl } from './apkDownload';
 import { isNativeApp } from './nativePlatform';
+import { PLAY_STORE_PHONE_SCREENSHOTS } from './playStoreAssets';
 
 export const FACEBOOK_PROMO_BASE_PATH = '/downloads/facebook';
 
-export const FACEBOOK_PROMO_IMAGES = [
-  ['ad-poster-portrait.png', 'Ad poster 1080×1350 (4:5 thumbnail / still)'],
-  ['ad-poster-square.png', 'Ad poster 1080×1080 (square thumbnail / still)'],
-] as const;
+/** Same 1080×1920 captures as Play Console — not framed posters. */
+export const FACEBOOK_PROMO_IMAGES = PLAY_STORE_PHONE_SCREENSHOTS;
 
 export const FACEBOOK_PROMO_VIDEOS = [
   ['ad-portrait.mp4', 'Facebook feed ad 1080×1350 (4:5) — live app footage'],
@@ -15,8 +14,8 @@ export const FACEBOOK_PROMO_VIDEOS = [
 ] as const;
 
 export const FACEBOOK_PROMO_DOCS = [
-  ['POST-COPY.txt', 'Ready-to-paste Facebook captions'],
-  ['README.txt', 'How to post these files on Facebook'],
+  ['README.txt', 'How to post the ad on Facebook'],
+  ['POST-COPY.txt', 'Ready-to-paste Facebook caption'],
 ] as const;
 
 export type FacebookPromoAssetLink = {

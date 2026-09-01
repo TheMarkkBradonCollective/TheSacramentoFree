@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Publish Facebook ad files for director downloads + zip bundle.
- * Writes public/downloads/facebook/* and public/downloads/facebook-promo.zip
+ * Videos from facebook-promo-assets/; screenshots are the same Play Console PNGs.
  */
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -16,6 +16,7 @@ import {
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const promoDir = join(root, 'facebook-promo-assets');
+const shotDir = join(root, 'play-store-assets', 'screenshots');
 const outDir = join(root, 'public', 'downloads');
 const assetOutDir = join(outDir, 'facebook');
 const zipPath = join(outDir, 'facebook-promo.zip');
@@ -41,8 +42,8 @@ export function packFacebookPromoZip() {
 
   const copies = [
     ...FACEBOOK_PROMO_DOCS.map(([file]) => [join(promoDir, file), file]),
-    ...FACEBOOK_PROMO_IMAGES.map(([file]) => [join(promoDir, file), file]),
     ...FACEBOOK_PROMO_VIDEOS.map(([file]) => [join(promoDir, file), file]),
+    ...FACEBOOK_PROMO_IMAGES.map(([file]) => [join(shotDir, file), file]),
   ];
 
   for (const [src, fileName] of copies) {

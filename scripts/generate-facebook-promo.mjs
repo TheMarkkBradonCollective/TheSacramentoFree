@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Build a Facebook video ad for TheSacramentoFree — live demo-app footage
- * with branded intro/outro — plus the two still posters the ad needs.
+ * with branded intro/outro. Screenshots in the zip are the Play Console PNGs.
  *
  *   npm run facebook:promo
  */
@@ -18,7 +18,6 @@ const outDir = join(root, 'facebook-promo-assets');
 const workDir = join(outDir, '.work');
 
 const GREEN = '0x00845A';
-const GREEN_DARK = '0x006B46';
 const CREAM = '0xF6F3EA';
 const INK = '0x0B0B0C';
 const MUTED = '0x52525B';
@@ -297,11 +296,6 @@ function concatAd(clips, dest) {
   console.log(`wrote ${dest}`);
 }
 
-function posterFromVideo(video, dest, time = 5.2) {
-  runFfmpeg(['-ss', String(time), '-i', video, '-frames:v', '1', '-pix_fmt', 'rgb24', dest], dest);
-  console.log(`wrote ${dest}`);
-}
-
 function writeDocs() {
   const readme = `The Sacramento Free — Facebook ad pack
 ======================================
@@ -311,18 +305,19 @@ Fictional demo neighbors only. Do not post live member names or photos.
 What to upload
 --------------
 1. Video (recommended): ad-portrait.mp4
-   Facebook feed 4:5 (1080×1350). This is the ad — live app footage,
-   not a screenshot slideshow.
+   Facebook feed 4:5 (1080×1350). Live app footage + brand open/close.
 2. Square video (optional): ad-square.mp4
    Same ad, 1080×1080.
-3. Still (if you also want a photo post, or as the video thumbnail):
-   ad-poster-portrait.png  or  ad-poster-square.png
+3. Screenshots: 01-home.png through 16-goget-arrived.png
+   Same 1080×1920 phone captures as Play Console (no frames, no posters).
+   Use as extra photos on the timeline if you want.
 
 Caption: paste from POST-COPY.txt.
 
 Regenerate
 ----------
-npm run facebook:promo
+npm run android:play-screenshots   # refresh Play/Facebook screenshots
+npm run facebook:promo             # rebuild the video ad + zip
 `;
 
   const captions = `The Sacramento Free — Facebook ad caption
@@ -374,7 +369,7 @@ async function main() {
   const introS = 3.0;
   const outroS = 3.4;
 
-  function buildVersion(width, height, phoneH, videoName, posterName, posterTime) {
+  function buildVersion(width, height, phoneH, videoName) {
     const intro = join(workDir, `intro-${width}x${height}.mp4`);
     const product = join(workDir, `product-${width}x${height}.mp4`);
     const outro = join(workDir, `outro-${width}x${height}.mp4`);
@@ -482,13 +477,12 @@ async function main() {
       ],
       join(outDir, videoName),
     );
-    posterFromVideo(join(outDir, videoName), join(outDir, posterName), posterTime);
   }
 
   console.log('Cutting portrait ad…');
-  buildVersion(1080, 1350, 1100, 'ad-portrait.mp4', 'ad-poster-portrait.png', 4.8);
+  buildVersion(1080, 1350, 1100, 'ad-portrait.mp4');
   console.log('Cutting square ad…');
-  buildVersion(1080, 1080, 820, 'ad-square.mp4', 'ad-poster-square.png', 4.8);
+  buildVersion(1080, 1080, 820, 'ad-square.mp4');
 
   writeDocs();
 
@@ -498,8 +492,6 @@ async function main() {
     '.work',
     'ad-portrait.mp4',
     'ad-square.mp4',
-    'ad-poster-portrait.png',
-    'ad-poster-square.png',
     'README.txt',
     'POST-COPY.txt',
   ]);

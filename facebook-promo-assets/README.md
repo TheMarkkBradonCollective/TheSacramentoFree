@@ -1,13 +1,13 @@
 # Facebook ad pack
 
-A **video ad** for the TheSacramentoFree Facebook Page, plus the two still posters the ad needs. The video is live footage of the demo app (fictional neighbors), not a screenshot slideshow.
+A **video ad** for the TheSacramentoFree Facebook Page, plus the **same phone screenshots** as Google Play Console (1080×1920, fictional demo neighbors).
 
 ## What to post
 
 1. **`ad-portrait.mp4`** — Facebook feed ad, 1080×1350 (4:5)
 2. Caption from `POST-COPY.txt`
-3. Optional: `ad-square.mp4` if you want a 1:1 post
-4. Optional still: `ad-poster-portrait.png` (thumbnail / photo post)
+3. Optional: `ad-square.mp4` for a 1:1 post
+4. Optional photos: `01-home.png` … `16-goget-arrived.png` — identical to Play Console
 
 ## Download (after deploy)
 
@@ -17,7 +17,6 @@ A **video ad** for the TheSacramentoFree Facebook Page, plus the two still poste
 ## Regenerate
 
 ```bash
-npm run facebook:promo
+npm run android:play-screenshots   # refresh Play/Facebook screenshots
+npm run facebook:promo             # rebuild the video ad + zip
 ```
-
-Records the local demo app (`VITE_PLAY_STORE_DEMO=1`), then cuts intro + live footage + end card.
