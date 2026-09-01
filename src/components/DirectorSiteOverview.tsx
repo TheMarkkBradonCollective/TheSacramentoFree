@@ -16,6 +16,11 @@ import type { DirectorActivityItem, DirectorSiteOverview } from '../types';
 import { getDirectorSiteOverview, supabase } from '../supabase';
 import { apiUrl } from '../lib/appOrigin';
 import { downloadPlayStoreAsset, downloadPlayStoreZip, playStoreAssetLinks } from '../lib/playStoreAssets';
+import {
+  downloadFacebookPromoAsset,
+  downloadFacebookPromoZip,
+  facebookPromoAssetLinks,
+} from '../lib/facebookPromoAssets';
 import { debounceRealtime, subscribePostgresChanges } from '../lib/supabaseRealtime';
 import UserAvatar from './UserAvatar';
 import { formatLastActive } from '../lib/presence';
@@ -25,14 +30,16 @@ interface DirectorSiteOverviewProps {
   onScrolled?: () => void;
 }
 
-function PlayStoreAssetDownload({
+function AssetDownloadButton({
   file,
   label,
   id,
+  onDownload,
 }: {
   file: string;
   label: string;
   id?: string;
+  onDownload: (file: string) => Promise<void>;
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,7 +53,7 @@ function PlayStoreAssetDownload({
         onClick={() => {
           setBusy(true);
           setError(null);
-          void downloadPlayStoreAsset(file)
+          void onDownload(file)
             .catch((err) => {
               setError(err instanceof Error ? err.message : 'Download failed');
             })
@@ -143,7 +150,10 @@ export default function DirectorSiteOverview({ scrollIntoView, onScrolled }: Dir
   const [exportTestersNotice, setExportTestersNotice] = useState<string | null>(null);
   const [zipBusy, setZipBusy] = useState(false);
   const [zipError, setZipError] = useState<string | null>(null);
+  const [fbZipBusy, setFbZipBusy] = useState(false);
+  const [fbZipError, setFbZipError] = useState<string | null>(null);
   const playStoreAssets = useMemo(() => playStoreAssetLinks(), []);
+  const facebookPromoAssets = useMemo(() => facebookPromoAssetLinks(), []);
 
   const reload = useCallback(async () => {
     const data = await getDirectorSiteOverview();
@@ -390,10 +400,11 @@ export default function DirectorSiteOverview({ scrollIntoView, onScrolled }: Dir
         <div className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
           {playStoreAssets.map((asset) => (
             <div key={asset.file}>
-              <PlayStoreAssetDownload
+              <AssetDownloadButton
                 id={`director_download_play_asset_${asset.file.replace(/[^a-z0-9]+/gi, '_')}`}
                 file={asset.file}
                 label={asset.label}
+                onDownload={downloadPlayStoreAsset}
               />
             </div>
           ))}
@@ -444,6 +455,51 @@ export default function DirectorSiteOverview({ scrollIntoView, onScrolled }: Dir
         )}
         <p className="text-[10px] text-muted/80 leading-snug">
           Upload screenshots in Play Console → Store presence. Upload tester CSV in Testing → Closed testing → Testers.
+        </p>
+      </div>
+
+      <div className="rounded-xl border border-app/60 bg-inset/40 p-3 space-y-3">
+        <div>
+          <h4 className="text-[10px] font-black uppercase tracking-widest text-muted">Facebook promo</h4>
+          <p className="text-[11px] text-muted mt-1 leading-snug">
+            Timeline images, screenshot-tour videos, captions, and phone screenshots. Fictional demo data only.
+          </p>
+        </div>
+        <div className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
+          {facebookPromoAssets.map((asset) => (
+            <div key={asset.file}>
+              <AssetDownloadButton
+                id={`director_download_facebook_asset_${asset.file.replace(/[^a-z0-9]+/gi, '_')}`}
+                file={asset.file}
+                label={asset.label}
+                onDownload={downloadFacebookPromoAsset}
+              />
+            </div>
+          ))}
+        </div>
+        <div className="space-y-1">
+          <button
+            type="button"
+            id="director_download_facebook_promo"
+            disabled={fbZipBusy}
+            onClick={() => {
+              setFbZipBusy(true);
+              setFbZipError(null);
+              void downloadFacebookPromoZip()
+                .catch((err) => {
+                  setFbZipError(err instanceof Error ? err.message : 'Download failed');
+                })
+                .finally(() => setFbZipBusy(false));
+            }}
+            className="inline-flex items-center justify-center gap-2 w-full px-3 py-2.5 rounded-xl border border-dashed border-app bg-surface/60 text-app text-xs font-bold hover:bg-surface-hover transition-colors disabled:opacity-60 cursor-pointer touch-manipulation"
+          >
+            <Download className="w-3.5 h-3.5" strokeWidth={2.5} aria-hidden />
+            {fbZipBusy ? 'Downloading zip…' : 'Download Facebook promo zip'}
+          </button>
+          {fbZipError ? <p className="text-[10px] text-red-400 leading-snug">{fbZipError}</p> : null}
+        </div>
+        <p className="text-[10px] text-muted/80 leading-snug">
+          Post on the Facebook Page timeline. Captions are in POST-COPY.txt. 4:5 portrait (1080×1350) fills more of the feed than square.
         </p>
       </div>
 

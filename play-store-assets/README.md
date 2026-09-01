@@ -30,6 +30,16 @@ Upload order matches the app footer: Feed → Stuff → Map → Events → Chat.
 
 Director download (after deploy): Staff panel / Account overview → Play Console — each file downloads individually, or use **Download all as zip**. Files live at `public/downloads/play-store/` and `public/downloads/play-store-screenshots.zip`.
 
+## Facebook timeline promo
+
+Separate pack for the Facebook Page: images, screenshot-tour videos, and captions.
+
+```bash
+npm run facebook:promo
+```
+
+See `facebook-promo-assets/README.md`. Zip: `public/downloads/facebook-promo.zip`.
+
 ## Feature graphic (required)
 
 - `play-store-assets/feature-graphic-1024x500.png`
