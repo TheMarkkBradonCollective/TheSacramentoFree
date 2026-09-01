@@ -109,9 +109,25 @@ const NEIGHBORS = {
   casey: { uid: 'demo-neighbor-casey', name: 'Casey Brooks', neighborhood: 'Tahoe Park', photo: avatar('Casey Brooks') },
   riley: { uid: 'demo-neighbor-riley', name: 'Riley Nguyen', neighborhood: 'Land Park', photo: avatar('Riley Nguyen') },
   morgan: { uid: 'demo-neighbor-morgan', name: 'Morgan Ellis', neighborhood: 'Curtis Park', photo: avatar('Morgan Ellis') },
+  dani: { uid: 'demo-neighbor-dani', name: 'Dani Alvarez', neighborhood: 'Midtown', photo: avatar('Dani Alvarez') },
 } as const;
 
 export const PLAY_STORE_DEMO_ITEMS: ItemPost[] = [
+  listing({
+    id: 'demo-item-lamp',
+    title: 'Brass table lamp — free',
+    type: 'giveaway',
+    category: 'Furniture',
+    userId: NEIGHBORS.dani.uid,
+    userDisplayName: NEIGHBORS.dani.name,
+    userPhotoURL: NEIGHBORS.dani.photo,
+    neighborhood: NEIGHBORS.dani.neighborhood,
+    imageUrl: '/play-store-demo/lamp.jpg',
+    details: 'Vintage brass base with a clean white shade. Works fine — takes a standard bulb, cord has no fraying. It has been sitting unused in the spare room.',
+    pickupNotes: 'Porch pickup in Midtown — say hi on the app and it is yours.',
+    createdHoursAgo: 1,
+    viewCount: 31,
+  }),
   listing({
     id: 'demo-item-couch',
     title: 'Gray sectional couch — free',
@@ -381,6 +397,7 @@ export const PLAY_STORE_DEMO_ITEM_VOTES: Record<
   string,
   { userVote: 'up' | 'down' | null; upvotes: number; downvotes: number }
 > = {
+  'demo-item-lamp': { userVote: null, upvotes: 17, downvotes: 0 },
   'demo-item-couch': { userVote: null, upvotes: 11, downvotes: 0 },
   'demo-item-tv': { userVote: 'up', upvotes: 14, downvotes: 0 },
   'demo-item-baby-toys': { userVote: null, upvotes: 8, downvotes: 0 },
@@ -391,6 +408,18 @@ export const PLAY_STORE_DEMO_ITEM_VOTES: Record<
 };
 
 export const PLAY_STORE_DEMO_ITEM_COMMENTS: Record<string, ItemComment[]> = {
+  'demo-item-lamp': [
+    {
+      id: 'demo-item-comment-lamp',
+      itemId: 'demo-item-lamp',
+      userId: NEIGHBORS.casey.uid,
+      userName: NEIGHBORS.casey.name,
+      userPhoto: NEIGHBORS.casey.photo,
+      userNeighborhood: NEIGHBORS.casey.neighborhood,
+      text: 'This would be perfect next to my reading chair — can I grab it off your porch today?',
+      createdAt: hoursAgo(0.5),
+    },
+  ],
   'demo-item-couch': [
     {
       id: 'demo-item-comment-couch',

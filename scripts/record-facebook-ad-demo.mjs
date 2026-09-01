@@ -189,30 +189,40 @@ export async function recordFacebookAdDemo() {
     await page.waitForSelector('#item_feed_wrapper', { timeout: 20000 }).catch(() => null);
     await wait(600);
 
-    let idx = 0;
-    idx = await captureSeconds(page, framesDir, idx, 1.2);
-    await page.mouse.move(180, 420);
-    for (let i = 0; i < 12; i++) {
-      await page.mouse.wheel({ deltaY: 95 });
-      await page.evaluate(() => {
+    const scrollFeed = (delta) =>
+      page.evaluate((step) => {
         let el = document.getElementById('item_feed_wrapper');
         while (el) {
           const oy = getComputedStyle(el).overflowY;
           if ((oy === 'auto' || oy === 'scroll') && el.scrollHeight > el.clientHeight + 20) {
-            el.scrollTop += 70;
+            el.scrollTop += step;
             return;
           }
           el = el.parentElement;
         }
-        (document.scrollingElement || document.documentElement).scrollTop += 70;
-      });
-      idx = await captureSeconds(page, framesDir, idx, 0.2);
+        (document.scrollingElement || document.documentElement).scrollTop += step;
+      }, delta);
+
+    // Keep the lamp card on screen: a short browse down and back, never past the top row.
+    let idx = 0;
+    idx = await captureSeconds(page, framesDir, idx, 1.4);
+    await page.mouse.move(180, 420);
+    for (let i = 0; i < 8; i++) {
+      await page.mouse.wheel({ deltaY: 70 });
+      await scrollFeed(55);
+      idx = await captureSeconds(page, framesDir, idx, 0.18);
     }
+    for (let i = 0; i < 8; i++) {
+      await page.mouse.wheel({ deltaY: -70 });
+      await scrollFeed(-55);
+      idx = await captureSeconds(page, framesDir, idx, 0.14);
+    }
+    idx = await captureSeconds(page, framesDir, idx, 0.4);
 
     await page.evaluate(() => {
-      const couch = document.querySelector('#item_card_demo-item-couch button');
-      if (couch instanceof HTMLElement) {
-        couch.click();
+      const lamp = document.querySelector('#item_card_demo-item-lamp button');
+      if (lamp instanceof HTMLElement) {
+        lamp.click();
         return;
       }
       const cards = Array.from(document.querySelectorAll('[id^="item_card_"]'));
@@ -220,7 +230,24 @@ export async function recordFacebookAdDemo() {
       const btn = (withPhoto || cards[0])?.querySelector('button');
       if (btn instanceof HTMLElement) btn.click();
     });
-    idx = await captureSeconds(page, framesDir, idx, 3.6);
+    await page.waitForSelector('#item_detail_fullscreen', { timeout: 12000 }).catch(() => null);
+    idx = await captureSeconds(page, framesDir, idx, 1.8);
+
+    await page.mouse.move(180, 430);
+    for (let i = 0; i < 12; i++) {
+      await page.mouse.wheel({ deltaY: 80 });
+      await page.evaluate(() => {
+        const root = document.getElementById('item_detail_fullscreen');
+        if (!root) return;
+        const scroller = Array.from(root.querySelectorAll('*')).find((el) => {
+          const oy = getComputedStyle(el).overflowY;
+          return (oy === 'auto' || oy === 'scroll') && el.scrollHeight > el.clientHeight + 24;
+        });
+        if (scroller) scroller.scrollTop += 60;
+      });
+      idx = await captureSeconds(page, framesDir, idx, 0.2);
+    }
+    idx = await captureSeconds(page, framesDir, idx, 0.8);
 
     if (idx < 24) {
       throw new Error(`Demo capture too short (${idx} frames)`);
