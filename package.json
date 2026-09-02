@@ -25,6 +25,7 @@
     "android:play-screenshots": "node scripts/capture-play-store-screenshots.mjs",
     "android:play-screenshots-zip": "node scripts/pack-play-store-screenshots.mjs",
     "facebook:posts": "python3 scripts/generate-facebook-post-pictures.py",
+    "facebook:newspaper-ad": "python3 scripts/generate-newspaper-ad.py",
     "play:reviewer-account": "node scripts/create-play-reviewer-account.mjs",
     "field:test": "node scripts/field-test.mjs",
     "field:test:web": "node scripts/field-test.mjs --web",
