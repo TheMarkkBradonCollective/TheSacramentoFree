@@ -7,10 +7,7 @@ import {
   subscribeToFulfillerLiveLocationChanges,
 } from '../../lib/goGetSessions';
 import { haversineMeters } from '../../lib/mapRoute';
-
-const MAP_TILE_URL = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
-const MAP_ATTRIBUTION =
-  '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank" rel="noreferrer">CARTO</a>';
+import { SBN_MAP_TILE_ATTRIBUTION, SBN_MAP_TILE_URL } from '../../lib/mapTiles';
 
 function createPickupIcon(): L.DivIcon {
   return L.divIcon({
@@ -95,7 +92,7 @@ export default function GoGetMeetingMap({
       attributionControl: true,
     }).setView([destinationLat, destinationLng], 16);
 
-    L.tileLayer(MAP_TILE_URL, { maxZoom: 19, attribution: MAP_ATTRIBUTION }).addTo(map);
+    L.tileLayer(SBN_MAP_TILE_URL, { maxZoom: 19, attribution: SBN_MAP_TILE_ATTRIBUTION }).addTo(map);
     L.control.zoom({ position: 'topright' }).addTo(map);
 
     pickupMarkerRef.current = L.marker([destinationLat, destinationLng], { icon: createPickupIcon() }).addTo(map);

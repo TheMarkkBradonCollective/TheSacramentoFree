@@ -29,13 +29,11 @@ import {
 } from '../../lib/goGetSessions';
 import { getViolationsForSession, staffEscalateGoGetSession } from '../../lib/violations';
 import { formatRouteDuration, formatRouteDistance, haversineMeters } from '../../lib/mapRoute';
+import { SBN_MAP_TILE_ATTRIBUTION, SBN_MAP_TILE_URL } from '../../lib/mapTiles';
 import { useStaffPermission } from '../../hooks/useStaffPermission';
 import NoPermissionModal from './NoPermissionModal';
 import StaffEscalateViolationDialog from './StaffEscalateViolationDialog';
 import StaffReasonDialog from './StaffReasonDialog';
-
-const MAP_TILE_URL = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
-const MAP_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>';
 
 interface TimelineEvent {
   label: string;
@@ -270,7 +268,7 @@ export default function StaffMeetDetailPanel({
     if (!mapContainerRef.current || mapRef.current) return;
     const map = L.map(mapContainerRef.current, { zoomControl: true, attributionControl: true })
       .setView([session.destinationLat, session.destinationLng], 15);
-    L.tileLayer(MAP_TILE_URL, { maxZoom: 19, attribution: MAP_ATTRIBUTION }).addTo(map);
+    L.tileLayer(SBN_MAP_TILE_URL, { maxZoom: 19, attribution: SBN_MAP_TILE_ATTRIBUTION }).addTo(map);
 
     const layer = L.layerGroup().addTo(map);
     trailLayerRef.current = layer;
