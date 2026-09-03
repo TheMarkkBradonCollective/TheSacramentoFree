@@ -4,8 +4,8 @@ The Sacramento Free — newspaper advertisement
 THIS LOOK IS FOR THIS AD ONLY.
 Do not use the newsprint layout on the other Facebook posts.
 
-One full-page newspaper ad about the website. The visual is the real
-TheSacramentoFree lockup — no lifestyle photos.
+A newspaper front page about the website. Typeset nameplate only —
+no logo, no photos.
 
 What to upload
 --------------

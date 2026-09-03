@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-"""One full-page newspaper advertisement for TheSacramentoFree.
+"""A newspaper front page about The Sacramento Free website.
 
-The page is a single ad about the website. The visual is the real lockup —
-no lifestyle photos. This look is for THIS ad only; other Facebook posts
-stay on the current photo brand.
+Typeset nameplate only — no logo, no photos. This look is for THIS ad only;
+other Facebook posts stay on the current photo brand.
 
   python3 scripts/generate-newspaper-ad.py
 """
@@ -19,7 +18,6 @@ OUT = ROOT / "facebook-promo-assets" / "newspaper-ad"
 PUBLIC = ROOT / "public" / "downloads" / "newspaper-ad"
 ZIP_PATH = ROOT / "public" / "downloads" / "newspaper-ad.zip"
 FONTS = ROOT / "facebook-promo-assets" / "fonts"
-LOCKUP = ROOT / "public" / "TheSacramentoFree.png"
 
 PAPER = (250, 249, 245)
 NEWSPrint = (233, 232, 227)
@@ -33,7 +31,6 @@ LIB_REG = "/usr/share/fonts/truetype/liberation/LiberationSerif-Regular.ttf"
 LIB_ITA = "/usr/share/fonts/truetype/liberation/LiberationSerif-Italic.ttf"
 INTER_BOLD = "/usr/share/fonts/truetype/macos/Inter-Bold.ttf"
 INTER_MED = "/usr/share/fonts/truetype/macos/Inter-Medium.ttf"
-INTER_SEMI = "/usr/share/fonts/truetype/macos/Inter-SemiBold.ttf"
 
 DATE = "Thursday, September 3, 2026"
 CITY = "Sacramento • California"
@@ -86,14 +83,6 @@ def paper_background(size: tuple[int, int]) -> Image.Image:
     return canvas
 
 
-def load_logo(max_side: int) -> Image.Image:
-    im = Image.open(LOCKUP).convert("RGB")
-    trim = int(im.width * 0.035)
-    im = im.crop((trim, trim, im.width - trim, im.height - trim))
-    im.thumbnail((max_side, max_side), Image.Resampling.LANCZOS)
-    return im
-
-
 def wrap(draw: ImageDraw.ImageDraw, text: str, font_obj: ImageFont.FreeTypeFont, max_width: int) -> list[str]:
     lines: list[str] = []
     for paragraph in text.split("\n"):
@@ -140,25 +129,16 @@ def double_rule(draw: ImageDraw.ImageDraw, x0: int, y: int, x1: int) -> int:
     return y + 8
 
 
-def draw_outer_frame(draw: ImageDraw.ImageDraw, w: int, h: int, m: int) -> None:
-    draw.rectangle((m, m, w - m, h - m), outline=INK, width=3)
-    inner = m + 6
-    draw.rectangle((inner, inner, w - inner, h - inner), outline=INK, width=1)
-
-
 def compose(size: tuple[int, int], variant: str) -> Image.Image:
     w, h = size
     canvas = paper_background(size)
     draw = ImageDraw.Draw(canvas)
-    frame = int(w * 0.028)
-    pad = frame + int(w * 0.042)
+    pad = int(w * 0.055)
     inner_l, inner_r = pad, w - pad
     usable_w = inner_r - inner_l
-    y = frame + int(h * 0.022)
+    y = int(h * 0.032)
 
-    draw_outer_frame(draw, w, h, frame)
-
-    foot_y = h - frame - int(h * 0.048)
+    foot_y = h - int(h * 0.048)
     hairline(draw, inner_l, foot_y, inner_r)
     foot = font(INTER_MED, max(11, int(w * 0.016)))
     fy = foot_y + int(h * 0.01)
@@ -168,9 +148,28 @@ def compose(size: tuple[int, int], variant: str) -> Image.Image:
     draw.text((inner_r - pw, fy), play, font=foot, fill=INK)
     content_bottom = foot_y - int(h * 0.016)
 
-    kicker = font(INTER_BOLD, max(11, int(w * 0.018)))
-    y = tracked_center(draw, "ADVERTISEMENT", kicker, w // 2, y, INK_MUTED, tracking=int(w * 0.008))
-    y += int(h * 0.012)
+    # Nameplate — typeset like a paper, not a logo mark
+    strip = font(INTER_BOLD, max(11, int(w * 0.017)))
+    vol = font(INTER_MED, max(11, int(w * 0.016)))
+    draw.text((inner_l, y), "COMMUNITY EDITION", font=strip, fill=INK_MUTED)
+    motto = "GIVE FREELY. ASK KINDLY."
+    mw = draw.textlength(motto, font=strip)
+    draw.text(((w - mw) / 2, y), motto, font=strip, fill=INK)
+    vw = draw.textlength("Vol. I  ·  No. 1", font=vol)
+    draw.text((inner_r - vw, y), "Vol. I  ·  No. 1", font=vol, fill=INK_MUTED)
+    y += text_h(draw, "COMMUNITY", strip) + int(h * 0.012)
+    hairline(draw, inner_l, y, inner_r)
+    y += int(h * 0.016)
+
+    the_f = font(INTER_BOLD, max(13, int(w * 0.022)))
+    y = tracked_center(draw, "THE", the_f, w // 2, y, INK_MUTED, tracking=int(w * 0.014))
+    y += int(h * 0.006)
+    name_size = int(w * (0.108 if variant == "square" else 0.122))
+    y = tracked_center(draw, "SACRAMENTO", fraunces(name_size, 900, 144), w // 2, y, INK, tracking=int(-w * 0.007))
+    y += int(h * 0.028)
+    free_f = font(LIB_ITA, int(w * (0.046 if variant == "square" else 0.050)))
+    y = tracked_center(draw, "FREE", free_f, w // 2, y, INK, tracking=int(w * 0.02))
+    y += int(h * 0.016)
     y = double_rule(draw, inner_l, y, inner_r)
     y += int(h * 0.01)
 
@@ -182,31 +181,20 @@ def compose(size: tuple[int, int], variant: str) -> Image.Image:
     draw.text((inner_r - gw, y), "GRATIS", font=folio, fill=INK)
     y += text_h(draw, DATE, folio) + int(h * 0.012)
     hairline(draw, inner_l, y, inner_r)
-    y += int(h * 0.018)
+    y += int(h * 0.02)
 
-    # Real lockup — no photograph
-    logo_side = int(h * (0.168 if variant == "square" else 0.22 if variant == "feed" else 0.20))
-    logo_side = min(logo_side, int(usable_w * (0.42 if variant == "square" else 0.50)))
-    logo = load_logo(logo_side)
-    canvas.paste(logo, ((w - logo.width) // 2, y))
-    y += logo.height + int(h * 0.016)
-    hairline(draw, inner_l, y, inner_r)
-    y += int(h * 0.016)
-
-    head = fraunces(int(w * (0.048 if variant == "square" else 0.052)), 900, 144)
+    head = fraunces(int(w * (0.058 if variant == "square" else 0.064)), 900, 144)
     for line in wrap(draw, "Free local gifting in Sacramento.", head, usable_w):
-        tw = draw.textlength(line, font=head)
-        draw.text(((w - tw) / 2, y), line, font=head, fill=INK)
-        y += int(text_h(draw, line, head) * 1.12)
-    y += int(h * 0.006)
-    deck = font(LIB_ITA, int(w * 0.026))
+        draw.text((inner_l, y), line, font=head, fill=INK)
+        y += int(text_h(draw, line, head) * 1.08)
+    y += int(h * 0.008)
+    deck = font(LIB_ITA, int(w * 0.028))
     for line in wrap(draw, "The community website. Not a marketplace. Not an auction.", deck, usable_w):
-        tw = draw.textlength(line, font=deck)
-        draw.text(((w - tw) / 2, y), line, font=deck, fill=INK)
+        draw.text((inner_l, y), line, font=deck, fill=INK)
         y += int(text_h(draw, line, deck) * 1.28)
-    y += int(h * 0.014)
-    y = double_rule(draw, inner_l, y, inner_r)
     y += int(h * 0.016)
+    y = double_rule(draw, inner_l, y, inner_r)
+    y += int(h * 0.018)
 
     # Three equal columns of site info
     col_gap = int(w * 0.028)
@@ -296,8 +284,8 @@ README = """The Sacramento Free — newspaper advertisement
 THIS LOOK IS FOR THIS AD ONLY.
 Do not use the newsprint layout on the other Facebook posts.
 
-One full-page newspaper ad about the website. The visual is the real
-TheSacramentoFree lockup — no lifestyle photos.
+A newspaper front page about the website. Typeset nameplate only —
+no logo, no photos.
 
 What to upload
 --------------
