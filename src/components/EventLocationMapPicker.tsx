@@ -1,11 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import { MapPin, Navigation } from 'lucide-react';
+import { SBN_MAP_TILE_ATTRIBUTION, SBN_MAP_TILE_URL } from '../lib/mapTiles';
 import { NEIGHBORHOOD_LAT_LONGS } from '../types';
-
-const PICKER_TILE_URL = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
-const PICKER_ATTRIBUTION =
-  '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank" rel="noreferrer">CARTO</a>';
 
 const DEFAULT_CENTER = { lat: 38.5816, lng: -121.4944 };
 
@@ -94,9 +91,9 @@ export default function EventLocationMapPicker({
       attributionControl: true,
     }).setView(center, typeof latitude === 'number' ? 17 : 13);
 
-    L.tileLayer(PICKER_TILE_URL, {
+    L.tileLayer(SBN_MAP_TILE_URL, {
       maxZoom: 19,
-      attribution: PICKER_ATTRIBUTION,
+      attribution: SBN_MAP_TILE_ATTRIBUTION,
     }).addTo(map);
 
     map.on('click', (event) => {

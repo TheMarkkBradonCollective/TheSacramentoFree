@@ -1417,7 +1417,7 @@ export default function SacramentoMapView({
       12,
     );
 
-    // Apply soft, beautiful CartoDB Voyager tile layer with NO labels/city-icons to keep the focus solely on the user's listing blips
+    // Soft street basemap (no API key) so listing blips stay the focus
     L.tileLayer(SBN_MAP_TILE_URL, SBN_MAP_TILE_OPTIONS).addTo(map);
 
     // Dynamic Markers Layer Group
