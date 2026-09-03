@@ -44,6 +44,14 @@ SQUARE = (1080, 1080)
 JOIN_URL = "sacramentobuynothing.com"
 BRAND = "TheSacramentoFree"
 
+HASHTAGS = (
+    "#TheSacramentoFree #Sacramento #SacramentoFree #SacramentoCommunity "
+    "#NeighborsHelpingNeighbors #BuyNothing #GiveFreelyAskKindly #KeepItLocal #fyp "
+    "#SacramentoCA #SacTown #916 #SacramentoNeighbors #SacCommunity "
+    "#FreeInSacramento #SacramentoLocal #SacLife #MidtownSac #EastSac "
+    "#LandPark #TahoePark #OakPark #Natomas #GreaterSacramento"
+)
+
 
 def font(path: str, size: int, weight: int | None = None) -> ImageFont.FreeTypeFont:
     try:
@@ -409,9 +417,7 @@ TheSacramentoFree — Give freely. Ask kindly.
 Join: https://www.sacramentobuynothing.com
 
 Android (closed testing — free to opt in):
-https://play.google.com/apps/testing/org.sacramentobuynothing.app
-
-#TheSacramentoFree #Sacramento #GiveFreelyAskKindly #KeepItLocal""",
+https://play.google.com/apps/testing/org.sacramentobuynothing.app""",
     },
     {
         "slug": "02-post-it-in-a-minute",
@@ -671,6 +677,13 @@ python3 scripts/generate-facebook-post-pictures.py
 """
 
 
+def with_tags(caption: str) -> str:
+    lines = caption.rstrip().splitlines()
+    while lines and (not lines[-1].strip() or lines[-1].lstrip().startswith("#")):
+        lines.pop()
+    return "\n".join(lines) + "\n\n" + HASHTAGS
+
+
 def write_captions() -> None:
     blocks = [
         "The Sacramento Free — Facebook captions for today's posts",
@@ -684,7 +697,7 @@ def write_captions() -> None:
         blocks.append(f"Image: {post['slug']}-portrait.jpg")
         blocks.append(f"Square: {post['slug']}-square.jpg")
         blocks.append("-" * 40)
-        blocks.append(post["caption"].strip())
+        blocks.append(with_tags(post["caption"]).strip())
         blocks.append("")
         blocks.append("")
     text = "\n".join(blocks).rstrip() + "\n"

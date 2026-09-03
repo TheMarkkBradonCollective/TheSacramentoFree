@@ -36,6 +36,14 @@ DATE = "Thursday, September 3, 2026"
 CITY = "Sacramento • California"
 URL = "sacramentobuynothing.com"
 
+HASHTAGS = (
+    "#TheSacramentoFree #Sacramento #SacramentoFree #SacramentoCommunity "
+    "#NeighborsHelpingNeighbors #BuyNothing #GiveFreelyAskKindly #KeepItLocal #fyp "
+    "#SacramentoCA #SacTown #916 #SacramentoNeighbors #SacCommunity "
+    "#FreeInSacramento #SacramentoLocal #SacLife #MidtownSac #EastSac "
+    "#LandPark #TahoePark #OakPark #Natomas #GreaterSacramento"
+)
+
 COLUMNS = [
     (
         "What it is",
@@ -275,8 +283,7 @@ https://play.google.com/apps/testing/org.sacramentobuynothing.app
 
 Give freely. Ask kindly.
 
-#TheSacramentoFree #Sacramento #GiveFreelyAskKindly #KeepItLocal
-"""
+""" + HASHTAGS + "\n"
 
 README = """The Sacramento Free — newspaper advertisement
 =============================================
