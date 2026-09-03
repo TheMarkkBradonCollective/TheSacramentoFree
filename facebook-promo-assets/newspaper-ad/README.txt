@@ -1,19 +1,18 @@
-The Sacramento Free — newspaper ad
-==================================
+The Sacramento Free — newspaper advertisement
+=============================================
 
 THIS LOOK IS FOR THIS AD ONLY.
-Do not use the newsprint masthead, classifieds, or paper layout on the
-other Facebook posts. Those stay on the current lifestyle brand
-(photo + TheSacramentoFree green bar).
+Do not use the newsprint layout on the other Facebook posts.
+
+One full-page newspaper ad about the website. The visual is the real
+TheSacramentoFree lockup — no lifestyle photos.
 
 What to upload
 --------------
 1. newspaper-ad-feed.jpg     1080×1350 (4:5 Facebook feed) — post this
-2. newspaper-ad-portrait.jpg 1080×1620 (taller front page)
+2. newspaper-ad-portrait.jpg 1080×1620
 3. newspaper-ad-square.jpg   1080×1080
 
 Caption: paste from CAPTION.txt
-
-Fictional demo neighbors / demo classifieds. Do not post live member names.
 
 Rebuild: python3 scripts/generate-newspaper-ad.py
